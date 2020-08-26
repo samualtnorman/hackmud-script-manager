@@ -1,12 +1,25 @@
-#!/usr/bin/env node
-
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
 import { build, clear, push, sync, watch } from "hackmud_env-tools"
-import { red, yellow, green, blue } from "ansi-colors"
+import c, { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
-type ArgValue = boolean | number | string | ArgValue[]
+// let o = ""
+
+// for (let key in c) {
+// 	if (![ "alias", "theme", "define", "create", "hasAnsi", "hasColor", "unstyle", "noop", "noop", "clear", "none", "stripColor", "reset", "gray" ].includes(key)) {
+// 		const value: any = c[key]
+
+// 		if (typeof value == "function")
+// 			o += value(key) + " "
+// 	}
+// }
+
+// console.log(o)
+
+// console.log(c.redBright("test"), c.redBright.dim("test"), c.red("test"), c.red.dim("test"))
+
+type ArgValue = boolean | number | string/* | ArgValue[]*/
 
 const configDir = resolvePath(homeDir(), ".config")
 const configFile = resolvePath(configDir, "hsm.json")
@@ -67,48 +80,81 @@ for (let arg of process.argv.slice(2)) {
 				break
 			case "push":
 				break
-			case "sync":
+			case "sync": {
+				const config = await getConfig()
+
+				if (config.hackmudPath) {
+					const srcPath = commands[1] || "."
+					const hackmudPath = config.hackmudPath
+					const users = options.get("users")?.toString().split(",") || []
+					const scripts = options.get("scripts")?.toString().split(",") || []
+
+					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
+
+					const userColours = new Map<string, string>()
+
+					sync(srcPath, hackmudPath, users, scripts, (file, { minLength, srcLength, users }) => {
+						if (users.length)
+							console.log(`synced ${dim(file)} to ${users.map(user => {
+								let colour = userColours.get(user)
+
+								if (!colour)
+									userColours.set(user, colour = colours[Math.floor(Math.random() * colours.length)](user))
+
+								return colour
+							}).join(", ")} saving ${bold((srcLength - minLength).toString())} chars`)
+					})
+				} else
+					console.log("you need to set hackmudPath in config before you can use this command")
+
 				break
+			}
+
 			case "watch":
 				break
-			case "sync":
-				// console.log(await sync())
-				break
-
+			
 			case "config":
 				switch (commands[1]) {
 					case "get":
-						console.log(exploreObject(await getConfig(), ...commands.slice(2)))
+						console.log(exploreObject(await getConfig(), commands.slice(2)))
 						break
-					case "delete":
-						break
-					case "set":
+
+					case "delete": {
+						const config = await getConfig()
 						const keys = commands.slice(2)
 
 						if (keys.length) {
-							let value
-	
-							if (keys.length == 1) {
-								value = undefined
-							} else {
-								value = keys.pop()
-							}
-
-							console.log({ keys, value })
+							delete exploreObject(config, keys.slice(0, -1))?.[keys.slice(-1)[0]]
+							console.log(config)
 						} else
 							help()
-
-						// // exploreObject(await getConfig(), ...keys.slice(0, -1))[keys.slice(-1)[0]] = value
-
-						// let object = await getConfig()
-
-						// for (let key of keys.slice(0, -1))
-						// 	object = object[key] || {}
-
-						// object[keys.slice(-1)[0]] = value
 						
-						// console.log(await getConfig())
 						break
+					}
+
+					case "set": {
+						const config = await getConfig()
+						const keys = commands.slice(2)
+						const value = keys.pop()
+
+						if (keys.length) {
+							let object = config
+	
+							for (let key of keys.slice(0, -1))
+								object = typeof object[key] == "object" ? object[key] : object[key] = {}
+
+							object[keys.slice(-1)[0]] = value
+
+							if (config.hackmudPath)
+								config.hackmudPath = resolvePath(config.hackmudPath)
+
+							console.log(config)
+						} else
+							help()
+						
+						break
+					}
+
 					default:
 						if (commands[1])
 							console.log("unknown command")
@@ -165,7 +211,7 @@ function help() {
 			break
 		default:
 			// console.log("hsm <build, clear, push, sync, watch, sync, config, help / h, version / v>")
-			console.log(`${red("hsm")} <${yellow("command")}> [...${yellow("option")}s]\n\n${yellow("command")}s:\n  ${green("build")} - ${blue("info")}\n  ${green("clear")} - ${blue("info")}\n\n${yellow("option")}s:\n  help,    h - info\n  version, v - info`)
+			console.log(`${redBright("hsm")} <${yellowBright("command")}> [...${yellowBright("option")}s]\n\n${yellowBright("command")}s:\n  ${greenBright("build")} - ${blueBright("info")}\n  ${greenBright("clear")} - ${blueBright("info")}\n\n${yellowBright("option")}s:\n  help,    h - info\n  version, v - info`)
 	}
 }
 
@@ -187,9 +233,12 @@ async function getConfig() {
 	return config
 }
 
-function exploreObject(object: any, ...keys: string[]) {
+function exploreObject(object: any, keys: string[], createPath = false) {
 	for (let key of keys)
-		object = object?.[key]
+		if (createPath)
+			object = typeof object[key] == "object" ? object[key] : object[key] = {}
+		else
+			object = object?.[key]
 
 	return object
 }

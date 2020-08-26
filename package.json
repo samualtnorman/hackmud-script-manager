@@ -2,7 +2,10 @@
 	"name": "hackmud-script-manager",
 	"version": "1.0.0",
 	"description": "",
-	"main": "index.js",
+	"files": [
+		"bin/hsm",
+		"lib/hsm.ts"
+	],
 	"scripts": {
 		"build": "npx tsc",
 		"watch": "npx tsc --watch"
@@ -19,16 +22,13 @@
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
 	"dependencies": {
 		"ansi-colors": "^4.1.1",
-		"hackmud_env-tools": "^1.0.2"
+		"hackmud_env-tools": "^1.1.0"
 	},
 	"devDependencies": {
 		"@types/node": "^14.6.0",
 		"typescript": "^4.0.2"
 	},
 	"bin": {
-		"hsm": "index.js"
-	},
-	"files": [
-		"index.js"
-	]
+		"hsm": "bin/hsm"
+	}
 }
