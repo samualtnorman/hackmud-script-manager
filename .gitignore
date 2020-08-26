@@ -105,3 +105,4 @@ dist
 
 *.js
 *.d.ts
+!test/src/*
