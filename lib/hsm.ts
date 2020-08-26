@@ -75,11 +75,49 @@ for (let arg of process.argv.slice(2)) {
 	else
 		switch (commands[0]) {
 			case "build":
+				for (const { name, oldLength, minLength } of await build(commands[1] || "src", commands[2] || "dist"))
+					console.log(`built ${name} [saved ${oldLength - minLength} chars]`)
+
 				break
-			case "clear":
+
+			case "clear": {
+				const config = await getConfig()
+
+				if (config.hackmudPath) {
+					const target = commands[1] || "dist"
+					const user = commands[2] || config.defaultUser
+
+					if (user) {
+						const { pushedRemoved, targetRemoved } = await clear(target, config.hackmudPath, user)
+
+						console.log(`cleared ${targetRemoved} file(s) from ${target} and ${pushedRemoved} file(s) from ${user}`)
+					} else
+						console.log("set defaultUser in config first")
+				} else
+					console.log("set hackmudPath in config first")
+
 				break
-			case "push":
+			}
+
+			case "push": {
+				const config = await getConfig()
+
+				if (config.hackmudPath) {
+					const target = commands[1] || "dist"
+					const user = commands[2] || config.defaultUser
+
+					if (user) {
+						const { pushedCount } = await push(target, config.hackmudPath, user)
+
+						console.log(`pushed ${pushedCount} file(s) to ${user}`)
+					} else
+						console.log("set defaultUser in config first")
+				} else
+					console.log("set hackmudPath in config first")
+
 				break
+			}
+
 			case "sync": {
 				const config = await getConfig()
 
@@ -90,7 +128,6 @@ for (let arg of process.argv.slice(2)) {
 					const scripts = options.get("scripts")?.toString().split(",") || []
 
 					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
-
 					const userColours = new Map<string, string>()
 
 					sync(srcPath, hackmudPath, users, scripts, (file, { minLength, srcLength, users }) => {
@@ -102,7 +139,7 @@ for (let arg of process.argv.slice(2)) {
 									userColours.set(user, colour = colours[Math.floor(Math.random() * colours.length)](user))
 
 								return colour
-							}).join(", ")} saving ${bold((srcLength - minLength).toString())} chars`)
+							}).join(", ")} [saved ${bold((srcLength - minLength).toString())} chars]`)
 					})
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
@@ -110,8 +147,26 @@ for (let arg of process.argv.slice(2)) {
 				break
 			}
 
-			case "watch":
+			case "watch": {
+				const config = await getConfig()
+
+				if (config.hackmudPath) {
+					const srcPath = commands[1] || "src"
+					const user = commands[2] || config.defaultUser
+
+					if (user) {
+						const {} = await watch(srcPath, config.hackmudPath, user, ({ minLength, oldLength, name }) => {
+							console.log(`built and pushed ${name} to ${user} [saved ${oldLength - minLength} chars]`)
+						})
+
+						// console.log(`pushed ${pushedCount} file(s) to ${user}`)
+					} else
+						console.log("set defaultUser in config first")
+				} else
+					console.log("set hackmudPath in config first")
+
 				break
+			}
 			
 			case "config":
 				switch (commands[1]) {
