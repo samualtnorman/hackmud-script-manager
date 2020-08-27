@@ -210,7 +210,12 @@ for (let arg of process.argv.slice(2)) {
 					if (script) {
 						const srcPath = commands[2] || "."
 						const hackmudPath = config.hackmudPath
-						pull(srcPath, hackmudPath, script)
+
+						try {
+							await pull(srcPath, hackmudPath, script)
+						} catch (error) {
+							console.log("something went wrong, did you forget to #down the script?")
+						}
 					} else
 						help()
 				} else
@@ -305,7 +310,7 @@ function help() {
 }
 
 async function version() {
-	console.log(JSON.parse(await readFile(resolvePath(__dirname, "package.json"), { encoding: "utf-8" })).version || "unknown")
+	console.log(JSON.parse(await readFile(resolvePath(__dirname, "../package.json"), { encoding: "utf-8" })).version || "unknown")
 }
 
 async function getConfig() {
