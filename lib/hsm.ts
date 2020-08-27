@@ -1,8 +1,12 @@
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { build, clear, push, sync, watch } from "hackmud_env-tools"
-import c, { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
+import { build, clear, pull, push, pushBuilt, watch } from "hackmud_env-tools"
+import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
+
+interface LooseObject<T = any> {
+	[key: string]: T | undefined
+}
 
 // let o = ""
 
@@ -33,10 +37,12 @@ const commands: string[] = []
 // 	}
 // }
 
-let config: Partial<{
+let config: LooseObject &  Partial<{
 	hackmudPath: string
 	defaultUser: string
-	[key: string]: any
+	users: LooseObject<{
+		colour: string
+	}>
 }> | undefined
 
 for (let arg of process.argv.slice(2)) {
@@ -99,7 +105,7 @@ for (let arg of process.argv.slice(2)) {
 				break
 			}
 
-			case "push": {
+			case "push-built": {
 				const config = await getConfig()
 
 				if (config.hackmudPath) {
@@ -107,7 +113,7 @@ for (let arg of process.argv.slice(2)) {
 					const user = commands[2] || config.defaultUser
 
 					if (user) {
-						const { pushedCount } = await push(target, config.hackmudPath, user)
+						const { pushedCount } = await pushBuilt(target, config.hackmudPath, user)
 
 						console.log(`pushed ${pushedCount} file(s) to ${user}`)
 					} else
@@ -118,7 +124,7 @@ for (let arg of process.argv.slice(2)) {
 				break
 			}
 
-			case "sync": {
+			case "push": {
 				const config = await getConfig()
 
 				if (config.hackmudPath) {
@@ -126,21 +132,29 @@ for (let arg of process.argv.slice(2)) {
 					const hackmudPath = config.hackmudPath
 					const users = options.get("users")?.toString().split(",") || []
 					const scripts = options.get("scripts")?.toString().split(",") || []
-
 					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
-					const userColours = new Map<string, string>()
+					const configUsers = config.users = config.users || {}
 
-					sync(srcPath, hackmudPath, users, scripts, (file, { minLength, srcLength, users }) => {
-						if (users.length)
-							console.log(`synced ${dim(file)} to ${users.map(user => {
-								let colour = userColours.get(user)
-
-								if (!colour)
-									userColours.set(user, colour = colours[Math.floor(Math.random() * colours.length)](user))
-
-								return colour
-							}).join(", ")} [saved ${bold((srcLength - minLength).toString())} chars]`)
-					})
+					await push(
+						srcPath,
+						hackmudPath,
+						users,
+						scripts,
+						({ minLength, srcLength, users, script }) =>
+							users.length && console.log(
+								`wrote ${
+									bold(minLength.toString())
+								} chars from ${
+									dim(script)
+								} to ${
+									users.map(user =>
+										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
+									).join(", ")
+								} and saved ${
+										bold((srcLength - minLength).toString())
+								} chars`
+							)
+					)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
 
@@ -151,19 +165,56 @@ for (let arg of process.argv.slice(2)) {
 				const config = await getConfig()
 
 				if (config.hackmudPath) {
-					const srcPath = commands[1] || "src"
-					const user = commands[2] || config.defaultUser
+					const srcPath = commands[1] || "."
+					const hackmudPath = config.hackmudPath
+					const users = options.get("users")?.toString().split(",") || []
+					const scripts = options.get("scripts")?.toString().split(",") || []
+					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
+					const configUsers = config.users = config.users || {}
 
-					if (user) {
-						const {} = await watch(srcPath, config.hackmudPath, user, ({ minLength, oldLength, name }) => {
-							console.log(`built and pushed ${name} to ${user} [saved ${oldLength - minLength} chars]`)
-						})
+					watch(
+						srcPath,
+						hackmudPath,
+						users,
+						scripts,
+						({ minLength, srcLength, users, script }) => {
+							users.length && console.log(
+								`wrote ${
+									bold(minLength.toString())
+								} chars from ${
+									dim(script)
+								} to ${
+									users.map(user =>
+										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
+									).join(", ")
+								} and saved ${
+										bold((srcLength - minLength).toString())
+								} chars`
+							)
 
-						// console.log(`pushed ${pushedCount} file(s) to ${user}`)
-					} else
-						console.log("set defaultUser in config first")
+							updateConfig()
+						}
+					)
 				} else
-					console.log("set hackmudPath in config first")
+					console.log("you need to set hackmudPath in config before you can use this command")
+
+				break
+			}
+
+			case "pull": {
+				const config = await getConfig()
+
+				if (config.hackmudPath) {
+					const script = commands[1]
+
+					if (script) {
+						const srcPath = commands[2] || "."
+						const hackmudPath = config.hackmudPath
+						pull(srcPath, hackmudPath, script)
+					} else
+						help()
+				} else
+					console.log("you need to set hackmudPath in config before you can use this command")
 
 				break
 			}
@@ -233,24 +284,7 @@ for (let arg of process.argv.slice(2)) {
 				help()
 		}
 
-	if (config) {
-		const json = JSON.stringify(config)
-
-		writeFile(configFile, json).catch(async error => {
-			switch (error.code) {
-				case "EISDIR":
-					await rmDir(configFile)
-					break
-				case "ENOENT":
-					await mkDir(configDir)
-					break
-				default:
-					throw error
-			}
-
-			writeFile(configFile, json)
-		})
-	}
+	updateConfig()
 })()
 
 function help() {
@@ -296,4 +330,25 @@ function exploreObject(object: any, keys: string[], createPath = false) {
 			object = object?.[key]
 
 	return object
+}
+
+function updateConfig() {
+	if (config) {
+		const json = JSON.stringify(config)
+
+		writeFile(configFile, json).catch(async error => {
+			switch (error.code) {
+				case "EISDIR":
+					await rmDir(configFile)
+					break
+				case "ENOENT":
+					await mkDir(configDir)
+					break
+				default:
+					throw error
+			}
+
+			writeFile(configFile, json)
+		})
+	}
 }
