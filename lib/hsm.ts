@@ -1,7 +1,7 @@
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { build, clear, pull, push, pushBuilt, watch } from "hackmud_env-tools"
+import { build, clear, pull, push, pushBuilt, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
 interface LooseObject<T = any> {
@@ -98,9 +98,9 @@ for (let arg of process.argv.slice(2)) {
 
 						console.log(`cleared ${targetRemoved} file(s) from ${target} and ${pushedRemoved} file(s) from ${user}`)
 					} else
-						console.log("set defaultUser in config first")
+						console.log("set defaultUser in config first\nhsm config set defaultUser <user>")
 				} else
-					console.log("set hackmudPath in config first")
+					console.log("set hackmudPath in config first\nhsm config set hackmudPath <hackmud directory>")
 
 				break
 			}
@@ -223,7 +223,7 @@ for (let arg of process.argv.slice(2)) {
 
 				break
 			}
-			
+
 			case "config":
 				switch (commands[1]) {
 					case "get":
@@ -239,7 +239,7 @@ for (let arg of process.argv.slice(2)) {
 							console.log(config)
 						} else
 							help()
-						
+
 						break
 					}
 
@@ -250,7 +250,7 @@ for (let arg of process.argv.slice(2)) {
 
 						if (keys.length) {
 							let object = config
-	
+
 							for (let key of keys.slice(0, -1))
 								object = typeof object[key] == "object" ? object[key] : object[key] = {}
 
@@ -262,14 +262,14 @@ for (let arg of process.argv.slice(2)) {
 							console.log(config)
 						} else
 							help()
-						
+
 						break
 					}
 
 					default:
 						if (commands[1])
 							console.log("unknown command")
-			
+
 					help()
 				}
 
@@ -285,7 +285,7 @@ for (let arg of process.argv.slice(2)) {
 			default:
 				if (commands[0])
 					console.log("unknown command")
-			
+
 				help()
 		}
 
@@ -319,6 +319,8 @@ async function getConfig() {
 
 	try {
 		config = JSON.parse(await readFile(configFile, { encoding: "utf-8" }))
+	} catch {
+		config = {}
 	} finally {
 		if (typeof config != "object")
 			config = {}
