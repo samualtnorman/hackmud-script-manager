@@ -5,7 +5,7 @@ import { resolve as resolvePath, basename, extname } from "path"
 
 /**
  * Copies target file or files in target folder to hackmud folder.
- * 
+ *
  * @param target file or folder to be pushed
  * @param hackmudPath hackmud directory
  * @param user hackmud user to target
@@ -36,10 +36,10 @@ export async function pushBuilt(target: string, hackmudPath: string, user: strin
 
 /**
  * Deletes target file or files in target folder and equivalent in hackmud folder.
- * 
+ *
  * @param target file or folder to be cleared
  * @param hackmudPath hackmud directory
- * @param user hackmud user to target 
+ * @param user hackmud user to target
  */
 export async function clear(target: string, hackmudPath: string, user: string) {
 	let targetRemoved = 0
@@ -62,7 +62,7 @@ export async function clear(target: string, hackmudPath: string, user: string) {
 
 /**
  * Builds target file or files in target folder and dumps them in specified directory.
- * 
+ *
  * @param target file or folder to be built
  * @param distPath folder to dump built files
  */
@@ -91,7 +91,7 @@ export async function build(target: string, distPath: string) {
 
 /**
  * Watches target file or folder for updates and builds and pushes updated file.
- * 
+ *
  * @param srcPath path to folder containing source files
  * @param hackmudPath path to hackmud directory
  * @param users users to push to (pushes to all if empty)
@@ -113,7 +113,7 @@ export function watch(srcPath: string, hackmudPath: string, users: string[], scr
 
 						const skips = new Map<string, string[]>()
 						const promisesSkips: Promise<any>[] = []
-				
+
 						for (const dir of await readDir(srcPath, { withFileTypes: true })) {
 							if (dir.isDirectory()) {
 								promisesSkips.push(readDir(resolvePath(srcPath, dir.name), { withFileTypes: true }).then(files => {
@@ -121,7 +121,7 @@ export function watch(srcPath: string, hackmudPath: string, users: string[], scr
 										if (file.isFile() && extname(file.name) == ".js") {
 											const name = basename(file.name, ".js")
 											const skip = skips.get(name)
-				
+
 											if (skip)
 												skip.push(dir.name)
 											else
@@ -133,7 +133,7 @@ export function watch(srcPath: string, hackmudPath: string, users: string[], scr
 						}
 
 						await Promise.all(promisesSkips)
-						
+
 						const minCode = await hackmudMinify(code)
 						const info: Info = { script: path, users: [], srcLength: hackmudLength(code), minLength: hackmudLength(minCode) }
 
@@ -144,7 +144,7 @@ export function watch(srcPath: string, hackmudPath: string, users: string[], scr
 							users = (await readDir(hackmudPath, { withFileTypes: true }))
 								.filter(a => a.isFile() && extname(a.name) == ".key")
 								.map(a => basename(a.name, ".key"))
-						
+
 						for (const user of users) {
 							if (!skip.includes(user)) {
 								info.users.push(user)
@@ -152,7 +152,7 @@ export function watch(srcPath: string, hackmudPath: string, users: string[], scr
 								promises.push(writeFile(resolvePath(hackmudPath, user, "scripts", file), minCode).catch(async error => {
 									if (error.code != "ENOENT")
 										throw error
-									
+
 									await mkDir(resolvePath(hackmudPath, user, "scripts"), { recursive: true })
 									await writeFile(resolvePath(hackmudPath, user, "scripts", file), minCode)
 								}))
@@ -180,7 +180,7 @@ export function watch(srcPath: string, hackmudPath: string, users: string[], scr
 						promises.push(writeFile(resolvePath(hackmudPath, user, "scripts", file), minCode).catch(async error => {
 							if (error.code != "ENOENT")
 								throw error
-							
+
 							await mkDir(resolvePath(hackmudPath, user, "scripts"), { recursive: true })
 							await writeFile(resolvePath(hackmudPath, user, "scripts", file), minCode)
 						}))
@@ -208,9 +208,9 @@ interface Info {
 /**
  * Push a specific or all scripts to a specific or all users.
  * In source directory, scripts in folders will override scripts with same name for user with folder name.
- * 
+ *
  * e.g. foo/bar.js overrides other bar.js script just for user foo.
- * 
+ *
  * @param srcPath path to folder containing source files
  * @param hackmudPath path to hackmud directory
  * @param users users to push to (pushes to all if empty)
@@ -245,17 +245,17 @@ export function push(srcPath: string, hackmudPath: string, users: string[], scri
 							readFile(resolvePath(srcPath, user, script), { encoding: "utf-8" }).then(async code => {
 								const minCode = await hackmudMinify(code)
 								const info: Info = { script: `${user}/${script}`, users: [ user ], srcLength: hackmudLength(code), minLength: hackmudLength(minCode) }
-		
+
 								infoAll.push(info)
-		
+
 								await writeFile(resolvePath(hackmudPath, user, "scripts", script), minCode).catch(async error => {
 									if (error.code != "ENOENT")
 										throw error
-									
+
 									await mkDir(resolvePath(hackmudPath, user, "scripts"), { recursive: true })
 									await writeFile(resolvePath(hackmudPath, user, "scripts", script), minCode)
 								})
-		
+
 								callback?.(info)
 							})
 						}
@@ -263,7 +263,7 @@ export function push(srcPath: string, hackmudPath: string, users: string[], scri
 				}))
 			}
 		}
-	
+
 		if (!users.length)
 			users = (await readDir(hackmudPath, { withFileTypes: true }))
 				.filter(a => a.isFile() && extname(a.name) == ".key")
@@ -275,29 +275,29 @@ export function push(srcPath: string, hackmudPath: string, users: string[], scri
 			for (const file of files) {
 				if (file.isFile()) {
 					const extension = extname(file.name)
-	
+
 					if (extension == ".js") {
 						const name = basename(file.name, extension)
-	
+
 						if (!scripts.length || scripts.includes(name)) {
 							promises.push(readFile(resolvePath(srcPath, file.name), { encoding: "utf-8" }).then(async code => {
 								const minCode = await hackmudMinify(code)
 								const info: Info = { script: file.name, users: [], srcLength: hackmudLength(code), minLength: hackmudLength(minCode) }
-								
+
 								infoAll.push(info)
 
 								const skip = skips.get(name) || []
 
 								const promises: Promise<any>[] = []
-	
+
 								for (const user of users)
 									if (!skip.includes(user)) {
 										info.users.push(user)
-	
+
 										promises.push(writeFile(resolvePath(hackmudPath, user, "scripts", file.name), minCode).catch(async error => {
 											if (error.code != "ENOENT")
 												throw error
-											
+
 											await mkDir(resolvePath(hackmudPath, user, "scripts"), { recursive: true })
 											await writeFile(resolvePath(hackmudPath, user, "scripts", file.name), minCode)
 										}))
@@ -322,7 +322,7 @@ export function push(srcPath: string, hackmudPath: string, users: string[], scri
 
 /**
  * Copies script from hackmud to local source folder.
- * 
+ *
  * @param srcPath path to folder containing source files
  * @param hackmudPath path to hackmud directory
  * @param scriptName script to pull in `user.script` format
@@ -343,24 +343,30 @@ export async function pull(srcPath: string, hackmudPath: string, scriptName: str
 
 async function hackmudMinify(code: string) {
 	const anon_code = Date.now().toString(16)
+	let minifiedCode
 
-	const minifiedCode = (await minify(
-		code.replace(/function(?: \w+| )?\(/, `function script_${anon_code}(`)
-			.replace(/#(?:(?:f|h|m|l|n|[0-4])?s|db|G|FMCL)/g, a => a.replace("#", `_hash_${anon_code}_`)),
-			{
-				compress: {
-					arrows: false, // hackmud does not like this
-					keep_fargs: false,
-					negate_iife: false,
-					booleans_as_integers: true,
-					unsafe_undefined: true,
-					unsafe_comps: true,
-					unsafe_proto: true,
-					passes: 2,
-					ecma: 2017
+	try {
+		minifiedCode = (await minify(
+			code.replace(/function(?: \w+| )?\(/, `function script_${anon_code}(`)
+				.replace(/#(?:(?:f|h|m|l|n|[0-4])?s|db|G|FMCL|D)/g, a => a.replace("#", `_hash_${anon_code}_`)),
+				{
+					compress: {
+						arrows: false, // hackmud does not like this
+						keep_fargs: false,
+						negate_iife: false,
+						booleans_as_integers: true,
+						unsafe_undefined: true,
+						unsafe_comps: true,
+						unsafe_proto: true,
+						passes: 2,
+						ecma: 2017
+					}
 				}
-			}
-	)).code
+		)).code
+	} catch (error) {
+		// TODO handle errors properly, remove console.log
+		console.log(error)
+	}
 
 	if (minifiedCode)
 		return minifiedCode
@@ -376,7 +382,7 @@ function addAutocomplete(sourceCode: string, code: string) {
 
 	if (!match)
 		return code
-		
+
 	const autocomplete = (match[1] || match[2]).trim()
 	return code.replace(/function\s*\([^\)]*\){/, `$& // ${autocomplete}\n`)
 }
