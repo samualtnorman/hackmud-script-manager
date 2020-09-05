@@ -1,7 +1,7 @@
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { build, clear, pull, push, pushBuilt, watch } from ".."
+import { pull, push, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
 interface LooseObject<T = any> {
@@ -80,50 +80,6 @@ for (let arg of process.argv.slice(2)) {
 		help()
 	else
 		switch (commands[0]) {
-			case "build":
-				for (const { name, oldLength, minLength } of await build(commands[1] || "src", commands[2] || "dist"))
-					console.log(`built ${name} [saved ${oldLength - minLength} chars]`)
-
-				break
-
-			case "clear": {
-				const config = await getConfig()
-
-				if (config.hackmudPath) {
-					const target = commands[1] || "dist"
-					const user = commands[2] || config.defaultUser
-
-					if (user) {
-						const { pushedRemoved, targetRemoved } = await clear(target, config.hackmudPath, user)
-
-						console.log(`cleared ${targetRemoved} file(s) from ${target} and ${pushedRemoved} file(s) from ${user}`)
-					} else
-						console.log("set defaultUser in config first\nhsm config set defaultUser <user>")
-				} else
-					console.log("set hackmudPath in config first\nhsm config set hackmudPath <hackmud directory>")
-
-				break
-			}
-
-			case "push-built": {
-				const config = await getConfig()
-
-				if (config.hackmudPath) {
-					const target = commands[1] || "dist"
-					const user = commands[2] || config.defaultUser
-
-					if (user) {
-						const { pushedCount } = await pushBuilt(target, config.hackmudPath, user)
-
-						console.log(`pushed ${pushedCount} file(s) to ${user}`)
-					} else
-						console.log("set defaultUser in config first")
-				} else
-					console.log("set hackmudPath in config first")
-
-				break
-			}
-
 			case "push": {
 				const config = await getConfig()
 
@@ -140,21 +96,16 @@ for (let arg of process.argv.slice(2)) {
 						hackmudPath,
 						users,
 						scripts,
-						({ minLength, srcLength, users, script }) =>
-							users.length && console.log(
-								`wrote ${
-									bold(minLength.toString())
-								} chars from ${
-									dim(script)
-								} to ${
-									users.map(user =>
-										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
-									).join(", ")
-								} and saved ${
-										bold((srcLength - minLength).toString())
-								} chars`
-							)
+						({ file, users }) => users.length && console.log(
+							`pushed ${dim(file)} to ${
+								users.map(user =>
+									(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
+								).join(", ")
+							}`
+						)
 					)
+
+					updateConfig()
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
 
@@ -177,19 +128,13 @@ for (let arg of process.argv.slice(2)) {
 						hackmudPath,
 						users,
 						scripts,
-						({ minLength, srcLength, users, script }) => {
+						({ file, users }) => {
 							users.length && console.log(
-								`wrote ${
-									bold(minLength.toString())
-								} chars from ${
-									dim(script)
-								} to ${
+								`pushed ${dim(file)} to ${
 									users.map(user =>
 										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
 									).join(", ")
-								} and saved ${
-										bold((srcLength - minLength).toString())
-								} chars`
+								}`
 							)
 
 							updateConfig()
@@ -296,16 +241,34 @@ function help() {
 	switch (commands[0]) {
 		case "config":
 			switch (commands[1]) {
+				case "get":
+					console.log("hsm config get <key>")
+					break
 				case "set":
 					console.log("hsm config set <key> <value>")
+					break
+				case "delete":
+					console.log("hsm config delete <key>")
 					break
 				default:
 					console.log("hsm config <get, delete, set>")
 			}
+
 			break
+		case "push":
+			console.log("hsm push [dir]")
+			break
+		case "watch":
+			console.log("hsm watch [dir]")
+			break
+		case "pull":
+			console.log("hsm pull <user.script>")
+			break
+		// default:
+		// 	// console.log("hsm <build, clear, push, sync, watch, sync, config, help / h, version / v>")
+		// 	console.log(`${redBright("hsm")} <${yellowBright("command")}> [...${yellowBright("option")}s]\n\n${yellowBright("command")}s:\n  ${greenBright("build")} - ${blueBright("info")}\n  ${greenBright("clear")} - ${blueBright("info")}\n\n${yellowBright("option")}s:\n  help,    h - info\n  version, v - info`)
 		default:
-			// console.log("hsm <build, clear, push, sync, watch, sync, config, help / h, version / v>")
-			console.log(`${redBright("hsm")} <${yellowBright("command")}> [...${yellowBright("option")}s]\n\n${yellowBright("command")}s:\n  ${greenBright("build")} - ${blueBright("info")}\n  ${greenBright("clear")} - ${blueBright("info")}\n\n${yellowBright("option")}s:\n  help,    h - info\n  version, v - info`)
+			console.log("hsm <push, watch, pull, config>")
 	}
 }
 
@@ -319,11 +282,11 @@ async function getConfig() {
 
 	try {
 		config = JSON.parse(await readFile(configFile, { encoding: "utf-8" }))
-	} catch {
-		config = {}
-	} finally {
+
 		if (typeof config != "object")
 			config = {}
+	} catch {
+		config = {}
 	}
 
 	return config
