@@ -241,7 +241,7 @@ export async function minifyScript(script: string) {
 	// preprocessing
 	script = script
 		.replace(/function(?: \w+| )?\(/, `function script_${uid}(`)
-		.replace(/#([fhmln0-4]s|db|G|FMCL|D)/g, a => a.replace("#", `_hash_${uid}_`))
+		.replace(/#([fhmln0-4]s|db|G|FMCL|D)\.[\w\.]+\(/g, a => a.replace("#", `_hash_${uid}_`).replace(/\./g, `_dot_${uid}_`))
 
 	// compilation
 	script = transpileModule(script, {
@@ -280,6 +280,7 @@ export async function minifyScript(script: string) {
 	script = script
 		.replace(`script_${uid}`, "")
 		.replace(new RegExp(`_hash_${uid}_`, "g"), "#")
+		.replace(new RegExp(`_dot_${uid}_`, "g"), ".")
 
 	if (autocompleteMatch)
 		return script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
