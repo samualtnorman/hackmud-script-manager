@@ -241,7 +241,7 @@ export async function minifyScript(script: string) {
 	// preprocessing
 	script = script
 		.replace(/function(?: \w+| )?\(/, `function script_${uid}(`)
-		.replace(/#([fhmln0-4]s|db|G|FMCL|D)\.[\w\.]+\(/g, a => a.replace("#", `_hash_${uid}_`).replace(/\./g, `_dot_${uid}_`))
+		.replace(/#[\w.]+\(/g, a => a.replace("#", `_hash_${uid}_`).replace(/\./g, `_dot_${uid}_`))
 
 	// compilation
 	script = transpileModule(script, {
@@ -256,7 +256,7 @@ export async function minifyScript(script: string) {
 			compress: {
 				keep_fargs: false,
 				negate_iife: false,
-				booleans_as_integers: true,
+				// booleans_as_integers: true,
 				unsafe_undefined: true,
 				unsafe_comps: true,
 				unsafe_proto: true,
