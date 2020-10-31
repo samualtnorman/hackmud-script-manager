@@ -4,10 +4,6 @@ import { homedir as homeDir } from "os"
 import { pull, push, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
-interface LooseObject<T = any> {
-	[key: string]: T | undefined
-}
-
 // let o = ""
 
 // for (let key in c) {
@@ -37,10 +33,10 @@ const commands: string[] = []
 // 	}
 // }
 
-let config: LooseObject &  Partial<{
+let config: Record<string, any> &  Partial<{
 	hackmudPath: string
 	defaultUser: string
-	users: LooseObject<{
+	users: Record<string, {
 		colour: string
 	}>
 }> | undefined

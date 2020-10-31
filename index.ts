@@ -1,4 +1,4 @@
-import { readdir as readDir, writeFile, unlink, mkdir as mkDir, readFile, copyFile } from "fs/promises"
+import { readdir as readDir, writeFile, mkdir as mkDir, readFile, copyFile } from "fs/promises"
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
@@ -219,29 +219,33 @@ export async function pull(srcPath: string, hackmudPath: string, script: string)
  * @param script JavaScript or TypeScript code
  */
 export async function minifyScript(script: string) {
-	const uid = Date.now().toString(36)
+	// const uid = Date.now().toString(36)
 	const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
-	const scriptLines = script.split("\n")
+	// const scriptLines = script.split("\n")
 
-	for (let i = 0; i < scriptLines.length; i++) {
-		const line = scriptLines[i]
+	// for (let i = 0; i < scriptLines.length; i++) {
+	// 	const line = scriptLines[i]
 
-		if (/\s*function\s*\(/.exec(line)?.index == 0)
-			break
+	// 	if (/\s*function\s*\(/.exec(line)?.index == 0)
+	// 		break
 
-		if (!(!line || /[^\s]/.exec(line) == null || /\s*\/\//.exec(line)?.index == 0)) {
-			scriptLines.splice(i, 0, "function (context, args) {")
-			scriptLines.push("}")
-			break
-		}
-	}
+	// 	if (!(!line || /[^\s]/.exec(line) == null || /\s*\/\//.exec(line)?.index == 0)) {
+	// 		scriptLines.splice(i, 0, "function (context, args) {")
+	// 		scriptLines.push("}")
+	// 		break
+	// 	}
+	// }
 
-	script = scriptLines.join("\n")
+	// script = scriptLines.join("\n")
 
-	// preprocessing
+	// // preprocessing
+	// script = script
+	// 	.replace(/function(?: \w+| )?\(/, `function script_${uid}(`)
+	// 	.replace(/#[\w.]+\(/g, a => a.replace("#", `_hash_${uid}_`).replace(/\./g, `_dot_${uid}_`))
+
 	script = script
-		.replace(/function(?: \w+| )?\(/, `function script_${uid}(`)
-		.replace(/#[\w.]+\(/g, a => a.replace("#", `_hash_${uid}_`).replace(/\./g, `_dot_${uid}_`))
+		.replace("export ", "")
+		.replace(/\$([\w.]+\()/g, a => "$" + a.slice(1).replace(/\./g, "$"))
 
 	// compilation
 	script = transpileModule(script, {
@@ -276,11 +280,15 @@ export async function minifyScript(script: string) {
 		printWidth: Infinity
 	})
 
-	// postprocessing
+	// // postprocessing
+	// script = script
+	// 	.replace(`script_${uid}`, "")
+	// 	.replace(new RegExp(`_hash_${uid}_`, "g"), "#")
+	// 	.replace(new RegExp(`_dot_${uid}_`, "g"), ".")
+
 	script = script
-		.replace(`script_${uid}`, "")
-		.replace(new RegExp(`_hash_${uid}_`, "g"), "#")
-		.replace(new RegExp(`_dot_${uid}_`, "g"), ".")
+		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
+		.replace(/function ?\w+\(/, "function (")
 
 	if (autocompleteMatch)
 		return script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
