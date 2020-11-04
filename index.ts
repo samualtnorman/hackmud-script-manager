@@ -320,6 +320,28 @@ export async function syncMacros(hackmudPath: string) {
 	return { macrosSynced, usersSynced: users.length }
 }
 
+export async function test(srcPath: string) {
+	const promises: Promise<any>[] = []
+
+	const errors: {
+		file: string
+		error: any
+	}[] = []
+
+	for (const dirent of await readDir(srcPath, { withFileTypes: true }))
+		if (dirent.isDirectory()) {
+			for (const file of await readDir(resolvePath(srcPath, dirent.name), { withFileTypes: true }))
+				if (file.isFile() && supportedExtensions.includes(extname(file.name)))
+					promises.push(processScript(await readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" }))
+						.catch(error => errors.push({ error, file: `${dirent.name}/${file.name}` })))
+		} else if (dirent.isFile() && supportedExtensions.includes(extname(dirent.name)))
+			promises.push(processScript(await readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" })).catch(error => errors.push({ error, file: dirent.name })))
+
+	await Promise.all(promises)
+
+	return errors
+}
+
 /**
  * Minifies a given script
  *
