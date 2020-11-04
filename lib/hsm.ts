@@ -1,7 +1,7 @@
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { pull, push, syncMacros, watch } from ".."
+import { pull, push, syncMacros, test, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
 // let o = ""
@@ -181,6 +181,26 @@ for (let arg of process.argv.slice(2)) {
 					console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
+
+				break
+			}
+
+			case "test": {
+				const srcPath = resolvePath(commands[1] || ".")
+				let errors = 0
+
+				console.log(`testing scripts in ${srcPath}\n`)
+
+				for (const { file, error } of await test(srcPath)) {
+					console.log(`error "${error instanceof Error ? bold(error.message) : error}" in ${dim(file)}`)
+					errors++
+				}
+
+				if (errors) {
+					process.exitCode = 1
+					console.log(`\nencountered ${errors} errors`)
+				} else
+					console.log("no errors found")
 
 				break
 			}
