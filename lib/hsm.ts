@@ -1,7 +1,7 @@
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { pull, push, watch } from ".."
+import { pull, push, syncMacros, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
 // let o = ""
@@ -167,6 +167,18 @@ for (let arg of process.argv.slice(2)) {
 						}
 					} else
 						help()
+				} else
+					console.log("you need to set hackmudPath in config before you can use this command")
+
+				break
+			}
+
+			case "sync-macros": {
+				const { hackmudPath } = await getConfig()
+
+				if (hackmudPath) {
+					const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
+					console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
 
