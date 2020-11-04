@@ -9,7 +9,8 @@ interface Info {
 	file: string
 	users: string[]
 	// srcLength: number
-	// minLength: number
+	minLength: number
+	error: any
 }
 
 const supportedExtensions = [ ".js", ".ts" ]
@@ -51,10 +52,25 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 								skips.set(name, [ user ])
 
 							readFile(resolvePath(srcDir, user, file.name), { encoding: "utf-8" }).then(async code => {
-								const minCode = await minifyScript(code)
-								const info: Info = { file: `${user}/${file.name}`, users: [ user ] }
+								let error = null
+
+								const minCode = await processScript(code).catch(reason => {
+									error = reason
+									return ""
+								})
+
+								const info: Info = { file: `${user}/${file.name}`, users: [ user ], minLength: 0, error }
+
 								infoAll.push(info)
-								await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode)
+
+								if (!error) {
+									if (minCode) {
+										info.minLength = hackmudLength(minCode)
+										await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode)
+									} else
+										info.error = new Error("processed script was empty")
+								}
+
 								onPush?.(info)
 							})
 						}
@@ -80,17 +96,31 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 
 						if (!scripts.length || scripts.includes(name)) {
 							promises.push(readFile(resolvePath(srcDir, file.name), { encoding: "utf-8" }).then(async code => {
-								const minCode = await minifyScript(code)
-								const info: Info = { file: file.name, users: [] }
-								infoAll.push(info)
-								const skip = skips.get(name) || []
-								const promises: Promise<any>[] = []
+								let error = null
 
-								for (const user of users)
-									if (!skip.includes(user)) {
-										info.users.push(user)
-										promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
-									}
+								const minCode = await processScript(code).catch(reason => {
+									error = reason
+									return ""
+								})
+
+								const info: Info = { file: file.name, users: [], minLength: 0, error }
+
+								infoAll.push(info)
+
+								if (!error) {
+									if (minCode) {
+										info.minLength = hackmudLength(minCode)
+										const skip = skips.get(name) || []
+										const promises: Promise<any>[] = []
+
+										for (const user of users)
+											if (!skip.includes(user)) {
+												info.users.push(user)
+												promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
+											}
+									} else
+										info.error = new Error("processed script was empty")
+								}
 
 								if (onPush)
 									Promise.all(promises).then(() => onPush(info))
@@ -100,9 +130,7 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 				}
 			}
 
-			Promise.all(promises).then(() => {
-				resolve(infoAll)
-			})
+			Promise.all(promises).then(() => resolve(infoAll))
 		})
 	})
 }
@@ -129,45 +157,61 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 					const file = path
 
 					if (!scripts.length || scripts.includes(name)) {
-						const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
+						const code = await readFile(resolvePath(srcDir, file), { encoding: "utf-8" })
 						const skips = new Map<string, string[]>()
 						const promisesSkips: Promise<any>[] = []
 
-						for (const dir of await readDir(srcDir, { withFileTypes: true })) {
-							if (dir.isDirectory()) {
+						for (const dir of await readDir(srcDir, { withFileTypes: true }))
+							if (dir.isDirectory())
 								promisesSkips.push(readDir(resolvePath(srcDir, dir.name), { withFileTypes: true }).then(files => {
 									for (const file of files) {
-										if (file.isFile() && extname(file.name) == ".js") {
-											const name = basename(file.name, ".js")
-											const skip = skips.get(name)
+										if (file.isFile()) {
+											const ext = extname(file.name)
 
-											if (skip)
-												skip.push(dir.name)
-											else
-												skips.set(name, [ dir.name ])
+											if (supportedExtensions.includes(ext)) {
+												const name = basename(file.name, ext)
+												const skip = skips.get(name)
+
+												if (skip)
+													skip.push(dir.name)
+												else
+													skips.set(name, [ dir.name ])
+											}
 										}
 									}
 								}))
-							}
-						}
 
 						await Promise.all(promisesSkips)
 
-						const minCode = await minifyScript(code)
-						const info: Info = { file: path, users: [] }
-						const skip = skips.get(name) || []
+						let error = null
+
+						const minCode = await processScript(code).catch(reason => {
+							error = reason
+							return ""
+						})
+
+						const info: Info = { file, users: [], minLength: 0, error }
 						const promises: Promise<any>[] = []
 
-						if (!users.length)
-							users = (await readDir(hackmudDir, { withFileTypes: true }))
-								.filter(a => a.isFile() && extname(a.name) == ".key")
-								.map(a => basename(a.name, ".key"))
+						if (!error) {
+							if (minCode) {
+								const skip = skips.get(name) || []
 
-						for (const user of users)
-							if (!skip.includes(user)) {
-								info.users.push(user)
-								promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
-							}
+								info.minLength = hackmudLength(minCode)
+
+								if (!users.length)
+									users = (await readDir(hackmudDir, { withFileTypes: true }))
+										.filter(a => a.isFile() && extname(a.name) == ".key")
+										.map(a => basename(a.name, ".key"))
+
+								for (const user of users)
+									if (!skip.includes(user)) {
+										info.users.push(user)
+										promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
+									}
+							} else
+								info.error = new Error("processed script was empty")
+						}
 
 						if (onPush) {
 							await Promise.all(promises)
@@ -179,14 +223,32 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 				}
 
 				case 2: {
-					const [ user, file ] = parts
+					const [ user ] = parts
 
 					if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
 						const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
-						const minCode = await minifyScript(code)
-						const info: Info = { file: path, users: [ user ] }
+
+						let error = null
+
+						const minCode = await processScript(code).catch(reason => {
+							error = reason
+							return ""
+						})
+
+						const info: Info = { file: path, users: [ user ], minLength: 0, error }
 						const promises: Promise<any>[] = []
-						promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
+
+						if (!error) {
+							if (minCode) {
+								info.minLength = hackmudLength(minCode)
+								const promises: Promise<any>[] = []
+
+								for (const user of users)
+									info.users.push(user)
+									promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
+							} else
+								info.error = new Error("processed script was empty")
+						}
 
 						if (onPush) {
 							await Promise.all(promises)
@@ -218,30 +280,8 @@ export async function pull(srcPath: string, hackmudPath: string, script: string)
  *
  * @param script JavaScript or TypeScript code
  */
-export async function minifyScript(script: string) {
-	// const uid = Date.now().toString(36)
+export async function processScript(script: string) {
 	const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
-	// const scriptLines = script.split("\n")
-
-	// for (let i = 0; i < scriptLines.length; i++) {
-	// 	const line = scriptLines[i]
-
-	// 	if (/\s*function\s*\(/.exec(line)?.index == 0)
-	// 		break
-
-	// 	if (!(!line || /[^\s]/.exec(line) == null || /\s*\/\//.exec(line)?.index == 0)) {
-	// 		scriptLines.splice(i, 0, "function (context, args) {")
-	// 		scriptLines.push("}")
-	// 		break
-	// 	}
-	// }
-
-	// script = scriptLines.join("\n")
-
-	// // preprocessing
-	// script = script
-	// 	.replace(/function(?: \w+| )?\(/, `function script_${uid}(`)
-	// 	.replace(/#[\w.]+\(/g, a => a.replace("#", `_hash_${uid}_`).replace(/\./g, `_dot_${uid}_`))
 
 	script = script
 		.replace("export ", "")
@@ -279,12 +319,6 @@ export async function minifyScript(script: string) {
 		trailingComma: "none",
 		printWidth: Infinity
 	})
-
-	// // postprocessing
-	// script = script
-	// 	.replace(`script_${uid}`, "")
-	// 	.replace(new RegExp(`_hash_${uid}_`, "g"), "#")
-	// 	.replace(new RegExp(`_dot_${uid}_`, "g"), ".")
 
 	script = script
 		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
@@ -324,4 +358,8 @@ async function copyFilePersist(path: CopyFileParameters[0], dest: string, flags?
 				throw error
 		}
 	})
+}
+
+function hackmudLength(script: string) {
+	return script.replace(/[ \n\r]/g, "").length
 }
