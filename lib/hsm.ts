@@ -92,12 +92,18 @@ for (let arg of process.argv.slice(2)) {
 						hackmudPath,
 						users,
 						scripts,
-						({ file, users }) => users.length && console.log(
-							`pushed ${dim(file)} to ${
-								users.map(user =>
-									(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
-								).join(", ")
-							}`
+						({ file, users, error, minLength }) => users.length && console.log(
+							error
+								? `error "${
+									error instanceof Error
+										? bold(error.message)
+										: error
+								}" in ${dim(file)}`
+								: `pushed ${dim(file)} to ${
+									users.map(user =>
+										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
+									).join(", ")
+								} [${minLength} chars]`
 						)
 					)
 
@@ -124,17 +130,19 @@ for (let arg of process.argv.slice(2)) {
 						hackmudPath,
 						users,
 						scripts,
-						({ file, users }) => {
-							users.length && console.log(
-								`pushed ${dim(file)} to ${
+						({ file, users, error, minLength }) => users.length && console.log(
+							error
+								? `error "${
+									error instanceof Error
+										? bold(error.message)
+										: error
+								}" in ${dim(file)}`
+								: `pushed ${dim(file)} to ${
 									users.map(user =>
 										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
 									).join(", ")
-								}`
-							)
-
-							updateConfig()
-						}
+								} [${minLength} chars]`
+						)
 					)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
