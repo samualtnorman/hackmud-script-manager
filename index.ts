@@ -1,4 +1,4 @@
-import { readdir as readDir, writeFile, mkdir as mkDir, readFile, copyFile } from "fs/promises"
+import { readdir as readDir, writeFile, mkdir as mkDir, readFile, copyFile, stat } from "fs/promises"
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
@@ -273,6 +273,51 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 export async function pull(srcPath: string, hackmudPath: string, script: string) {
 	const [ user, name ] = script.split(".")
 	await copyFilePersist(resolvePath(hackmudPath, user, "scripts", `${name}.js`), resolvePath(srcPath, user, `${name}.js`))
+}
+
+export async function syncMacros(hackmudPath: string) {
+	const files = await readDir(hackmudPath, { withFileTypes: true })
+	const macros = new Map<string, { macro: string, date: Date }>()
+	const users: string[] = []
+
+	for (const file of files) {
+		if (file.isFile())
+			switch (extname(file.name)) {
+				case ".macros": {
+					const lines = (await readFile(resolvePath(hackmudPath, file.name), { encoding: "utf-8" })).split("\n")
+					const date = (await stat(resolvePath(hackmudPath, file.name))).mtime
+
+					for (let i = 0; i < lines.length / 2 - 1; i++) {
+						const macroName = lines[i * 2]
+						const curMacro = macros.get(macroName)
+
+						if (!curMacro || date > curMacro.date)
+							macros.set(macroName, { date, macro: lines[i * 2 + 1] })
+					}
+
+					break
+				}
+
+				case ".key": {
+					users.push(basename(file.name, ".key"))
+					break
+				}
+			}
+	}
+
+	let macroFile = ""
+	let macrosSynced = 0
+
+	for (const [ name, { macro } ] of [ ...macros ].sort(([ a ], [ b ]) => (a > b) - (a < b)))
+		if (macro[0] == macro[0].toLowerCase()) {
+			macroFile += `${name}\n${macro}\n`
+			macrosSynced++
+		}
+
+	for (const user of users)
+		writeFile(resolvePath(hackmudPath, user + ".macros"), macroFile)
+
+	return { macrosSynced, usersSynced: users.length }
 }
 
 /**
