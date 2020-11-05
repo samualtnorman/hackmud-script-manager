@@ -350,9 +350,12 @@ export async function test(srcPath: string) {
 export async function processScript(script: string) {
 	const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
 
+	if (script.startsWith("export function"))
+		script = script.replace("export ", "")
+
 	script = script
-		.replace("export ", "")
-		.replace(/\$([\w.]+\()/g, a => "$" + a.slice(1).replace(/\./g, "$"))
+		.replace(/[#\$]([\w.]+\()/g, a => "$" + a.slice(1).replace(/\./g, "$"))
+		.replace(/^function\s*\(/, "function script(")
 
 	// compilation
 	script = transpileModule(script, {
