@@ -150,113 +150,103 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 		if (supportedExtensions.includes(extension)) {
 			const name = basename(path, extension)
-			const parts = path.split("/")
+			const fileName = basename(path)
 
-			switch (parts.length) {
-				case 1: {
-					const file = path
+			if (path == fileName) {
+				if (!scripts.length || scripts.includes(name)) {
+					const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
+					const skips = new Map<string, string[]>()
+					const promisesSkips: Promise<any>[] = []
 
-					if (!scripts.length || scripts.includes(name)) {
-						const code = await readFile(resolvePath(srcDir, file), { encoding: "utf-8" })
-						const skips = new Map<string, string[]>()
-						const promisesSkips: Promise<any>[] = []
+					for (const dir of await readDir(srcDir, { withFileTypes: true }))
+						if (dir.isDirectory())
+							promisesSkips.push(readDir(resolvePath(srcDir, dir.name), { withFileTypes: true }).then(files => {
+								for (const file of files) {
+									if (file.isFile()) {
+										const ext = extname(file.name)
 
-						for (const dir of await readDir(srcDir, { withFileTypes: true }))
-							if (dir.isDirectory())
-								promisesSkips.push(readDir(resolvePath(srcDir, dir.name), { withFileTypes: true }).then(files => {
-									for (const file of files) {
-										if (file.isFile()) {
-											const ext = extname(file.name)
+										if (supportedExtensions.includes(ext)) {
+											const name = basename(file.name, ext)
+											const skip = skips.get(name)
 
-											if (supportedExtensions.includes(ext)) {
-												const name = basename(file.name, ext)
-												const skip = skips.get(name)
-
-												if (skip)
-													skip.push(dir.name)
-												else
-													skips.set(name, [ dir.name ])
-											}
+											if (skip)
+												skip.push(dir.name)
+											else
+												skips.set(name, [ dir.name ])
 										}
 									}
-								}))
+								}
+							}))
 
-						await Promise.all(promisesSkips)
+					await Promise.all(promisesSkips)
 
-						let error = null
+					let error = null
 
-						const minCode = await processScript(code).catch(reason => {
-							error = reason
-							return ""
-						})
+					const minCode = await processScript(code).catch(reason => {
+						error = reason
+						return ""
+					})
 
-						const info: Info = { file, users: [], minLength: 0, error }
-						const promises: Promise<any>[] = []
+					const info: Info = { file: path, users: [], minLength: 0, error }
+					const promises: Promise<any>[] = []
 
-						if (!error) {
-							if (minCode) {
-								const skip = skips.get(name) || []
+					if (!error) {
+						if (minCode) {
+							const skip = skips.get(name) || []
 
-								info.minLength = hackmudLength(minCode)
+							info.minLength = hackmudLength(minCode)
 
-								if (!users.length)
-									users = (await readDir(hackmudDir, { withFileTypes: true }))
-										.filter(a => a.isFile() && extname(a.name) == ".key")
-										.map(a => basename(a.name, ".key"))
+							if (!users.length)
+								users = (await readDir(hackmudDir, { withFileTypes: true }))
+									.filter(a => a.isFile() && extname(a.name) == ".key")
+									.map(a => basename(a.name, ".key"))
 
-								for (const user of users)
-									if (!skip.includes(user)) {
-										info.users.push(user)
-										promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
-									}
-							} else
-								info.error = new Error("processed script was empty")
-						}
-
-						if (onPush) {
-							await Promise.all(promises)
-							onPush(info)
-						}
-					}
-
-					break
-				}
-
-				case 2: {
-					const [ user ] = parts
-
-					if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
-						const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
-
-						let error = null
-
-						const minCode = await processScript(code).catch(reason => {
-							error = reason
-							return ""
-						})
-
-						const info: Info = { file: path, users: [ user ], minLength: 0, error }
-						const promises: Promise<any>[] = []
-
-						if (!error) {
-							if (minCode) {
-								info.minLength = hackmudLength(minCode)
-								const promises: Promise<any>[] = []
-
-								for (const user of users)
+							for (const user of users)
+								if (!skip.includes(user)) {
 									info.users.push(user)
 									promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
-							} else
-								info.error = new Error("processed script was empty")
-						}
-
-						if (onPush) {
-							await Promise.all(promises)
-							onPush(info)
-						}
+								}
+						} else
+							info.error = new Error("processed script was empty")
 					}
 
-					break
+					if (onPush) {
+						await Promise.all(promises)
+						onPush(info)
+					}
+				}
+			} else {
+				const user = basename(resolvePath(path, ".."))
+
+				if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
+					const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
+
+					let error = null
+
+					const minCode = await processScript(code).catch(reason => {
+						error = reason
+						return ""
+					})
+
+					const info: Info = { file: path, users: [ user ], minLength: 0, error }
+					const promises: Promise<any>[] = []
+
+					if (!error) {
+						if (minCode) {
+							info.minLength = hackmudLength(minCode)
+							const promises: Promise<any>[] = []
+
+							for (const user of users)
+								info.users.push(user)
+								promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
+						} else
+							info.error = new Error("processed script was empty")
+					}
+
+					if (onPush) {
+						await Promise.all(promises)
+						onPush(info)
+					}
 				}
 			}
 		}
