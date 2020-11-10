@@ -229,24 +229,15 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 					})
 
 					const info: Info = { file: path, users: [ user ], minLength: 0, error }
-					const promises: Promise<any>[] = []
 
-					if (!error) {
+					if (!error)
 						if (minCode) {
 							info.minLength = hackmudLength(minCode)
-							const promises: Promise<any>[] = []
-
-							for (const user of users)
-								info.users.push(user)
-								promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
+							await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode)
 						} else
 							info.error = new Error("processed script was empty")
-					}
 
-					if (onPush) {
-						await Promise.all(promises)
-						onPush(info)
-					}
+					onPush?.(info)
 				}
 			}
 		}
@@ -332,6 +323,10 @@ export async function test(srcPath: string) {
 	return errors
 }
 
+// export async function generateTypings(srcPath: string) {
+
+// }
+
 /**
  * Minifies a given script
  *
@@ -346,6 +341,7 @@ export async function processScript(script: string) {
 	script = script
 		.replace(/[#\$]([\w.]+\()/g, a => "$" + a.slice(1).replace(/\./g, "$"))
 		.replace(/^function\s*\(/, "function script(")
+		.replace(/#G[^\w]/g, "$G")
 
 	// compilation
 	script = transpileModule(script, {
@@ -383,6 +379,7 @@ export async function processScript(script: string) {
 	script = script
 		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
 		.replace(/function ?\w+\(/, "function (")
+		.replace(/\$G[^\w]/g, a => a.replace("$", "#"))
 
 	if (autocompleteMatch)
 		return script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
