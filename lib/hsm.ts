@@ -1,7 +1,7 @@
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
 import { resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { pull, push, syncMacros, test, watch } from ".."
+import { generateTypings, pull, push, syncMacros, test, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
 // let o = ""
@@ -124,6 +124,7 @@ for (let arg of process.argv.slice(2)) {
 					const scripts = options.get("scripts")?.toString().split(",") || []
 					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
 					const configUsers = config.users = config.users || {}
+					const genTypes = options.get("gen-types")?.toString()
 
 					watch(
 						srcPath,
@@ -142,7 +143,8 @@ for (let arg of process.argv.slice(2)) {
 										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
 									).join(", ")
 								} [${minLength} chars]`
-						)
+						),
+						{ genTypes }
 					)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
@@ -201,6 +203,20 @@ for (let arg of process.argv.slice(2)) {
 					console.log(`\nencountered ${errors} errors`)
 				} else
 					console.log("no errors found")
+
+				break
+			}
+
+			case "gen-types": {
+				const srcPath = resolvePath(commands[1] || ".")
+				let targetPath: string
+
+				if (commands[2])
+					targetPath = resolvePath(commands[2])
+				else
+					targetPath = resolvePath(srcPath, "../player.d.ts")
+
+				generateTypings(srcPath, targetPath, (await getConfig()).hackmudPath)
 
 				break
 			}
