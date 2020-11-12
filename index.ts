@@ -338,19 +338,28 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 				users.add(basename(dirent.name, ".key"))
 
 	const wildScripts: string[] = []
+	const wildAnyScripts: string[] = []
 	const allScripts: Record<string, string[]> = {}
+	const allAnyScripts: Record<string, string[]> = {}
 
 	for (const dirent of await readDir(srcDir, { withFileTypes: true }))
-		if (dirent.isFile() && extname(dirent.name) == ".ts")
-			wildScripts.push(basename(dirent.name, ".ts"))
-		else if (dirent.isDirectory()) {
+		if (dirent.isFile()) {
+			if (extname(dirent.name) == ".ts")
+				wildScripts.push(basename(dirent.name, ".ts"))
+			else if (extname(dirent.name) == ".js")
+				wildAnyScripts.push(basename(dirent.name, ".js"))
+		} else if (dirent.isDirectory()) {
 			const scripts: string[] = allScripts[dirent.name] = []
+			const anyScripts: string[] = allAnyScripts[dirent.name] = []
 
 			users.add(dirent.name)
 
 			for (const file of await readDir(resolvePath(srcDir, dirent.name), { withFileTypes: true }))
-				if (file.isFile() && extname(file.name) == ".ts")
-					scripts.push(basename(file.name, ".ts"))
+				if (file.isFile())
+					if (extname(file.name) == ".ts")
+						scripts.push(basename(file.name, ".ts"))
+					else if (extname(file.name) == ".js")
+						anyScripts.push(basename(file.name, ".js"))
 		}
 
 	let o = ""
@@ -378,18 +387,25 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 	for (const script of wildScripts)
 		o += `\t${script}: Subscript<typeof $${script}$>\n`
 
+	for (const script of wildAnyScripts)
+		o += `\t${script}: (...args: any) => any\n`
+
 	o += "}\n\nexport type PlayerFullsec = {"
 
 	for (const user of users) {
 		const scripts = allScripts[user]
+		const anyScripts = allAnyScripts[user]
 
 		o += `\n\t${user}: WildFullsec`
 
-		if (scripts && scripts.length) {
+		if ((scripts && scripts.length) || (anyScripts  && anyScripts.length)) {
 			o += " & {\n"
 
 			for (const script of scripts)
 				o += `\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
+
+			for (const script of anyScripts)
+				o += `\t\t${script}: (...args: any) => any\n`
 
 			o += "\t}"
 		}
