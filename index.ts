@@ -2,7 +2,7 @@ import { readdir as readDir, writeFile, mkdir as mkDir, readFile, copyFile, stat
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
-import { transpileModule, ScriptTarget } from "typescript"
+import { transpileModule, ScriptTarget, CompilerOptions, createProgram, createCompilerHost } from "typescript"
 import { format } from "prettier"
 
 interface Info {
@@ -144,8 +144,8 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
  * @param scripts scripts to push from (pushes from all if empty)
  * @param onPush function that's called after each script has been built and written
  */
-export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void) {
-	watchDir("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
+export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string } = {}) {
+	const watcher = watchDir("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
 		const extension = extname(path)
 
 		if (supportedExtensions.includes(extension)) {
@@ -242,6 +242,12 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 			}
 		}
 	})
+
+	if (genTypes) {
+		generateTypings(srcDir, resolvePath(srcDir, genTypes), hackmudDir)
+		watcher.on("add", () => generateTypings(srcDir, resolvePath(srcDir, genTypes), hackmudDir))
+		watcher.on("unlink", () => generateTypings(srcDir, resolvePath(srcDir, genTypes), hackmudDir))
+	}
 }
 
 /**
@@ -323,9 +329,85 @@ export async function test(srcPath: string) {
 	return errors
 }
 
-// export async function generateTypings(srcPath: string) {
+export async function generateTypings(srcDir: string, target: string, hackmudPath?: string) {
+	const users = new Set<string>()
 
-// }
+	if (hackmudPath)
+		for (const dirent of await readDir(hackmudPath, { withFileTypes: true }))
+			if (dirent.isFile() && extname(dirent.name) == ".key")
+				users.add(basename(dirent.name, ".key"))
+
+	const wildScripts: string[] = []
+	const allScripts: Record<string, string[]> = {}
+
+	for (const dirent of await readDir(srcDir, { withFileTypes: true }))
+		if (dirent.isFile() && extname(dirent.name) == ".ts")
+			wildScripts.push(basename(dirent.name, ".ts"))
+		else if (dirent.isDirectory()) {
+			const scripts: string[] = allScripts[dirent.name] = []
+
+			users.add(dirent.name)
+
+			for (const file of await readDir(resolvePath(srcDir, dirent.name), { withFileTypes: true }))
+				if (file.isFile() && extname(file.name) == ".ts")
+					scripts.push(basename(file.name, ".ts"))
+		}
+
+	let o = ""
+
+	for (const script of wildScripts)
+		o += `import { script as $${script}$ } from "src/${script}"\n`
+
+	o += "\n"
+
+	for (const user in allScripts) {
+		const scripts = allScripts[user]
+
+		for (const script of scripts)
+			o += `import { script as $${user}$${script}$ } from "src/${user}/${script}"\n`
+	}
+
+	o += `
+type Subscript<T extends (...args: any) => any> = Parameters<T>[1] extends undefined
+	? (args?: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
+	: (args?: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
+
+type WildFullsec = Record<string, () => ScriptFailure> & {
+`
+
+	for (const script of wildScripts)
+		o += `\t${script}: Subscript<typeof $${script}$>\n`
+
+	o += "}\n\nexport type PlayerFullsec = {"
+
+	for (const user of users) {
+		const scripts = allScripts[user]
+
+		o += `\n\t${user}: WildFullsec`
+
+		if (scripts && scripts.length) {
+			o += " & {\n"
+
+			for (const script of scripts)
+				o += `\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
+
+			o += "\t}"
+		}
+
+		o += "\n"
+	}
+
+	o += `\
+}
+
+export type PlayerHighsec = {}
+export type PlayerMidsec = {}
+export type PlayerLowsec = {}
+export type PlayerNullsec = {}
+`
+
+	await writeFile(target, o)
+}
 
 /**
  * Minifies a given script
