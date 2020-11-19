@@ -365,7 +365,7 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 	let o = ""
 
 	for (const script of wildScripts)
-		o += `import { script as $${script}$ } from "src/${script}"\n`
+		o += `import { script as $${script}$ } from "./src/${script}"\n`
 
 	o += "\n"
 
@@ -373,13 +373,13 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 		const scripts = allScripts[user]
 
 		for (const script of scripts)
-			o += `import { script as $${user}$${script}$ } from "src/${user}/${script}"\n`
+			o += `import { script as $${user}$${script}$ } from "./src/${user}/${script}"\n`
 	}
 
 	o += `
 type Subscript<T extends (...args: any) => any> = Parameters<T>[1] extends undefined
 	? (args?: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
-	: (args?: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
+	: (args: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
 
 type WildFullsec = Record<string, () => ScriptFailure> & {
 `
@@ -390,37 +390,30 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 	for (const script of wildAnyScripts)
 		o += `\t${script}: (...args: any) => any\n`
 
-	o += "}\n\nexport type PlayerFullsec = {"
+	o += "}\n\ndeclare global {\n\tinterface PlayerFullsec {"
 
 	for (const user of users) {
 		const scripts = allScripts[user]
 		const anyScripts = allAnyScripts[user]
 
-		o += `\n\t${user}: WildFullsec`
+		o += `\n\t\t${user}: WildFullsec`
 
 		if ((scripts && scripts.length) || (anyScripts  && anyScripts.length)) {
 			o += " & {\n"
 
 			for (const script of scripts)
-				o += `\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
+				o += `\t\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
 
 			for (const script of anyScripts)
-				o += `\t\t${script}: (...args: any) => any\n`
+				o += `\t\t\t${script}: (...args: any) => any\n`
 
-			o += "\t}"
+			o += "\t\t}"
 		}
 
-		o += "\n"
+		o += "\t\n"
 	}
 
-	o += `\
-}
-
-export type PlayerHighsec = {}
-export type PlayerMidsec = {}
-export type PlayerLowsec = {}
-export type PlayerNullsec = {}
-`
+	o += "\t}\n}\n"
 
 	await writeFile(target, o)
 }
