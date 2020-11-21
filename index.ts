@@ -2,7 +2,7 @@ import { readdir as readDir, writeFile, mkdir as mkDir, readFile, copyFile, stat
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
-import { transpileModule, ScriptTarget, CompilerOptions, createProgram, createCompilerHost } from "typescript"
+import { transpileModule, ScriptTarget } from "typescript"
 import { format } from "prettier"
 
 interface Info {
@@ -316,13 +316,22 @@ export async function test(srcPath: string) {
 	}[] = []
 
 	for (const dirent of await readDir(srcPath, { withFileTypes: true }))
-		if (dirent.isDirectory()) {
-			for (const file of await readDir(resolvePath(srcPath, dirent.name), { withFileTypes: true }))
-				if (file.isFile() && supportedExtensions.includes(extname(file.name)))
-					promises.push(processScript(await readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" }))
-						.catch(error => errors.push({ error, file: `${dirent.name}/${file.name}` })))
-		} else if (dirent.isFile() && supportedExtensions.includes(extname(dirent.name)))
-			promises.push(processScript(await readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" })).catch(error => errors.push({ error, file: dirent.name })))
+		if (dirent.isDirectory())
+			promises.push(readDir(resolvePath(srcPath, dirent.name), { withFileTypes: true }).then(files => {
+				const promises: Promise<any>[] = []
+
+				for (const file of files)
+					if (file.isFile() && supportedExtensions.includes(extname(file.name)))
+						promises.push(readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" }).then(code =>
+							processScript(code).catch(error => errors.push({ error, file: `${dirent.name}/${file.name}` }))
+						))
+
+				return Promise.all(promises)
+			}))
+		else if (dirent.isFile() && supportedExtensions.includes(extname(dirent.name)))
+			promises.push(readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" }).then(code =>
+				processScript(code).catch(error => errors.push({ error, file: dirent.name }))
+			))
 
 	await Promise.all(promises)
 
@@ -443,18 +452,16 @@ export async function processScript(script: string) {
 	}).outputText
 
 	// minification
-	script = (await minify(script, {
-			compress: {
-				keep_fargs: false,
-				negate_iife: false,
-				// booleans_as_integers: true,
-				unsafe_undefined: true,
-				unsafe_comps: true,
-				unsafe_proto: true,
-				passes: 2,
-				ecma: 2017
-			}
-	})).code || ""
+	script = (await minify(script, { compress: {
+		keep_fargs: false,
+		negate_iife: false,
+		// booleans_as_integers: true,
+		unsafe_undefined: true,
+		unsafe_comps: true,
+		unsafe_proto: true,
+		passes: 2,
+		ecma: 2017
+	} })).code || ""
 
 	// extra formatting to get the non whitespace character count lower
 	script = format(script, {
