@@ -386,7 +386,7 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 	}
 
 	o += `
-type Subscript<T extends (...args: any) => any> = Parameters<T>[1] extends undefined
+type Subscript<T extends (...args: any) => any> = undefined extends Parameters<T>[1]
 	? (args?: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
 	: (args: Parameters<T>[1]) => ReturnType<T> | ScriptFailure
 
