@@ -435,12 +435,9 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 export async function processScript(script: string) {
 	const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
 
-	if (script.startsWith("export function"))
-		script = script.replace("export ", "")
-
 	script = script
 		.replace(/[#\$]([\w.]+\()/g, a => "$" + a.slice(1).replace(/\./g, "$"))
-		.replace(/^function\s*\(/, "function script(")
+		.replace(/function\s*\(/, "function script(")
 		.replace(/#G[^\w]/g, "$G")
 
 	// compilation
@@ -450,6 +447,8 @@ export async function processScript(script: string) {
 			strict: false
 		}
 	}).outputText
+
+	script = script.replace(/^export /, "")
 
 	// minification
 	script = (await minify(script, { compress: {
