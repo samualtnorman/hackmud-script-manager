@@ -1,7 +1,7 @@
 {
 	"name": "hackmud-script-manager",
-	"version": "0.8.3",
-	"description": "",
+	"version": "0.8.5",
+	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"main": "index.js",
 	"bin": {
 		"hsm": "bin/hsm"
@@ -11,18 +11,17 @@
 		"lib/hsm.js"
 	],
 	"scripts": {
-		"build": "npx tsc",
-		"watch": "npx tsc --watch"
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"test": "tsc --noEmit"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/samualtnorman/hackmud-script-manager.git"
+		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"author": "Samual Norman",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/samualtnorman/hackmud-script-manager/issues"
-	},
+	"license": "GPL-3.0-or-later",
+	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
 	"dependencies": {
 		"ansi-colors": "^4.1.1",
@@ -33,16 +32,21 @@
 	},
 	"devDependencies": {
 		"@types/node": "^14.14.10",
-		"@types/prettier": "^2.1.0"
+		"@types/prettier": "^2.1.0",
+		"@types/semver": "^7.3.4",
+		"semver": "^7.3.4"
 	},
 	"keywords": [
+		"api",
+		"command-line",
+		"script",
+		"manager",
+		"minification",
+		"minifier",
+		"hackmd",
 		"hackmud",
-		"minify",
-		"javascript",
-		"typescript",
-		"manage",
-		"scripts",
-		"command",
-		"api"
+		"javascipt",
+		"typescipt",
+		"typescript-support"
 	]
 }
