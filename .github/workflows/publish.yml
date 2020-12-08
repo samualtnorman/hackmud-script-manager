@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2.3.4
-    - uses: actions/setup-node@setup-node@v2.1.2
+    - uses: actions/setup-node@v2.1.2
 
     - run: npm install
     - run: npm run build
