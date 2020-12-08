@@ -6,9 +6,11 @@ Promise.all([
 		.then(JSON.parse)
 		.then(({ version }: { version: string }) => version),
 	execute("git rev-parse --short HEAD")
-		.then(({ stdout }) => stdout)
+		.then(({ stdout }) => stdout.trim())
 ]).then(([ version, hash ]) =>
-	execute(`npm version ${version}-${hash}`).then(console.log, console.log)
+	execute(`npm version ${version}-${hash}`)
+		.then(({ stdout }) => stdout)
+		.then(console.log)
 )
 
 function execute(command: string) {
