@@ -27,5 +27,7 @@ jobs:
         env: 
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - run: export hash=$(git rev-parse --short HEAD)
-      - run: npm publish --tag $hash
+      - run: |
+          npm version minor
+          node scripts/set-version-hash
+          npm publish --tag dev
