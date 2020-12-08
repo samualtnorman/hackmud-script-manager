@@ -1,7 +1,7 @@
 {
 	"name": "hackmud-script-manager",
 	"version": "0.8.3",
-	"description": "",
+	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"main": "index.js",
 	"bin": {
 		"hsm": "bin/hsm"
@@ -16,10 +16,10 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/samualtnorman/hackmud-script-manager.git"
+		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"author": "Samual Norman",
-	"license": "MIT",
+	"license": "GPL-3.0-or-later",
 	"bugs": {
 		"url": "https://github.com/samualtnorman/hackmud-script-manager/issues"
 	},
@@ -36,13 +36,16 @@
 		"@types/prettier": "^2.1.0"
 	},
 	"keywords": [
+		"api",
+		"command-line",
+		"script",
+		"manager",
+		"minification",
+		"minifier",
+		"hackmd",
 		"hackmud",
-		"minify",
-		"javascript",
-		"typescript",
-		"manage",
-		"scripts",
-		"command",
-		"api"
+		"javascipt",
+		"typescipt",
+		"typescript-support "
 	]
 }
