@@ -1,5 +1,5 @@
 # hackmud-script-manager
-![Build Test](https://github.com/samualtnorman/hackmud-script-manager/workflows/Build%20Test/badge.svg)
+![Build Test](../../workflows/Build/badge.svg)
 
 Command made for [hackmud-environment](https://github.com/samualtnorman/hackmud-environment), which is a scripting environment for hackmud with minification, autocompletes / intellisense, and TypeScript support.
 
