@@ -14,4 +14,9 @@ jobs:
 
     - run: npm install
     - run: npm run build
-    - run: node workflows/publish
+    - run: node workflows/version-hash
+    - run: |
+        npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+        npm publish --ignore-scripts
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
