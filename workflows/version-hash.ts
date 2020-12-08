@@ -7,7 +7,6 @@ const hash = execute("git rev-parse HEAD").then(({ stdout }) => stdout.slice(0, 
 
 Promise.all([ packageJSON, hash ]).then(async ([ packageJSON, hash ]) => {
 	await execute(`npm version ${packageJSON.version}-${hash}`).then(console.log, console.log)
-	await execute(`npm publish`).then(console.log, console.log)
 })
 
 function execute(command: string) {
