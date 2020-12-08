@@ -33,7 +33,9 @@
 	},
 	"devDependencies": {
 		"@types/node": "^14.14.10",
-		"@types/prettier": "^2.1.0"
+		"@types/prettier": "^2.1.0",
+		"@types/semver": "^7.3.4",
+		"semver": "^7.3.4"
 	},
 	"keywords": [
 		"api",
