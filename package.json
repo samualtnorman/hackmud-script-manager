@@ -12,7 +12,8 @@
 	],
 	"scripts": {
 		"build": "tsc",
-		"watch": "tsc --watch"
+		"dev": "tsc --watch",
+		"test": "tsc --noEmit"
 	},
 	"repository": {
 		"type": "git",
@@ -20,9 +21,7 @@
 	},
 	"author": "Samual Norman",
 	"license": "GPL-3.0-or-later",
-	"bugs": {
-		"url": "https://github.com/samualtnorman/hackmud-script-manager/issues"
-	},
+	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
 	"dependencies": {
 		"ansi-colors": "^4.1.1",
@@ -48,6 +47,6 @@
 		"hackmud",
 		"javascipt",
 		"typescipt",
-		"typescript-support "
+		"typescript-support"
 	]
 }
