@@ -21,8 +21,10 @@ jobs:
       - run: npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
         env: 
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
+      - run: npm version minor
+        continue-on-error: true
 
       - run: |
-          npm version minor
           node scripts/set-version-hash
           npm publish --tag dev
