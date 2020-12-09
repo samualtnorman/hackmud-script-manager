@@ -34,6 +34,6 @@ jobs:
         node scripts/version-dev
         npm publish --tag dev
 
-    - name: Publish
+    - name: Publish release
       if: github.event_name == 'release'
       run: npm publish
