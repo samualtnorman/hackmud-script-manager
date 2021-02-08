@@ -17,7 +17,6 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    if: "github.event_name == 'pull_request' ? github.event.pull_request.merged : true"
 
     steps:
     - uses: actions/checkout@v2
@@ -34,7 +33,7 @@ jobs:
     - run: npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
 
     - name: Publish dev
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || github.event_name == 'pull_request' && github.event.pull_request.merged
       run: |
         node scripts/version-dev
         npm publish --tag dev
