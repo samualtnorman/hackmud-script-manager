@@ -6,6 +6,4 @@ Command made for [hackmud-environment](https://github.com/samualtnorman/hackmud-
 Install with `npm install hackmud-script-manager -g` to make the `hsm` command available everywhere.
 Or use `npm install hackmud-script-manager` without the `-g` option if you are using the API, or only need the command in your project.
 
-I'll write a proper README at some point.
-
 The internal API is also exposed for programmatic use.
