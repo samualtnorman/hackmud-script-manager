@@ -4,12 +4,8 @@
 	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"main": "index.js",
 	"bin": {
-		"hsm": "bin/hsm"
+		"hsm": "bin/hsm.js"
 	},
-	"files": [
-		"bin/hsm",
-		"lib/hsm.js"
-	],
 	"scripts": {
 		"build": "tsc",
 		"dev": "tsc --watch",
