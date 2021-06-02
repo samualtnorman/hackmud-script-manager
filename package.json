@@ -3,6 +3,9 @@
 	"version": "0.8.5",
 	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"main": "index.js",
+	"files": [
+		"index.d.ts"
+	],
 	"bin": {
 		"hsm": "bin/hsm.js"
 	},
