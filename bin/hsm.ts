@@ -22,8 +22,8 @@ import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBr
 
 type ArgValue = boolean | number | string/* | ArgValue[]*/
 
-const configDir = resolvePath(homeDir(), ".config")
-const configFile = resolvePath(configDir, "hsm.json")
+const configDirPath = resolvePath(homeDir(), ".config")
+const configFilePath = resolvePath(configDirPath, "hsm.json")
 
 const options = new Map<string, ArgValue>()
 const commands: string[] = []
@@ -111,9 +111,7 @@ for (let arg of process.argv.slice(2)) {
 					updateConfig()
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
-
-				break
-			}
+			} break
 
 			case "watch": {
 				const config = await getConfig()
@@ -333,16 +331,28 @@ async function getConfig() {
 	if (config)
 		return config
 
-	try {
-		config = JSON.parse(await readFile(configFile, { encoding: "utf-8" }))
+	return config = await readFile(configFilePath, { encoding: "utf-8" })
+		.then(configFile => {
+			let tempConfig
 
-		if (typeof config != "object")
-			config = {}
-	} catch {
-		config = {}
-	}
+			try {
+				tempConfig = JSON.parse(configFile)
+			} catch {
+				// TODO log to error log file
+				console.log("config file was corrupted, resetting")
+				return {}
+			}
 
-	return config
+			if (!tempConfig || typeof tempConfig != "object") {
+				console.log("config file was corrupted, resetting")
+				return {}
+			}
+
+			return tempConfig
+		}, () => {
+			console.log(`creating config file at ${configFilePath}`)
+			return {}
+		})
 }
 
 function exploreObject(object: any, keys: string[], createPath = false) {
@@ -359,19 +369,19 @@ function updateConfig() {
 	if (config) {
 		const json = JSON.stringify(config)
 
-		writeFile(configFile, json).catch(async error => {
+		writeFile(configFilePath, json).catch(async error => {
 			switch (error.code) {
 				case "EISDIR":
-					await rmDir(configFile)
+					await rmDir(configFilePath)
 					break
 				case "ENOENT":
-					await mkDir(configDir)
+					await mkDir(configDirPath)
 					break
 				default:
 					throw error
 			}
 
-			writeFile(configFile, json)
+			writeFile(configFilePath, json)
 		})
 	}
 }
