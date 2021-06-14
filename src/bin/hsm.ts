@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
-import { resolve as resolvePath } from "path"
+import { basename, extname, resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
 import { generateTypings, pull, push, syncMacros, test, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
@@ -93,18 +93,18 @@ for (let arg of process.argv.slice(2)) {
 						hackmudPath,
 						users,
 						scripts,
-						({ file, users, error, minLength }) => users.length && console.log(
+						({ file, users, error, minLength, srcLength }) => users.length && console.log(
 							error
 								? `error "${
 									error instanceof Error
 										? bold(error.message)
 										: error
 								}" in ${dim(file)}`
-								: `pushed ${dim(file)} to ${
+								: `pushed ${bold(file)} to ${
 									users.map(user =>
-										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
+										bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
 									).join(", ")
-								} [${minLength} chars]`
+								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} chars | ${bold(`${Math.round(((srcLength / minLength) - 1) * 100)}%`)} compression | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
 						)
 					)
 
@@ -130,18 +130,18 @@ for (let arg of process.argv.slice(2)) {
 						hackmudPath,
 						users,
 						scripts,
-						({ file, users, error, minLength }) => users.length && console.log(
+						({ file, users, error, minLength, srcLength }) => users.length && console.log(
 							error
 								? `error "${
 									error instanceof Error
 										? bold(error.message)
 										: error
 								}" in ${dim(file)}`
-								: `pushed ${dim(file)} to ${
+								: `pushed ${bold(file)} to ${
 									users.map(user =>
-										(configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour
+										bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
 									).join(", ")
-								} [${minLength} chars]`
+								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} chars | ${bold(`${Math.round(((srcLength / minLength) - 1) * 100)}%`)} compression | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
 						),
 						{ genTypes }
 					)

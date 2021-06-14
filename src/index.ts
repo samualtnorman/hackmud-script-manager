@@ -3,12 +3,11 @@ import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
 import { transpileModule, ScriptTarget } from "typescript"
-import { format } from "prettier"
 
 interface Info {
 	file: string
 	users: string[]
-	// srcLength: number
+	srcLength: number
 	minLength: number
 	error: any
 }
@@ -54,12 +53,22 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 							readFile(resolvePath(srcDir, user, file.name), { encoding: "utf-8" }).then(async code => {
 								let error = null
 
-								const minCode = await processScript(code).catch(reason => {
+								const { srcLength, script: minCode } = await processScript(code).catch(reason => {
 									error = reason
-									return ""
+
+									return {
+										srcLength: 0,
+										script: ""
+									}
 								})
 
-								const info: Info = { file: `${user}/${file.name}`, users: [ user ], minLength: 0, error }
+								const info: Info = {
+									file: `${user}/${file.name}`,
+									users: [ user ],
+									minLength: 0,
+									error,
+									srcLength
+								}
 
 								infoAll.push(info)
 
@@ -98,12 +107,22 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 							promises.push(readFile(resolvePath(srcDir, file.name), { encoding: "utf-8" }).then(async code => {
 								let error = null
 
-								const minCode = await processScript(code).catch(reason => {
+								const { script: minCode, srcLength } = await processScript(code).catch(reason => {
 									error = reason
-									return ""
+
+									return {
+										script: "",
+										srcLength: 0
+									}
 								})
 
-								const info: Info = { file: file.name, users: [], minLength: 0, error }
+								const info: Info = {
+									file: file.name,
+									users: [],
+									minLength: 0,
+									error,
+									srcLength
+								}
 
 								infoAll.push(info)
 
@@ -182,12 +201,23 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 					let error = null
 
-					const minCode = await processScript(code).catch(reason => {
+					const { script: minCode, srcLength } = await processScript(code).catch(reason => {
 						error = reason
-						return ""
+
+						return {
+							script: "",
+							srcLength: 0
+						}
 					})
 
-					const info: Info = { file: path, users: [], minLength: 0, error }
+					const info: Info = {
+						file: path,
+						users: [],
+						minLength: 0,
+						error,
+						srcLength
+					}
+
 					const promises: Promise<any>[] = []
 
 					if (!error) {
@@ -223,12 +253,22 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 					let error = null
 
-					const minCode = await processScript(code).catch(reason => {
+					const { script: minCode, srcLength } = await processScript(code).catch(reason => {
 						error = reason
-						return ""
+
+						return {
+							script: "",
+							srcLength: 0
+						}
 					})
 
-					const info: Info = { file: path, users: [ user ], minLength: 0, error }
+					const info: Info = {
+						file: path,
+						users: [ user ],
+						minLength: 0,
+						error,
+						srcLength
+					}
 
 					if (!error)
 						if (minCode) {
@@ -445,44 +485,52 @@ export async function processScript(script: string) {
 	script = transpileModule(script, {
 		compilerOptions: {
 			target: ScriptTarget.ES2015,
-			strict: false
+			strict: true
 		}
 	}).outputText
 
 	script = script.replace(/^export /, "")
 
-	// minification
-	script = (await minify(script, { compress: {
-		keep_fargs: false,
-		negate_iife: false,
-		// booleans_as_integers: true,
-		unsafe_undefined: true,
-		unsafe_comps: true,
-		unsafe_proto: true,
-		passes: 2,
-		ecma: 2017
-	} })).code || ""
+	const transpiledSource = script.replace(/^function ?\w+\(/, "function (")
+	const srcLength = hackmudLength(transpiledSource)
 
-	// extra formatting to get the non whitespace character count lower
-	script = format(script, {
-		semi: false,
-		parser: "babel",
-		arrowParens: "avoid",
-		bracketSpacing: false,
-		tabWidth: 0,
-		trailingComma: "none",
-		printWidth: Infinity
-	})
+	// minification
+	script = (await minify(script, {
+		ecma: 2015,
+		compress: {
+			booleans_as_integers: true,
+			passes: Infinity,
+			unsafe: true,
+			unsafe_arrows: true,
+			unsafe_comps: true,
+			unsafe_symbols: true,
+			unsafe_methods: true,
+			unsafe_proto: true,
+			unsafe_regexp: true,
+			unsafe_undefined: true
+		},
+		format: {
+			semicolons: false
+		}
+	})).code || ""
+
+	script = script
+		.replace(/function ?\w+\(/, "function (")
+
+	if (script.length > transpiledSource.length)
+		script = transpiledSource
 
 	script = script
 		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
-		.replace(/function ?\w+\(/, "function (")
 		.replace(/\$G[^\w]/g, a => a.replace("$", "#"))
 
 	if (autocompleteMatch)
-		return script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
+		script = script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
 
-	return script
+	return {
+		srcLength,
+		script
+	}
 }
 
 type WriteFileParameters = Parameters<typeof writeFile>
