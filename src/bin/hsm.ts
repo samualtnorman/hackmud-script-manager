@@ -5,21 +5,6 @@ import { homedir as homeDir } from "os"
 import { generateTypings, pull, push, syncMacros, test, watch } from ".."
 import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
 
-// let o = ""
-
-// for (let key in c) {
-// 	if (![ "alias", "theme", "define", "create", "hasAnsi", "hasColor", "unstyle", "noop", "noop", "clear", "none", "stripColor", "reset", "gray" ].includes(key)) {
-// 		const value: any = c[key]
-
-// 		if (typeof value == "function")
-// 			o += value(key) + " "
-// 	}
-// }
-
-// console.log(o)
-
-// console.log(c.redBright("test"), c.redBright.dim("test"), c.red("test"), c.red.dim("test"))
-
 type ArgValue = boolean | number | string/* | ArgValue[]*/
 
 const configDirPath = resolvePath(homeDir(), ".config")
@@ -27,12 +12,6 @@ const configFilePath = resolvePath(configDirPath, "hsm.json")
 
 const options = new Map<string, ArgValue>()
 const commands: string[] = []
-
-// const helpConfig = {
-// 	config: {
-// 		set: [ "key", "value" ]
-// 	}
-// }
 
 let config: Record<string, any> &  Partial<{
 	hackmudPath: string
@@ -315,9 +294,6 @@ function help() {
 		case "pull":
 			console.log("hsm pull <user.script>")
 			break
-		// default:
-		// 	// console.log("hsm <build, clear, push, sync, watch, sync, config, help / h, version / v>")
-		// 	console.log(`${redBright("hsm")} <${yellowBright("command")}> [...${yellowBright("option")}s]\n\n${yellowBright("command")}s:\n  ${greenBright("build")} - ${blueBright("info")}\n  ${greenBright("clear")} - ${blueBright("info")}\n\n${yellowBright("option")}s:\n  help,    h - info\n  version, v - info`)
 		default:
 			console.log("hsm <push, watch, pull, config>")
 	}
