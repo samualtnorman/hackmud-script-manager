@@ -14,6 +14,9 @@ interface Info {
 
 const supportedExtensions = [ ".js", ".ts" ]
 
+// TODO `clean()` function that delete all scripts in hackmud directory #70
+// TODO optional argument (defaults to false) for `clean()` that makes it only remove scripts without a source file #70
+
 /**
  * Push a specific or all scripts to a specific or all users.
  * In source directory, scripts in folders will override scripts with same name for user with folder name.
@@ -347,6 +350,7 @@ export async function syncMacros(hackmudPath: string) {
 	return { macrosSynced, usersSynced: users.length }
 }
 
+// BUG does not detect syntax errors #40
 export async function test(srcPath: string) {
 	const promises: Promise<any>[] = []
 
