@@ -399,17 +399,19 @@ export async function test(srcPath: string) {
 export async function generateTypings(srcDir: string, target: string, hackmudPath?: string) {
 	const users = new Set<string>()
 
-	if (hackmudPath)
-		for (const dirent of await readDir(hackmudPath, { withFileTypes: true }))
+	if (hackmudPath) {
+		for (const dirent of await readDir(hackmudPath, { withFileTypes: true })) {
 			if (dirent.isFile() && extname(dirent.name) == ".key")
 				users.add(basename(dirent.name, ".key"))
+		}
+	}
 
 	const wildScripts: string[] = []
 	const wildAnyScripts: string[] = []
 	const allScripts: Record<string, string[]> = {}
 	const allAnyScripts: Record<string, string[]> = {}
 
-	for (const dirent of await readDir(srcDir, { withFileTypes: true }))
+	for (const dirent of await readDir(srcDir, { withFileTypes: true })) {
 		if (dirent.isFile()) {
 			if (extname(dirent.name) == ".ts")
 				wildScripts.push(basename(dirent.name, ".ts"))
@@ -421,13 +423,16 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 
 			users.add(dirent.name)
 
-			for (const file of await readDir(resolvePath(srcDir, dirent.name), { withFileTypes: true }))
-				if (file.isFile())
+			for (const file of await readDir(resolvePath(srcDir, dirent.name), { withFileTypes: true })) {
+				if (file.isFile()) {
 					if (extname(file.name) == ".ts")
 						scripts.push(basename(file.name, ".ts"))
 					else if (extname(file.name) == ".js")
 						anyScripts.push(basename(file.name, ".js"))
+				}
+			}
 		}
+	}
 
 	let o = ""
 
@@ -442,6 +447,12 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 		for (const script of scripts)
 			o += `import { script as $${user}$${script}$ } from "./src/${user}/${script}"\n`
 	}
+
+	// TODO detect security level and generate apropriate code
+
+	// TODO accurate function signatures
+	// currently I lose the generic-ness of my functions when I wrap them
+	// just regexing isn't enough and it looks like I'm going to need to parse the files in TypeScript to extract the signature
 
 	o += `
 type ArrayRemoveFirst<A> = A extends [ infer FirstItem, ...infer Rest ] ? Rest : never
@@ -460,14 +471,16 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 
 	o += "}\n\ndeclare global {\n\tinterface PlayerFullsec {"
 
+	let lastWasMultiLine = true
+
 	for (const user of users) {
 		const scripts = allScripts[user]
 		const anyScripts = allAnyScripts[user]
 
-		o += `\n\t\t${user}: WildFullsec`
-
 		if ((scripts && scripts.length) || (anyScripts  && anyScripts.length)) {
-			o += " & {\n"
+			lastWasMultiLine = true
+
+			o += `\n\t\t${user}: WildFullsec & {\n`
 
 			for (const script of scripts)
 				o += `\t\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
@@ -476,9 +489,16 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 				o += `\t\t\t${script}: (...args: any) => any\n`
 
 			o += "\t\t}"
+		} else {
+			if (lastWasMultiLine) {
+				o += "\n"
+				lastWasMultiLine = false
+			}
+
+			o += `\t\t${user}: WildFullsec`
 		}
 
-		o += "\t\n"
+		o += "\n"
 	}
 
 	o += "\t}\n}\n"
