@@ -523,7 +523,6 @@ export async function processScript(script: string) {
 	const { outputText, diagnostics = [] } = transpileModule(script, {
 		compilerOptions: {
 			target: ScriptTarget.ES2015,
-			strict: true,
 			removeComments: true
 		},
 		reportDiagnostics: true
