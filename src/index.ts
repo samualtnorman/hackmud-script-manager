@@ -350,32 +350,46 @@ export async function syncMacros(hackmudPath: string) {
 	return { macrosSynced, usersSynced: users.length }
 }
 
-// BUG does not detect syntax errors #40
 export async function test(srcPath: string) {
 	const promises: Promise<any>[] = []
 
 	const errors: {
 		file: string
-		error: any
+		message: string
+		line: number
 	}[] = []
 
-	for (const dirent of await readDir(srcPath, { withFileTypes: true }))
-		if (dirent.isDirectory())
+	for (const dirent of await readDir(srcPath, { withFileTypes: true })) {
+		if (dirent.isDirectory()) {
 			promises.push(readDir(resolvePath(srcPath, dirent.name), { withFileTypes: true }).then(files => {
 				const promises: Promise<any>[] = []
 
-				for (const file of files)
-					if (file.isFile() && supportedExtensions.includes(extname(file.name)))
+				for (const file of files) {
+					if (file.isFile() && supportedExtensions.includes(extname(file.name))) {
 						promises.push(readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" }).then(code =>
-							processScript(code).catch(error => errors.push({ error, file: `${dirent.name}/${file.name}` }))
+							processScript(code).then(({ warnings }) =>
+								errors.push(...warnings.map(({ message, line }) => ({
+									file: `${dirent.name}/${file.name}`,
+									message, line
+								})))
+							)
 						))
+					}
+				}
 
 				return Promise.all(promises)
 			}))
-		else if (dirent.isFile() && supportedExtensions.includes(extname(dirent.name)))
+		} else if (dirent.isFile() && supportedExtensions.includes(extname(dirent.name))) {
 			promises.push(readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" }).then(code =>
-				processScript(code).catch(error => errors.push({ error, file: dirent.name }))
+				processScript(code).then(({ warnings }) =>
+					errors.push(...warnings.map(({ message, line }) => ({
+						file: dirent.name,
+						message, line
+					})))
+				)
 			))
+		}
+	}
 
 	await Promise.all(promises)
 
@@ -486,14 +500,20 @@ export async function processScript(script: string) {
 		.replace(/#G[^\w]/g, "$G")
 
 	// compilation
-	script = transpileModule(script, {
+	const { outputText, diagnostics = [] } = transpileModule(script, {
 		compilerOptions: {
 			target: ScriptTarget.ES2015,
 			strict: true
-		}
-	}).outputText
+		},
+		reportDiagnostics: true
+	})
 
-	script = script.replace(/^export /, "")
+	const warnings = diagnostics.map(({ messageText, start }) => ({
+		message: typeof messageText == "string" ? messageText : messageText.messageText,
+		line: positionToLineNumber(start!, script)
+	}))
+
+	script = outputText.replace(/^export /, "")
 
 	const transpiledSource = script.replace(/^function ?\w+\(/, "function (")
 	const srcLength = hackmudLength(transpiledSource)
@@ -533,7 +553,8 @@ export async function processScript(script: string) {
 
 	return {
 		srcLength,
-		script
+		script,
+		warnings
 	}
 }
 
@@ -569,4 +590,17 @@ async function copyFilePersist(path: CopyFileParameters[0], dest: string, flags?
 
 function hackmudLength(script: string) {
 	return script.replace(/[ \n\r]/g, "").length
+}
+
+function positionToLineNumber(position: number, script: string) {
+	let totalCharacters = 0
+
+	for (const [ lineNumber, line ] of script.split("\n").entries()) {
+		totalCharacters += line.length + 1
+
+		if (position < totalCharacters)
+			return lineNumber
+	}
+
+	throw new Error("unreachable")
 }

@@ -169,16 +169,16 @@ for (let arg of process.argv.slice(2)) {
 				const srcPath = resolvePath(commands[1] || ".")
 				let errors = 0
 
-				console.log(`testing scripts in ${srcPath}\n`)
+				console.log(`testing scripts in ${bold(srcPath)}\n`)
 
-				for (const { file, error } of await test(srcPath)) {
-					console.log(`error "${error instanceof Error ? bold(error.message) : error}" in ${dim(file)}`)
+				for (const { file, line, message } of await test(srcPath)) {
+					console.log(`error "${bold(message)}" in ${bold(file)} on line ${bold(String(line))}`)
 					errors++
 				}
 
 				if (errors) {
 					process.exitCode = 1
-					console.log(`\nencountered ${errors} errors`)
+					console.log(`\nencountered ${bold(String(errors))} errors`)
 				} else
 					console.log("no errors found")
 
