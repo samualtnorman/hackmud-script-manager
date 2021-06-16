@@ -83,7 +83,7 @@ for (let arg of process.argv.slice(2)) {
 									users.map(user =>
 										bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
 									).join(", ")
-								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} chars | ${bold(`${Math.round(((srcLength / minLength) - 1) * 100)}%`)} compression | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
+								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} chars | ${bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)} compression | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
 						)
 					)
 
@@ -120,7 +120,7 @@ for (let arg of process.argv.slice(2)) {
 									users.map(user =>
 										bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
 									).join(", ")
-								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} chars | ${bold(`${Math.round(((srcLength / minLength) - 1) * 100)}%`)} compression | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
+								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} chars | ${bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)} compression | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
 						),
 						{ genTypes }
 					)
