@@ -542,7 +542,6 @@ export async function processScript(script: string) {
 	script = (await minify(script, {
 		ecma: 2015,
 		compress: {
-			booleans_as_integers: true,
 			passes: Infinity,
 			unsafe: true,
 			unsafe_arrows: true,
