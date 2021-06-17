@@ -566,6 +566,8 @@ export async function processScript(script: string) {
 	script = script
 		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
 		.replace(/\$G[^\w]/g, a => a.replace("$", "#"))
+		.replace(/\.prototype/g, `["prototype"]`)
+		.replace(/\.__proto__/g, `["__proto__"]`)
 
 	if (autocompleteMatch)
 		script = script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
