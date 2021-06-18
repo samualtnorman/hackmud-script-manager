@@ -517,7 +517,7 @@ export async function processScript(script: string) {
 	script = script
 		.replace(/[#\$]([\w.]+[\(<])/g, a => "$" + a.slice(1).replace(/\./g, "$"))
 		.replace(/function\s*\(/, "function script(")
-		.replace(/#G[^\w]/g, "$G")
+		.replace(/#((?:G|FMCL)[^\w])/g, "$$$1")
 
 	// compilation
 	const { outputText, diagnostics = [] } = transpileModule(script, {
