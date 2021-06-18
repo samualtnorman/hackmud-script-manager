@@ -565,7 +565,7 @@ export async function processScript(script: string) {
 
 	script = script
 		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
-		.replace(/\$G[^\w]/g, a => a.replace("$", "#"))
+		.replace(/\$((?:G|FMCL)[^\w])/g, "#$1")
 		.replace(/\.prototype/g, `["prototype"]`)
 		.replace(/\.__proto__/g, `["__proto__"]`)
 
