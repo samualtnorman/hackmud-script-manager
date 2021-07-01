@@ -3,6 +3,8 @@ import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
 import { transpileModule, ScriptTarget } from "typescript"
+import { parse, Token, tokenizer, tokTypes } from "acorn"
+import { PathLike } from "fs"
 
 interface Info {
 	file: string
@@ -512,14 +514,18 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
  * @param script JavaScript or TypeScript code
  */
 export async function processScript(script: string) {
-	const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
+	// TODO bring autocompletes back
+	// const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
 
 	script = script
-		.replace(/[#\$]([\w.]+[\(<])/g, a => "$" + a.slice(1).replace(/\./g, "$"))
-		.replace(/function\s*\(/, "function script(")
-		.replace(/#((?:G|FMCL)[^\w])/g, "$$$1")
+		.replace(/[#$]([fhmln01234])s\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "$$$1s$$$2$$$3(")
+		.replace(/^function\s*\(/, "function script(")
+		.replace(/#D\(/g, "$D(")
+		.replace(/#FMCL/g, "$FMCL")
+		.replace(/#G/g, "$G")
+		.replace(/#db\./g, "$db.")
 
-	// compilation
+	// typescript compilation, this runs on regular javascript too to convert any post es2015 syntax into es2015 syntax
 	const { outputText, diagnostics = [] } = transpileModule(script, {
 		compilerOptions: {
 			target: ScriptTarget.ES2015,
@@ -535,10 +541,192 @@ export async function processScript(script: string) {
 
 	script = outputText.replace(/^export /, "")
 
-	const transpiledSource = script.replace(/^function ?\w+\(/, "function (")
-	const srcLength = hackmudLength(transpiledSource)
+	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function ("))
 
-	// minification
+	// remove dead code (so we don't waste chracters quine cheating strings that aren't even used)
+	script = (await minify(script, {
+		ecma: 2015,
+		parse: { bare_returns: true }
+	})).code || ""
+
+	let blockStatementIndex: number
+
+	{
+		const functionDeclarationNode = (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0]
+
+		if (functionDeclarationNode.type == "FunctionDeclaration")
+			blockStatementIndex = functionDeclarationNode.body.start
+		else {
+			script = `function script(context, args) {\n${script}\n}`
+			blockStatementIndex = 31
+			srcLength += 24
+		}
+	}
+
+	const scriptBeforeJSONValueReplacement = (await minify(script, {
+		ecma: 2015,
+		compress: {
+			passes: Infinity,
+			unsafe: true,
+			unsafe_arrows: true,
+			unsafe_comps: true,
+			unsafe_symbols: true,
+			unsafe_methods: true,
+			unsafe_proto: true,
+			unsafe_regexp: true,
+			unsafe_undefined: true
+		},
+		format: { semicolons: false }
+	})).code || ""
+
+	const jSONItems: any[] = []
+	let i = 0
+	let undefinedIsReferenced = false
+
+	// we iterate through the tokens backwards so that substring replacements
+	// don't affect future replacements since a part of the string could be
+	// replaced with a string of a different length which messes up indexes
+	const tokens = [ ...tokenizer(script, { ecmaVersion: 2015 }) ].reverse()[Symbol.iterator]()
+
+	// BUG incorrectly converts String.raw`foo${bar}baz` to String[n](r+bar+t)
+	for (const token of tokens) {
+		if (token.start < blockStatementIndex)
+			break
+
+		switch (token.type) {
+			case tokTypes.backQuote: {
+				const templateToken = tokens.next().value as Token
+
+				if (tokens.next().value.type == tokTypes.backQuote)
+					throw "foo`bar` syntax not yet supported"
+
+				if (templateToken.value == "") {
+					script = `${script.slice(0, templateToken.start - 1)})) ${script.slice(token.end)}`
+					break
+				}
+
+				if (jSONItems.includes(templateToken.value)) {
+					script = `${script.slice(0, templateToken.start - 1)}) + _JSON_VALUE_${jSONItems.indexOf(templateToken.value)}_) ${script.slice(token.end)}`
+					break
+				}
+
+				jSONItems.push(templateToken.value)
+				script = `${script.slice(0, templateToken.start - 1)}) + _JSON_VALUE_${i++}_) ${script.slice(token.end)}`
+			} break
+
+			case tokTypes.template: {
+				const tokenBefore = tokens.next().value
+
+				if (tokenBefore.type == tokTypes.backQuote) {
+					if (jSONItems.includes(token.value)) {
+						script = `${script.slice(0, token.start - 1)} (_JSON_VALUE_${jSONItems.indexOf(token.value)}_ + (${script.slice(token.end + 2)}`
+						break
+					}
+
+					jSONItems.push(token.value)
+					script = `${script.slice(0, token.start - 1)} (_JSON_VALUE_${i++}_ + (${script.slice(token.end + 2)}`
+
+					break
+				}
+
+				if (token.value == "") {
+					script = `${script.slice(0, token.start - 1)}) + (${script.slice(token.end + 2)}`
+					break
+				}
+
+
+				if (jSONItems.includes(token.value)) {
+					script = `${script.slice(0, token.start - 1)}) + _JSON_VALUE_${jSONItems.indexOf(token.value)}_ + (${script.slice(token.end + 2)}`
+					break
+				}
+
+				jSONItems.push(token.value)
+				script = `${script.slice(0, token.start - 1)}) + _JSON_VALUE_${i++}_ + (${script.slice(token.end + 2)}`
+			} break
+
+			case tokTypes.name: {
+				if (token.value.length > 2) {
+					const tokenBefore = tokens.next().value as Token | undefined
+
+					if (tokenBefore && tokenBefore.type == tokTypes.dot) {
+						if (jSONItems.includes(token.value)) {
+							script = `${script.slice(0, tokenBefore.start)}[_JSON_VALUE_${jSONItems.indexOf(token.value)}_]${script.slice(token.end)}`
+							break
+						}
+
+						jSONItems.push(token.value)
+						script = `${script.slice(0, tokenBefore.start)}[_JSON_VALUE_${i++}_]${script.slice(token.end)}`
+
+						break
+					}
+				}
+
+				if (token.value == "undefined") {
+					script = `${script.slice(0, token.start)} _UNDEFINED_ ${script.slice(token.end)}`
+					undefinedIsReferenced = true
+				}
+			} break
+
+			case tokTypes._null: {
+				if (jSONItems.includes(null)) {
+					script = `${script.slice(0, token.start)} _JSON_VALUE_${jSONItems.indexOf(null)}_ ${script.slice(token.end)}`
+					break
+				}
+
+				jSONItems.push(null)
+				script = `${script.slice(0, token.start)} _JSON_VALUE_${i++}_ ${script.slice(token.end)}`
+			} break
+
+			case tokTypes._true:
+			case tokTypes._false:
+			case tokTypes.num: {
+				if (token.value == 0) {
+					const tokenBefore = tokens.next().value as Token | undefined
+
+					if (tokenBefore && tokenBefore.type == tokTypes._void) {
+						script = `${script.slice(0, tokenBefore.start)} _UNDEFINED_ ${script.slice(token.end)}`
+						undefinedIsReferenced = true
+					}
+
+					break
+				}
+
+				if (token.value < 10)
+					break
+
+				if (jSONItems.includes(token.value)) {
+					script = `${script.slice(0, token.start)} _JSON_VALUE_${jSONItems.indexOf(token.value)}_ ${script.slice(token.end)}`
+					break
+				}
+
+				jSONItems.push(token.value)
+				script = `${script.slice(0, token.start)} _JSON_VALUE_${i++}_ ${script.slice(token.end)}`
+			} break
+
+			case tokTypes.string: {
+				if (token.value.includes("\u0000"))
+					break
+
+				if (jSONItems.includes(token.value)) {
+					script = `${script.slice(0, token.start)} _JSON_VALUE_${jSONItems.indexOf(token.value)}_ ${script.slice(token.end)}`
+					break
+				}
+
+				jSONItems.push(token.value)
+				script = `${script.slice(0, token.start)} _JSON_VALUE_${i++}_ ${script.slice(token.end)}`
+			} break
+
+			case tokTypes._const: {
+				script = `${script.slice(0, token.start)}let${script.slice(token.end)}`
+			} break
+		}
+	}
+
+	if (jSONItems.length)
+		script = `${script.slice(0, blockStatementIndex + 1)}\nlet [ ${jSONItems.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")}${undefinedIsReferenced ? ", _UNDEFINED_" : ""} ] = JSON.parse($fs$scripts$quine().split\`\t\`[_SPLIT_INDEX_])\n${script.slice(blockStatementIndex + 1)}`
+	else
+		script = script.replace(/_UNDEFINED_/g, "void 0")
+
 	script = (await minify(script, {
 		ecma: 2015,
 		compress: {
@@ -552,25 +740,39 @@ export async function processScript(script: string) {
 			unsafe_regexp: true,
 			unsafe_undefined: true
 		},
-		format: {
-			semicolons: false
-		}
+		format: { semicolons: false }
 	})).code || ""
 
+	 if (hackmudLength(scriptBeforeJSONValueReplacement) <= hackmudLength(script))
+		script = scriptBeforeJSONValueReplacement
+	else if (hackmudLength(script) < hackmudLength(scriptBeforeJSONValueReplacement) && jSONItems.length) {
+		let json = JSON.stringify(jSONItems)
+		const scriptLines = script.split("\n")
+
+		script = [
+			scriptLines[0],
+			`//\t${json}\t`,
+			...scriptLines.slice(1)
+		].join("\n")
+
+		for (const [ i, part ] of script.split("\t").entries()) {
+			if (part == json) {
+				script = script.replace("_SPLIT_INDEX_", (await minify(`$(${i})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1])
+				break
+			}
+		}
+	}
+
 	script = script
-		.replace(/function ?\w+\(/, "function (")
+		.replace(/^function\s*\w+\(/, "function(")
+		.replace(/\$([fhmln01234])s\$([a-zA-Z_][a-zA-Z0-9_]*)\$([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "#$1s.$2.$3(")
+		.replace(/\$D\(/g, "#D(")
+		.replace(/\$FMCL/g, "#FMCL")
+		.replace(/\$G/g, "#G")
+		.replace(/\$db\./g, "#db.")
 
-	if (script.length > transpiledSource.length)
-		script = transpiledSource
-
-	script = script
-		.replace(/\$[\w\$]+\(/g, a => a.replace("$", "#").replace(/\$/g, "."))
-		.replace(/\$((?:G|FMCL)[^\w])/g, "#$1")
-		.replace(/\.prototype/g, `["prototype"]`)
-		.replace(/\.__proto__/g, `["__proto__"]`)
-
-	if (autocompleteMatch)
-		script = script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
+	// if (autocompleteMatch)
+	// 	script = script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
 
 	return {
 		srcLength,
@@ -594,9 +796,7 @@ async function writeFilePersist(path: string, data: WriteFileParameters[1], opti
 	})
 }
 
-type CopyFileParameters = Parameters<typeof copyFile>
-
-async function copyFilePersist(path: CopyFileParameters[0], dest: string, flags?: CopyFileParameters[2]) {
+async function copyFilePersist(path: PathLike, dest: string, flags?: number) {
 	await copyFile(path, dest, flags).catch(async (error: NodeJS.ErrnoException) => {
 		switch (error.code) {
 			case "ENOENT":
@@ -610,7 +810,7 @@ async function copyFilePersist(path: CopyFileParameters[0], dest: string, flags?
 }
 
 function hackmudLength(script: string) {
-	return script.replace(/[ \n\r]/g, "").length
+	return script.replace(/\/\/.*/g, "").replace(/[ \t\n\r\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000]/g, "").length
 }
 
 function positionToLineNumber(position: number, script: string) {
