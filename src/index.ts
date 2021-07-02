@@ -514,6 +514,11 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
  * @param script JavaScript or TypeScript code
  */
 export async function processScript(script: string) {
+	// remove comments and whatever whitespace at the start of the script
+	[ , script ] = script.match(/(?:^\s*\/\/.*\n)*\s*([^]+)/m)!
+
+	const semicolons = script.match(/;/g)?.length ?? 0
+
 	// TODO bring autocompletes back
 	// const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
 
@@ -525,12 +530,10 @@ export async function processScript(script: string) {
 		.replace(/#G/g, "$G")
 		.replace(/#db\./g, "$db.")
 
-	// typescript compilation, this runs on regular javascript too to convert any post es2015 syntax into es2015 syntax
+	// typescript compilation, this runs on regular javascript too to convert
+	// any post es2015 syntax into es2015 syntax
 	const { outputText, diagnostics = [] } = transpileModule(script, {
-		compilerOptions: {
-			target: ScriptTarget.ES2015,
-			removeComments: true
-		},
+		compilerOptions: { target: ScriptTarget.ES2015 },
 		reportDiagnostics: true
 	})
 
@@ -541,9 +544,13 @@ export async function processScript(script: string) {
 
 	script = outputText.replace(/^export /, "")
 
-	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function ("))
+	// the typescript inserts semicolons where they weren't already so we take
+	// all semicolons out of the count and add the number of semicolons in the
+	// source to make things fair
+	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function (")) - (script.match(/;/g)?.length ?? 0) + semicolons
 
-	// remove dead code (so we don't waste chracters quine cheating strings that aren't even used)
+	// remove dead code (so we don't waste chracters quine cheating strings
+	// that aren't even used)
 	script = (await minify(script, {
 		ecma: 2015,
 		parse: { bare_returns: true }
@@ -552,7 +559,12 @@ export async function processScript(script: string) {
 	let blockStatementIndex: number
 
 	{
-		const functionDeclarationNode = (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0]
+		// FIXME we definitly don't need to parse the entire file just to figure
+		// out where the first open squigly bracket after the args is
+		// TODO we can get iterate through the tokens finding the matching close
+		// bracket to the first open bracket, the first open squigly bracket
+		// after that is the function block start
+		const [ functionDeclarationNode ] = (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body
 
 		if (functionDeclarationNode.type == "FunctionDeclaration")
 			blockStatementIndex = functionDeclarationNode.body.start
@@ -579,8 +591,7 @@ export async function processScript(script: string) {
 		format: { semicolons: false }
 	})).code || ""
 
-	const jSONItems: any[] = []
-	let i = 0
+	const jsonValues: any[] = []
 	let undefinedIsReferenced = false
 
 	// we iterate through the tokens backwards so that substring replacements
@@ -588,8 +599,8 @@ export async function processScript(script: string) {
 	// replaced with a string of a different length which messes up indexes
 	const tokens = [ ...tokenizer(script, { ecmaVersion: 2015 }) ].reverse()[Symbol.iterator]()
 
-	// BUG incorrectly converts String.raw`foo${bar}baz` to String[n](r+bar+t)
 	for (const token of tokens) {
+		// we can't replace any tokens before the block statement or we'll break stuff
 		if (token.start < blockStatementIndex)
 			break
 
@@ -597,134 +608,135 @@ export async function processScript(script: string) {
 			case tokTypes.backQuote: {
 				const templateToken = tokens.next().value as Token
 
-				if (tokens.next().value.type == tokTypes.backQuote)
-					throw "foo`bar` syntax not yet supported"
+				if ((tokens.next().value as Token).type == tokTypes.backQuote)
+					throw "tagged templates not supported yet"
 
+				// no point in concatenating an empty string
 				if (templateToken.value == "") {
-					script = `${script.slice(0, templateToken.start - 1)})) ${script.slice(token.end)}`
+					script = stringSplice(script, "))", templateToken.start - 1, token.end)
 					break
 				}
 
-				if (jSONItems.includes(templateToken.value)) {
-					script = `${script.slice(0, templateToken.start - 1)}) + _JSON_VALUE_${jSONItems.indexOf(templateToken.value)}_) ${script.slice(token.end)}`
-					break
-				}
+				let jsonValueIndex = jsonValues.indexOf(templateToken.value)
 
-				jSONItems.push(templateToken.value)
-				script = `${script.slice(0, templateToken.start - 1)}) + _JSON_VALUE_${i++}_) ${script.slice(token.end)}`
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(templateToken.value)
+
+				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_)`, templateToken.start - 1, token.end)
 			} break
 
 			case tokTypes.template: {
-				const tokenBefore = tokens.next().value
+				if ((tokens.next().value as Token).type == tokTypes.backQuote) {
+					if ((tokens.next().value as Token).type == tokTypes.name)
+						throw "tagged templates not supported yet"
 
-				if (tokenBefore.type == tokTypes.backQuote) {
-					if (jSONItems.includes(token.value)) {
-						script = `${script.slice(0, token.start - 1)} (_JSON_VALUE_${jSONItems.indexOf(token.value)}_ + (${script.slice(token.end + 2)}`
-						break
-					}
+					// there *is* a point in concatenating an empty string at the
+					// start because foo + bar is not the same thing as "" + foo + bar
 
-					jSONItems.push(token.value)
-					script = `${script.slice(0, token.start - 1)} (_JSON_VALUE_${i++}_ + (${script.slice(token.end + 2)}`
+					let jsonValueIndex = jsonValues.indexOf(token.value)
 
+					if (jsonValueIndex == -1)
+						jsonValueIndex += jsonValues.push(token.value)
+
+					script = stringSplice(script, `(_JSON_VALUE_${jsonValueIndex}_+(`, token.start - 1, token.end + 2)
 					break
 				}
 
+				// no point in concatenating an empty string
 				if (token.value == "") {
-					script = `${script.slice(0, token.start - 1)}) + (${script.slice(token.end + 2)}`
+					script = stringSplice(script, ")+(", token.start - 1, token.end + 2)
 					break
 				}
 
+				let jsonValueIndex = jsonValues.indexOf(token.value)
 
-				if (jSONItems.includes(token.value)) {
-					script = `${script.slice(0, token.start - 1)}) + _JSON_VALUE_${jSONItems.indexOf(token.value)}_ + (${script.slice(token.end + 2)}`
-					break
-				}
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(token.value)
 
-				jSONItems.push(token.value)
-				script = `${script.slice(0, token.start - 1)}) + _JSON_VALUE_${i++}_ + (${script.slice(token.end + 2)}`
+				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_+(`, token.start - 1, token.end + 2)
 			} break
 
 			case tokTypes.name: {
-				if (token.value.length > 2) {
-					const tokenBefore = tokens.next().value as Token | undefined
+				if (token.value.length < 3)
+					break
 
-					if (tokenBefore && tokenBefore.type == tokTypes.dot) {
-						if (jSONItems.includes(token.value)) {
-							script = `${script.slice(0, tokenBefore.start)}[_JSON_VALUE_${jSONItems.indexOf(token.value)}_]${script.slice(token.end)}`
-							break
-						}
+				const tokenBefore = tokens.next().value as Token
 
-						jSONItems.push(token.value)
-						script = `${script.slice(0, tokenBefore.start)}[_JSON_VALUE_${i++}_]${script.slice(token.end)}`
+				if (tokenBefore.type == tokTypes.dot) {
+					let jsonValueIndex = jsonValues.indexOf(token.value)
 
-						break
-					}
+					if (jsonValueIndex == -1)
+						jsonValueIndex += jsonValues.push(token.value)
+
+					script = stringSplice(script, `[_JSON_VALUE_${jsonValueIndex}_]`, tokenBefore.start, token.end)
+					break
 				}
 
 				if (token.value == "undefined") {
-					script = `${script.slice(0, token.start)} _UNDEFINED_ ${script.slice(token.end)}`
+					script = stringSplice(script, " _UNDEFINED_ ", token.start, token.end)
 					undefinedIsReferenced = true
 				}
 			} break
 
 			case tokTypes._null: {
-				if (jSONItems.includes(null)) {
-					script = `${script.slice(0, token.start)} _JSON_VALUE_${jSONItems.indexOf(null)}_ ${script.slice(token.end)}`
-					break
-				}
+				let jsonValueIndex = jsonValues.indexOf(null)
 
-				jSONItems.push(null)
-				script = `${script.slice(0, token.start)} _JSON_VALUE_${i++}_ ${script.slice(token.end)}`
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(null)
+
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
 			case tokTypes._true:
 			case tokTypes._false:
 			case tokTypes.num: {
 				if (token.value == 0) {
-					const tokenBefore = tokens.next().value as Token | undefined
+					const tokenBefore = tokens.next().value as Token
 
-					if (tokenBefore && tokenBefore.type == tokTypes._void) {
-						script = `${script.slice(0, tokenBefore.start)} _UNDEFINED_ ${script.slice(token.end)}`
+					if (tokenBefore.type == tokTypes._void) {
+						script = stringSplice(script, " _UNDEFINED_ ", tokenBefore.start, token.end)
 						undefinedIsReferenced = true
 					}
 
+					// may as well break here since we're gonna break anyway
 					break
 				}
 
 				if (token.value < 10)
 					break
 
-				if (jSONItems.includes(token.value)) {
-					script = `${script.slice(0, token.start)} _JSON_VALUE_${jSONItems.indexOf(token.value)}_ ${script.slice(token.end)}`
-					break
-				}
+				let jsonValueIndex = jsonValues.indexOf(token.value)
 
-				jSONItems.push(token.value)
-				script = `${script.slice(0, token.start)} _JSON_VALUE_${i++}_ ${script.slice(token.end)}`
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(token.value)
+
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
 			case tokTypes.string: {
 				if (token.value.includes("\u0000"))
 					break
 
-				if (jSONItems.includes(token.value)) {
-					script = `${script.slice(0, token.start)} _JSON_VALUE_${jSONItems.indexOf(token.value)}_ ${script.slice(token.end)}`
-					break
-				}
+				let jsonValueIndex = jsonValues.indexOf(token.value)
 
-				jSONItems.push(token.value)
-				script = `${script.slice(0, token.start)} _JSON_VALUE_${i++}_ ${script.slice(token.end)}`
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(token.value)
+
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
 			case tokTypes._const: {
-				script = `${script.slice(0, token.start)}let${script.slice(token.end)}`
+				script = stringSplice(script, "let", token.start, token.end)
 			} break
 		}
 	}
 
-	if (jSONItems.length)
-		script = `${script.slice(0, blockStatementIndex + 1)}\nlet [ ${jSONItems.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")}${undefinedIsReferenced ? ", _UNDEFINED_" : ""} ] = JSON.parse($fs$scripts$quine().split\`\t\`[_SPLIT_INDEX_])\n${script.slice(blockStatementIndex + 1)}`
-	else
+	if (jsonValues.length) {
+		if (jsonValues.length == 1)
+			script = stringSplice(script, `\nlet _JSON_VALUE_0_ = JSON.parse($fs$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+		else
+			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")} ] = JSON.parse($fs$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+	} else
 		script = script.replace(/_UNDEFINED_/g, "void 0")
 
 	script = (await minify(script, {
@@ -743,17 +755,10 @@ export async function processScript(script: string) {
 		format: { semicolons: false }
 	})).code || ""
 
-	 if (hackmudLength(scriptBeforeJSONValueReplacement) <= hackmudLength(script))
-		script = scriptBeforeJSONValueReplacement
-	else if (hackmudLength(script) < hackmudLength(scriptBeforeJSONValueReplacement) && jSONItems.length) {
-		let json = JSON.stringify(jSONItems)
-		const scriptLines = script.split("\n")
+	if (jsonValues.length) {
+		const json = JSON.stringify(jsonValues.length == 1 ? jsonValues[0] : jsonValues)
 
-		script = [
-			scriptLines[0],
-			`//\t${json}\t`,
-			...scriptLines.slice(1)
-		].join("\n")
+		script = stringSplice(script, `//\t${json}\t\n`, (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0].body.start + 1)
 
 		for (const [ i, part ] of script.split("\t").entries()) {
 			if (part == json) {
@@ -762,6 +767,9 @@ export async function processScript(script: string) {
 			}
 		}
 	}
+
+	if (hackmudLength(scriptBeforeJSONValueReplacement) <= hackmudLength(script))
+		script = scriptBeforeJSONValueReplacement
 
 	script = script
 		.replace(/^function\s*\w+\(/, "function(")
@@ -824,4 +832,8 @@ function positionToLineNumber(position: number, script: string) {
 	}
 
 	throw new Error("unreachable")
+}
+
+function stringSplice(original: string, replacement: string, start: number, end = start) {
+	return original.slice(0, start) + replacement + original.slice(end)
 }
