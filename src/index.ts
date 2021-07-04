@@ -1,10 +1,11 @@
-import { readdir as readDir, writeFile, mkdir as mkDir, readFile, copyFile, stat } from "fs/promises"
+import { readdir as readDir, writeFile, readFile, stat } from "fs/promises"
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname } from "path"
 import { transpileModule, ScriptTarget } from "typescript"
 import { parse, Token, tokenizer, tokTypes } from "acorn"
-import { PathLike } from "fs"
+
+import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
 
 interface Info {
 	file: string
@@ -808,53 +809,4 @@ export async function processScript(script: string) {
 		script,
 		warnings
 	}
-}
-
-type WriteFileParameters = Parameters<typeof writeFile>
-
-async function writeFilePersist(path: string, data: WriteFileParameters[1], options?: WriteFileParameters[2]) {
-	await writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
-		switch (error.code) {
-			case "ENOENT":
-				await mkDir(resolvePath(path, ".."), { recursive: true })
-				await writeFile(path, data, options)
-				break
-			default:
-				throw error
-		}
-	})
-}
-
-async function copyFilePersist(path: PathLike, dest: string, flags?: number) {
-	await copyFile(path, dest, flags).catch(async (error: NodeJS.ErrnoException) => {
-		switch (error.code) {
-			case "ENOENT":
-				await mkDir(resolvePath(dest, ".."), { recursive: true })
-				await copyFile(path, dest, flags)
-				break
-			default:
-				throw error
-		}
-	})
-}
-
-function hackmudLength(script: string) {
-	return script.replace(/\/\/.*/g, "").replace(/[ \t\n\r\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000]/g, "").length
-}
-
-function positionToLineNumber(position: number, script: string) {
-	let totalCharacters = 0
-
-	for (const [ lineNumber, line ] of script.split("\n").entries()) {
-		totalCharacters += line.length + 1
-
-		if (position < totalCharacters)
-			return lineNumber
-	}
-
-	throw new Error("unreachable")
-}
-
-function stringSplice(original: string, replacement: string, start: number, end = start) {
-	return original.slice(0, start) + replacement + original.slice(end)
 }
