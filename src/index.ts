@@ -616,8 +616,7 @@ export async function processScript(script: string) {
 	// we iterate through the tokens backwards so that substring replacements
 	// don't affect future replacements since a part of the string could be
 	// replaced with a string of a different length which messes up indexes
-	// TODO switch out [Symbol.iterator]() for .values()
-	const tokens = [ ...tokenizer(script, { ecmaVersion: 2015 }) ].reverse()[Symbol.iterator]()
+	const tokens = [ ...tokenizer(script, { ecmaVersion: 2015 }) ].reverse().values()
 
 	for (const token of tokens) {
 		// we can't replace any tokens before the block statement or we'll break stuff
