@@ -521,6 +521,9 @@ export async function processScript(script: string) {
 
 	[ , preScriptComments, script, autocomplete ] = script.match(/((?:^\s*\/\/.*\n)*)\s*((?:.+?\/\/\s*(.+?)\s*$)?[^]*)/m)!
 
+	if (!script)
+		throw new Error("script was empty")
+
 	for (const line of preScriptComments.split("\n")) {
 		let autocompleteMatch = line.match(/^\s*\/\/\s*@autocomplete\s*([^\s].*?)\s*$/)?.[1]
 
@@ -626,7 +629,7 @@ export async function processScript(script: string) {
 				const templateToken = tokens.next().value as Token
 
 				if ((tokens.next().value as Token).type == tokTypes.backQuote)
-					throw "tagged templates not supported yet"
+					throw new Error("tagged templates not supported yet")
 
 				// no point in concatenating an empty string
 				if (templateToken.value == "") {
@@ -645,7 +648,7 @@ export async function processScript(script: string) {
 			case tokTypes.template: {
 				if ((tokens.next().value as Token).type == tokTypes.backQuote) {
 					if ((tokens.next().value as Token).type == tokTypes.name)
-						throw "tagged templates not supported yet"
+						throw new Error("tagged templates not supported yet")
 
 					// there *is* a point in concatenating an empty string at the
 					// start because foo + bar is not the same thing as "" + foo + bar
