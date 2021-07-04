@@ -593,7 +593,7 @@ export async function processScript(script: string) {
 		.replace(/#D\(/g, "$D(")
 		.replace(/#FMCL/g, "$FMCL")
 		.replace(/#G/g, "$G")
-		.replace(/#db\./g, "DB$")
+		.replace(/[#$]db\./g, "DB$")
 
 	// typescript compilation, this runs on regular javascript too to convert
 	// any post es2015 syntax into es2015 syntax
