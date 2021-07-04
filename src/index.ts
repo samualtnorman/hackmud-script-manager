@@ -2,8 +2,8 @@ import { readdir as readDirectory, writeFile, readFile, stat } from "fs/promises
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname as getFileExtension } from "path"
-import { transpileModule, ScriptTarget } from "typescript"
-import { parse, Token, tokenizer, tokTypes } from "acorn"
+import typescript from "typescript"
+import { parse, Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 
 import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
 
@@ -599,8 +599,8 @@ export async function processScript(script: string) {
 
 	// typescript compilation, this runs on regular javascript too to convert
 	// any post es2015 syntax into es2015 syntax
-	const { outputText, diagnostics = [] } = transpileModule(script, {
-		compilerOptions: { target: ScriptTarget.ES2015 },
+	const { outputText, diagnostics = [] } = typescript.transpileModule(script, {
+		compilerOptions: { target: typescript.ScriptTarget.ES2015 },
 		reportDiagnostics: true
 	})
 
@@ -625,21 +625,12 @@ export async function processScript(script: string) {
 
 	let blockStatementIndex: number
 
-	{
-		// FIXME we definitly don't need to parse the entire file just to figure
-		// out where the first open squigly bracket after the args is
-		// TODO we can get iterate through the tokens finding the matching close
-		// bracket to the first open bracket, the first open squigly bracket
-		// after that is the function block start
-		const [ functionDeclarationNode ] = (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body
-
-		if (functionDeclarationNode.type == "FunctionDeclaration")
-			blockStatementIndex = functionDeclarationNode.body.start
-		else {
-			script = `function script(context, args) {\n${script}\n}`
-			blockStatementIndex = 31
-			srcLength += 24
-		}
+	if (script.startsWith("function "))
+		blockStatementIndex = getFunctionBodyStart(script)
+	else {
+		script = `function script(context, args) {\n${script}\n}`
+		blockStatementIndex = 31
+		srcLength += 24
 	}
 
 	const scriptBeforeJSONValueReplacement = (await minify(script, {
@@ -664,7 +655,7 @@ export async function processScript(script: string) {
 	// we iterate through the tokens backwards so that substring replacements
 	// don't affect future replacements since a part of the string could be
 	// replaced with a string of a different length which messes up indexes
-	const tokens = [ ...tokenizer(script, { ecmaVersion: 2015 }) ].reverse().values()
+	const tokens = [ ...tokenize(script, { ecmaVersion: 2015 }) ].reverse().values()
 
 	for (const token of tokens) {
 		// we can't replace any tokens before the block statement or we'll break stuff
@@ -672,10 +663,10 @@ export async function processScript(script: string) {
 			break
 
 		switch (token.type) {
-			case tokTypes.backQuote: {
+			case tokenTypes.backQuote: {
 				const templateToken = tokens.next().value as Token
 
-				if ((tokens.next().value as Token).type == tokTypes.backQuote)
+				if ((tokens.next().value as Token).type == tokenTypes.backQuote)
 					throw new Error("tagged templates not supported yet")
 
 				// no point in concatenating an empty string
@@ -692,9 +683,9 @@ export async function processScript(script: string) {
 				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_)`, templateToken.start - 1, token.end)
 			} break
 
-			case tokTypes.template: {
-				if ((tokens.next().value as Token).type == tokTypes.backQuote) {
-					if ((tokens.next().value as Token).type == tokTypes.name)
+			case tokenTypes.template: {
+				if ((tokens.next().value as Token).type == tokenTypes.backQuote) {
+					if ((tokens.next().value as Token).type == tokenTypes.name)
 						throw new Error("tagged templates not supported yet")
 
 					// there *is* a point in concatenating an empty string at the
@@ -723,13 +714,13 @@ export async function processScript(script: string) {
 				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_+(`, token.start - 1, token.end + 2)
 			} break
 
-			case tokTypes.name: {
+			case tokenTypes.name: {
 				if (token.value.length < 3)
 					break
 
 				const tokenBefore = tokens.next().value as Token
 
-				if (tokenBefore.type == tokTypes.dot) {
+				if (tokenBefore.type == tokenTypes.dot) {
 					let jsonValueIndex = jsonValues.indexOf(token.value)
 
 					if (jsonValueIndex == -1)
@@ -745,7 +736,7 @@ export async function processScript(script: string) {
 				}
 			} break
 
-			case tokTypes._null: {
+			case tokenTypes._null: {
 				let jsonValueIndex = jsonValues.indexOf(null)
 
 				if (jsonValueIndex == -1)
@@ -754,13 +745,13 @@ export async function processScript(script: string) {
 				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
-			case tokTypes._true:
-			case tokTypes._false:
-			case tokTypes.num: {
+			case tokenTypes._true:
+			case tokenTypes._false:
+			case tokenTypes.num: {
 				if (token.value == 0) {
 					const tokenBefore = tokens.next().value as Token
 
-					if (tokenBefore.type == tokTypes._void) {
+					if (tokenBefore.type == tokenTypes._void) {
 						script = stringSplice(script, " _UNDEFINED_ ", tokenBefore.start, token.end)
 						undefinedIsReferenced = true
 					}
@@ -780,7 +771,7 @@ export async function processScript(script: string) {
 				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
-			case tokTypes.string: {
+			case tokenTypes.string: {
 				if (token.value.includes("\u0000"))
 					break
 
@@ -792,7 +783,7 @@ export async function processScript(script: string) {
 				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
-			case tokTypes._const: {
+			case tokenTypes._const: {
 				script = stringSplice(script, "let", token.start, token.end)
 			} break
 		}
@@ -826,7 +817,7 @@ export async function processScript(script: string) {
 	if (jsonValues.length) {
 		const json = JSON.stringify(jsonValues.length == 1 ? jsonValues[0] : jsonValues)
 
-		script = stringSplice(script, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${json}\t\n`, (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0].body.start + 1)
+		script = stringSplice(script, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${json}\t\n`, getFunctionBodyStart(script) + 1)
 
 		for (const [ i, part ] of script.split("\t").entries()) {
 			if (part == json) {
@@ -840,7 +831,7 @@ export async function processScript(script: string) {
 		script = scriptBeforeJSONValueReplacement
 
 		if (autocomplete)
-			script = stringSplice(script, `//${autocomplete}\n`, (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0].body.start + 1)
+			script = stringSplice(script, `//${autocomplete}\n`, getFunctionBodyStart(script) + 1)
 	}
 
 	script = script
@@ -856,4 +847,25 @@ export async function processScript(script: string) {
 		script,
 		warnings
 	}
+}
+
+function getFunctionBodyStart(code: string) {
+	const tokens = tokenize(code, { ecmaVersion: 2015 })
+
+	tokens.getToken() // function
+	tokens.getToken() // name
+	tokens.getToken() // (
+
+	let nests = 1
+
+	while (nests) {
+		const token = tokens.getToken()
+
+		if (token.type == tokenTypes.parenL)
+			nests++
+		else if (token.type == tokenTypes.parenR)
+			nests--
+	}
+
+	return tokens.getToken().start // {
 }
