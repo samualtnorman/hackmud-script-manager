@@ -587,15 +587,13 @@ export async function processScript(script: string) {
 
 	const semicolons = script.match(/;/g)?.length ?? 0
 
-	// FIXME I think #db.i() is gonna be turned into $db[_JSON_VALUE_0_]()
-
 	script = script
 		.replace(/[#$][fhmln43210]?s\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "SC$$$1$$$2(")
 		.replace(/^function\s*\(/, "function script(")
 		.replace(/#D\(/g, "$D(")
 		.replace(/#FMCL/g, "$FMCL")
 		.replace(/#G/g, "$G")
-		.replace(/#db\./g, "$db.")
+		.replace(/#db\./g, "DB$")
 
 	// typescript compilation, this runs on regular javascript too to convert
 	// any post es2015 syntax into es2015 syntax
@@ -614,7 +612,11 @@ export async function processScript(script: string) {
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
 	// source to make things fair
-	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function(")) - (script.match(/;/g)?.length ?? 0) + semicolons + (script.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
+	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function("))
+		- (script.match(/;/g)?.length ?? 0)
+		+ semicolons
+		+ (script.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
+		+ (script.match(/DB\$/g)?.length ?? 0)
 
 	// remove dead code (so we don't waste chracters quine cheating strings
 	// that aren't even used)
@@ -840,7 +842,7 @@ export async function processScript(script: string) {
 		.replace(/\$D\(/g, "#D(")
 		.replace(/\$FMCL/g, "#FMCL")
 		.replace(/\$G/g, "#G")
-		.replace(/\$db\./g, "#db.")
+		.replace(/DB\$/g, "#db.")
 
 	return {
 		srcLength,
