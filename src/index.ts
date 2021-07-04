@@ -1,7 +1,7 @@
-import { readdir as readDir, writeFile, readFile, stat } from "fs/promises"
+import { readdir as readDirectory, writeFile, readFile, stat } from "fs/promises"
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
-import { resolve as resolvePath, basename, extname } from "path"
+import { resolve as resolvePath, basename, extname as getFileExtension } from "path"
 import { transpileModule, ScriptTarget } from "typescript"
 import { parse, Token, tokenizer, tokTypes } from "acorn"
 
@@ -35,7 +35,7 @@ const supportedExtensions = [ ".js", ".ts" ]
 export function push(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void) {
 	return new Promise<Info[]>(async resolve => {
 		const infoAll: Info[] = []
-		const files = await readDir(srcDir, { withFileTypes: true })
+		const files = await readDirectory(srcDir, { withFileTypes: true })
 		const skips = new Map<string, string[]>()
 		const promises: Promise<any>[] = []
 
@@ -43,9 +43,9 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 			const user = dir.name
 
 			if (dir.isDirectory() && (!users.length || users.includes(user))) {
-				promises.push(readDir(resolvePath(srcDir, user), { withFileTypes: true }).then(files => {
+				promises.push(readDirectory(resolvePath(srcDir, user), { withFileTypes: true }).then(files => {
 					for (const file of files) {
-						const extension = extname(file.name)
+						const extension = getFileExtension(file.name)
 						const name = basename(file.name, extension)
 
 						if (supportedExtensions.includes(extension) && file.isFile() && (!scripts.length || scripts.includes(name))) {
@@ -94,17 +94,18 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 			}
 		}
 
-		if (!users.length)
-			users = (await readDir(hackmudDir, { withFileTypes: true }))
-				.filter(a => a.isFile() && extname(a.name) == ".key")
+		if (!users.length) {
+			users = (await readDirectory(hackmudDir, { withFileTypes: true }))
+				.filter(a => a.isFile() && getFileExtension(a.name) == ".key")
 				.map(a => basename(a.name, ".key"))
+		}
 
 		Promise.all(promises).then(() => {
 			const promises: Promise<any>[] = []
 
 			for (const file of files) {
 				if (file.isFile()) {
-					const extension = extname(file.name)
+					const extension = getFileExtension(file.name)
 
 					if (supportedExtensions.includes(extension)) {
 						const name = basename(file.name, extension)
@@ -138,11 +139,12 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 										const skip = skips.get(name) || []
 										const promises: Promise<any>[] = []
 
-										for (const user of users)
+										for (const user of users) {
 											if (!skip.includes(user)) {
 												info.users.push(user)
 												promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
 											}
+										}
 									} else
 										info.error = new Error("processed script was empty")
 								}
@@ -171,7 +173,7 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
  */
 export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string } = {}) {
 	const watcher = watchDir("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
-		const extension = extname(path)
+		const extension = getFileExtension(path)
 
 		if (supportedExtensions.includes(extension)) {
 			const name = basename(path, extension)
@@ -179,35 +181,40 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 			if (path == fileName) {
 				if (!scripts.length || scripts.includes(name)) {
-					const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
+					const sourceCode = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
 					const skips = new Map<string, string[]>()
 					const promisesSkips: Promise<any>[] = []
 
-					for (const dir of await readDir(srcDir, { withFileTypes: true }))
-						if (dir.isDirectory())
-							promisesSkips.push(readDir(resolvePath(srcDir, dir.name), { withFileTypes: true }).then(files => {
-								for (const file of files) {
-									if (file.isFile()) {
-										const ext = extname(file.name)
+					for (const dir of await readDirectory(srcDir, { withFileTypes: true })) {
+						if (!dir.isDirectory())
+							continue
 
-										if (supportedExtensions.includes(ext)) {
-											const name = basename(file.name, ext)
-											const skip = skips.get(name)
+						promisesSkips.push(readDirectory(resolvePath(srcDir, dir.name), { withFileTypes: true }).then(files => {
+							for (const file of files) {
+								if (!file.isFile())
+									continue
 
-											if (skip)
-												skip.push(dir.name)
-											else
-												skips.set(name, [ dir.name ])
-										}
-									}
-								}
-							}))
+								const fileExtension = getFileExtension(file.name)
+
+								if (!supportedExtensions.includes(fileExtension))
+									continue
+
+								const name = basename(file.name, fileExtension)
+								const skip = skips.get(name)
+
+								if (skip)
+									skip.push(dir.name)
+								else
+									skips.set(name, [ dir.name ])
+							}
+						}))
+					}
 
 					await Promise.all(promisesSkips)
 
 					let error = null
 
-					const { script: minCode, srcLength } = await processScript(code).catch(reason => {
+					const { script, srcLength } = await processScript(sourceCode).catch(reason => {
 						error = reason
 
 						return {
@@ -227,21 +234,24 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 					const promises: Promise<any>[] = []
 
 					if (!error) {
-						if (minCode) {
+						if (script) {
 							const skip = skips.get(name) || []
 
-							info.minLength = hackmudLength(minCode)
+							info.minLength = hackmudLength(script)
 
-							if (!users.length)
-								users = (await readDir(hackmudDir, { withFileTypes: true }))
-									.filter(a => a.isFile() && extname(a.name) == ".key")
+							if (!users.length) {
+								users = (await readDirectory(hackmudDir, { withFileTypes: true }))
+									.filter(a => a.isFile() && getFileExtension(a.name) == ".key")
 									.map(a => basename(a.name, ".key"))
+							}
 
-							for (const user of users)
-								if (!skip.includes(user)) {
-									info.users.push(user)
-									promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
-								}
+							for (const user of users) {
+								if (skip.includes(user))
+									continue
+
+								info.users.push(user)
+								promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script))
+							}
 						} else
 							info.error = new Error("processed script was empty")
 					}
@@ -255,11 +265,10 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 				const user = basename(resolvePath(path, ".."))
 
 				if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
-					const code = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
-
+					const sourceCode = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
 					let error = null
 
-					const { script: minCode, srcLength } = await processScript(code).catch(reason => {
+					const { script, srcLength } = await processScript(sourceCode).catch(reason => {
 						error = reason
 
 						return {
@@ -276,12 +285,13 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 						srcLength
 					}
 
-					if (!error)
-						if (minCode) {
-							info.minLength = hackmudLength(minCode)
-							await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode)
+					if (!error) {
+						if (script) {
+							info.minLength = hackmudLength(script)
+							await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script)
 						} else
 							info.error = new Error("processed script was empty")
+					}
 
 					onPush?.(info)
 				}
@@ -299,53 +309,54 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 /**
  * Copies script from hackmud to local source folder.
  *
- * @param srcPath path to folder containing source files
+ * @param sourceFolderPath path to folder containing source files
  * @param hackmudPath path to hackmud directory
  * @param script script to pull in `user.name` format
  */
-export async function pull(srcPath: string, hackmudPath: string, script: string) {
+export async function pull(sourceFolderPath: string, hackmudPath: string, script: string) {
 	const [ user, name ] = script.split(".")
-	await copyFilePersist(resolvePath(hackmudPath, user, "scripts", `${name}.js`), resolvePath(srcPath, user, `${name}.js`))
+	await copyFilePersist(resolvePath(hackmudPath, user, "scripts", `${name}.js`), resolvePath(sourceFolderPath, user, `${name}.js`))
 }
 
 export async function syncMacros(hackmudPath: string) {
-	const files = await readDir(hackmudPath, { withFileTypes: true })
+	const files = await readDirectory(hackmudPath, { withFileTypes: true })
 	const macros = new Map<string, { macro: string, date: Date }>()
 	const users: string[] = []
 
 	for (const file of files) {
-		if (file.isFile())
-			switch (extname(file.name)) {
-				case ".macros": {
-					const lines = (await readFile(resolvePath(hackmudPath, file.name), { encoding: "utf-8" })).split("\n")
-					const date = (await stat(resolvePath(hackmudPath, file.name))).mtime
+		if (!file.isFile())
+			continue
 
-					for (let i = 0; i < lines.length / 2 - 1; i++) {
-						const macroName = lines[i * 2]
-						const curMacro = macros.get(macroName)
+		switch (getFileExtension(file.name)) {
+			case ".macros": {
+				const lines = (await readFile(resolvePath(hackmudPath, file.name), { encoding: "utf-8" })).split("\n")
+				const date = (await stat(resolvePath(hackmudPath, file.name))).mtime
 
-						if (!curMacro || date > curMacro.date)
-							macros.set(macroName, { date, macro: lines[i * 2 + 1] })
-					}
+				for (let i = 0; i < lines.length / 2 - 1; i++) {
+					const macroName = lines[i * 2]
+					const curMacro = macros.get(macroName)
 
-					break
+					if (!curMacro || date > curMacro.date)
+						macros.set(macroName, { date, macro: lines[i * 2 + 1] })
 				}
+			} break
 
-				case ".key": {
-					users.push(basename(file.name, ".key"))
-					break
-				}
-			}
+			case ".key": {
+				users.push(basename(file.name, ".key"))
+			} break
+		}
 	}
 
 	let macroFile = ""
 	let macrosSynced = 0
 
-	for (const [ name, { macro } ] of [ ...macros ].sort(([ a ], [ b ]) => (a as any > b as any) - (a as any < b as any)))
-		if (macro[0] == macro[0].toLowerCase()) {
-			macroFile += `${name}\n${macro}\n`
-			macrosSynced++
-		}
+	for (const [ name, { macro } ] of [ ...macros ].sort(([ a ], [ b ]) => (a as any > b as any) - (a as any < b as any))) {
+		if (macro[0] != macro[0].toLowerCase())
+			continue
+
+		macroFile += `${name}\n${macro}\n`
+		macrosSynced++
+	}
 
 	for (const user of users)
 		writeFile(resolvePath(hackmudPath, user + ".macros"), macroFile)
@@ -362,35 +373,40 @@ export async function test(srcPath: string) {
 		line: number
 	}[] = []
 
-	for (const dirent of await readDir(srcPath, { withFileTypes: true })) {
+	for (const dirent of await readDirectory(srcPath, { withFileTypes: true })) {
 		if (dirent.isDirectory()) {
-			promises.push(readDir(resolvePath(srcPath, dirent.name), { withFileTypes: true }).then(files => {
+			promises.push(readDirectory(resolvePath(srcPath, dirent.name), { withFileTypes: true }).then(files => {
 				const promises: Promise<any>[] = []
 
 				for (const file of files) {
-					if (file.isFile() && supportedExtensions.includes(extname(file.name))) {
-						promises.push(readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" }).then(code =>
-							processScript(code).then(({ warnings }) =>
+					if (!file.isFile() || !supportedExtensions.includes(getFileExtension(file.name)))
+						continue
+
+					promises.push(
+						readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" })
+							.then(processScript)
+							.then(({ warnings }) =>
 								errors.push(...warnings.map(({ message, line }) => ({
 									file: `${dirent.name}/${file.name}`,
 									message, line
 								})))
 							)
-						))
-					}
+					)
 				}
 
 				return Promise.all(promises)
 			}))
-		} else if (dirent.isFile() && supportedExtensions.includes(extname(dirent.name))) {
-			promises.push(readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" }).then(code =>
-				processScript(code).then(({ warnings }) =>
-					errors.push(...warnings.map(({ message, line }) => ({
-						file: dirent.name,
-						message, line
-					})))
-				)
-			))
+		} else if (dirent.isFile() && supportedExtensions.includes(getFileExtension(dirent.name))) {
+			promises.push(
+				readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" })
+					.then(processScript)
+					.then(({ warnings }) =>
+						errors.push(...warnings.map(({ message, line }) => ({
+							file: dirent.name,
+							message, line
+						})))
+					)
+			)
 		}
 	}
 
@@ -403,8 +419,8 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 	const users = new Set<string>()
 
 	if (hackmudPath) {
-		for (const dirent of await readDir(hackmudPath, { withFileTypes: true })) {
-			if (dirent.isFile() && extname(dirent.name) == ".key")
+		for (const dirent of await readDirectory(hackmudPath, { withFileTypes: true })) {
+			if (dirent.isFile() && getFileExtension(dirent.name) == ".key")
 				users.add(basename(dirent.name, ".key"))
 		}
 	}
@@ -414,11 +430,11 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 	const allScripts: Record<string, string[]> = {}
 	const allAnyScripts: Record<string, string[]> = {}
 
-	for (const dirent of await readDir(srcDir, { withFileTypes: true })) {
+	for (const dirent of await readDirectory(srcDir, { withFileTypes: true })) {
 		if (dirent.isFile()) {
-			if (extname(dirent.name) == ".ts")
+			if (getFileExtension(dirent.name) == ".ts")
 				wildScripts.push(basename(dirent.name, ".ts"))
-			else if (extname(dirent.name) == ".js")
+			else if (getFileExtension(dirent.name) == ".js")
 				wildAnyScripts.push(basename(dirent.name, ".js"))
 		} else if (dirent.isDirectory()) {
 			const scripts: string[] = allScripts[dirent.name] = []
@@ -426,11 +442,11 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 
 			users.add(dirent.name)
 
-			for (const file of await readDir(resolvePath(srcDir, dirent.name), { withFileTypes: true })) {
+			for (const file of await readDirectory(resolvePath(srcDir, dirent.name), { withFileTypes: true })) {
 				if (file.isFile()) {
-					if (extname(file.name) == ".ts")
+					if (getFileExtension(file.name) == ".ts")
 						scripts.push(basename(file.name, ".ts"))
-					else if (extname(file.name) == ".js")
+					else if (getFileExtension(file.name) == ".js")
 						anyScripts.push(basename(file.name, ".js"))
 				}
 			}
