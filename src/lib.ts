@@ -1,10 +1,14 @@
 import { writeFile, mkdir as mkDir, copyFile } from "fs/promises"
 import { resolve as resolvePath } from "path"
-import { PathLike } from "fs"
+import { BaseEncodingOptions, Mode, OpenMode, PathLike } from "fs"
+import { Stream } from "stream"
+import { Abortable } from "events"
 
-type WriteFileParameters = Parameters<typeof writeFile>
-
-export async function writeFilePersist(path: string, data: WriteFileParameters[1], options?: WriteFileParameters[2]) {
+export async function writeFilePersist(
+	path: string,
+	data: string | NodeJS.ArrayBufferView | Iterable<string | NodeJS.ArrayBufferView> | AsyncIterable<string | NodeJS.ArrayBufferView> | Stream,
+	options?: BaseEncodingOptions & { mode?: Mode, flag?: OpenMode } & Abortable | BufferEncoding | null
+) {
 	await writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
 		switch (error.code) {
 			case "ENOENT":
