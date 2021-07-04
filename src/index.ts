@@ -515,8 +515,6 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
  * @param script JavaScript or TypeScript code
  */
 export async function processScript(script: string) {
-	// TODO comment tag for seclevel
-
 	let preScriptComments: string | undefined
 	let autocomplete: string | undefined
 
@@ -525,25 +523,58 @@ export async function processScript(script: string) {
 	if (!script)
 		throw new Error("script was empty")
 
+	if (script.match(/(?:SC|DB)\$/))
+		throw new Error("SC$ and DB$ are protected and cannot appear in a script")
+
+	let seclevel: number | undefined
+
 	for (const line of preScriptComments.split("\n")) {
-		let autocompleteMatch = line.match(/^\s*\/\/\s*@autocomplete\s*([^\s].*?)\s*$/)?.[1]
+		let [ , autocompleteMatch, seclevelMatch ] = (line.match(/^\s*\/\/\s*(?:@autocomplete\s*([^\s].*?)|@seclevel\s*([^\s].*?))\s*$/) || []) as [ never, string | undefined, string | undefined ]
 
 		if (autocompleteMatch)
 			autocomplete = autocompleteMatch
+		else if (seclevelMatch) {
+			seclevelMatch = seclevelMatch.toLowerCase()
+
+			if (seclevelMatch.match(/fullsec|f|4|fs|full/))
+				seclevel = 4
+			else if (seclevelMatch.match(/highsec|h|3|hs|high/))
+				seclevel = 3
+			else if (seclevelMatch.match(/midsec|m|2|ms|mid/))
+				seclevel = 2
+			else if (seclevelMatch.match(/lowsec|l|1|ls|low/))
+				seclevel = 1
+			else if (seclevelMatch.match(/nullsec|n|0|ns|null/))
+				seclevel = 0
+		}
 	}
+
+	let detectedSeclevel: number | undefined
+
+	if (script.match(/[#$][n0]s\./))
+		detectedSeclevel = 0
+	else if (script.match(/[#$][l1]s\./))
+		detectedSeclevel = 1
+	else if (script.match(/[#$][m2]s\./))
+		detectedSeclevel = 2
+	else if (script.match(/[#$][h3]s\./))
+		detectedSeclevel = 3
+	else if (script.match(/[#$][f4]s\./))
+		detectedSeclevel = 4
+
+	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
+
+	if (seclevel == undefined)
+		seclevel = seclevel ?? detectedSeclevel ?? 0
+	else if (detectedSeclevel != undefined && seclevel != detectedSeclevel)
+		throw new Error(`detected seclevel is ${seclevelNames[detectedSeclevel]} which does not match the provided seclevel of ${seclevelNames[seclevel]}`)
 
 	const semicolons = script.match(/;/g)?.length ?? 0
 
-	// I can detect the sec level right here with if (script.match(/[#$][n0]s\./)) {} else if (script.match(/[#$][l1]s\./)) {} else if ...
-	// if the sec level was provided in the comment tag seclevel, we'll throw an error if the comment tag seclevel doesn't match the seclevel provided by subscripts if they use the explicit sevlevel syntax
-	// TODO support #s./$s. syntax when comment tag secelevel is provided
-
 	// FIXME I think #db.i() is gonna be turned into $db[_JSON_VALUE_0_]()
 
-	// TODO once we support #s./$s. syntax we should replace subscripts with SC$foo$bar( just like the hackmud preprocessor
-
 	script = script
-		.replace(/[#$]([fhmln01234])s\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "$$$1s$$$2$$$3(")
+		.replace(/[#$][fhmln43210]?s\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "SC$$$1$$$2(")
 		.replace(/^function\s*\(/, "function script(")
 		.replace(/#D\(/g, "$D(")
 		.replace(/#FMCL/g, "$FMCL")
@@ -567,7 +598,7 @@ export async function processScript(script: string) {
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
 	// source to make things fair
-	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function (")) - (script.match(/;/g)?.length ?? 0) + semicolons
+	let srcLength = hackmudLength(script.replace(/^function\s*\w+\(/, "function(")) - (script.match(/;/g)?.length ?? 0) + semicolons + (script.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
 
 	// remove dead code (so we don't waste chracters quine cheating strings
 	// that aren't even used)
@@ -753,9 +784,9 @@ export async function processScript(script: string) {
 
 	if (jsonValues.length) {
 		if (jsonValues.length == 1)
-			script = stringSplice(script, `\nlet _JSON_VALUE_0_ = JSON.parse($fs$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+			script = stringSplice(script, `\nlet _JSON_VALUE_0_ = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
 		else
-			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")} ] = JSON.parse($fs$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")} ] = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
 	} else
 		script = script.replace(/_UNDEFINED_/g, "void 0")
 
@@ -798,7 +829,7 @@ export async function processScript(script: string) {
 
 	script = script
 		.replace(/^function\s*\w+\(/, "function(")
-		.replace(/\$([fhmln01234])s\$([a-zA-Z_][a-zA-Z0-9_]*)\$([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "#$1s.$2.$3(")
+		.replace(/SC\$([a-zA-Z_][a-zA-Z0-9_]*)\$([a-zA-Z_][a-zA-Z0-9_]*)\(/g, `#${"nlmhf"[seclevel]}s.$1.$2(`)
 		.replace(/\$D\(/g, "#D(")
 		.replace(/\$FMCL/g, "#FMCL")
 		.replace(/\$G/g, "#G")
