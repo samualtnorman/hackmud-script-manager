@@ -514,13 +514,29 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
  * @param script JavaScript or TypeScript code
  */
 export async function processScript(script: string) {
-	// remove comments and whatever whitespace at the start of the script
-	[ , script ] = script.match(/(?:^\s*\/\/.*\n)*\s*([^]+)/m)!
+	// TODO comment tag for seclevel
+
+	let preScriptComments: string | undefined
+	let autocomplete: string | undefined
+
+	[ , preScriptComments, script, autocomplete ] = script.match(/((?:^\s*\/\/.*\n)*)\s*((?:.+?\/\/\s*(.+?)\s*$)?[^]*)/m)!
+
+	for (const line of preScriptComments.split("\n")) {
+		let autocompleteMatch = line.match(/^\s*\/\/\s*@autocomplete\s*([^\s].*?)\s*$/)?.[1]
+
+		if (autocompleteMatch)
+			autocomplete = autocompleteMatch
+	}
 
 	const semicolons = script.match(/;/g)?.length ?? 0
 
-	// TODO bring autocompletes back
-	// const autocompleteMatch = script.match(/^(?:\/\/ @autocomplete (.+)|function(?: \w+| )?\([^\)]*\)\s*{\s*\/\/(.+))\n/)
+	// I can detect the sec level right here with if (script.match(/[#$][n0]s\./)) {} else if (script.match(/[#$][l1]s\./)) {} else if ...
+	// if the sec level was provided in the comment tag seclevel, we'll throw an error if the comment tag seclevel doesn't match the seclevel provided by subscripts if they use the explicit sevlevel syntax
+	// TODO support #s./$s. syntax when comment tag secelevel is provided
+
+	// FIXME I think #db.i() is gonna be turned into $db[_JSON_VALUE_0_]()
+
+	// TODO once we support #s./$s. syntax we should replace subscripts with SC$foo$bar( just like the hackmud preprocessor
 
 	script = script
 		.replace(/[#$]([fhmln01234])s\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "$$$1s$$$2$$$3(")
@@ -597,6 +613,7 @@ export async function processScript(script: string) {
 	// we iterate through the tokens backwards so that substring replacements
 	// don't affect future replacements since a part of the string could be
 	// replaced with a string of a different length which messes up indexes
+	// TODO switch out [Symbol.iterator]() for .values()
 	const tokens = [ ...tokenizer(script, { ecmaVersion: 2015 }) ].reverse()[Symbol.iterator]()
 
 	for (const token of tokens) {
@@ -755,10 +772,11 @@ export async function processScript(script: string) {
 		format: { semicolons: false }
 	})).code || ""
 
+	// this step affects the chracter count and can't be done after the count comparison
 	if (jsonValues.length) {
 		const json = JSON.stringify(jsonValues.length == 1 ? jsonValues[0] : jsonValues)
 
-		script = stringSplice(script, `//\t${json}\t\n`, (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0].body.start + 1)
+		script = stringSplice(script, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${json}\t\n`, (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0].body.start + 1)
 
 		for (const [ i, part ] of script.split("\t").entries()) {
 			if (part == json) {
@@ -768,8 +786,12 @@ export async function processScript(script: string) {
 		}
 	}
 
-	if (hackmudLength(scriptBeforeJSONValueReplacement) <= hackmudLength(script))
+	if (hackmudLength(scriptBeforeJSONValueReplacement) <= hackmudLength(script)) {
 		script = scriptBeforeJSONValueReplacement
+
+		if (autocomplete)
+			script = stringSplice(script, `//${autocomplete}\n`, (parse(script, { ecmaVersion: 2015, allowReturnOutsideFunction: true }) as any).body[0].body.start + 1)
+	}
 
 	script = script
 		.replace(/^function\s*\w+\(/, "function(")
@@ -778,9 +800,6 @@ export async function processScript(script: string) {
 		.replace(/\$FMCL/g, "#FMCL")
 		.replace(/\$G/g, "#G")
 		.replace(/\$db\./g, "#db.")
-
-	// if (autocompleteMatch)
-	// 	script = script.replace(/function \(.*\) \{/, `$& // ${(autocompleteMatch[1] || autocompleteMatch[2]).trim()}`)
 
 	return {
 		srcLength,
