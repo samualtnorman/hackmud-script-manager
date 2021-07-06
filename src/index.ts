@@ -550,32 +550,30 @@ export async function processScript(script: string) {
 		if (autocompleteMatch)
 			autocomplete = autocompleteMatch
 		else if (seclevelMatch) {
-			seclevelMatch = seclevelMatch.toLowerCase()
-
-			if (seclevelMatch.match(/fullsec|f|4|fs|full/))
+			if (seclevelMatch.match(/^(?:fullsec|f|4|fs|full)$/i))
 				seclevel = 4
-			else if (seclevelMatch.match(/highsec|h|3|hs|high/))
+			else if (seclevelMatch.match(/^(?:highsec|h|3|hs|high)$/i))
 				seclevel = 3
-			else if (seclevelMatch.match(/midsec|m|2|ms|mid/))
+			else if (seclevelMatch.match(/^(?:midsec|m|2|ms|mid)$/i))
 				seclevel = 2
-			else if (seclevelMatch.match(/lowsec|l|1|ls|low/))
+			else if (seclevelMatch.match(/^(?:lowsec|l|1|ls|low)$/i))
 				seclevel = 1
-			else if (seclevelMatch.match(/nullsec|n|0|ns|null/))
+			else if (seclevelMatch.match(/^(?:nullsec|n|0|ns|null)$/i))
 				seclevel = 0
 		}
 	}
 
 	let detectedSeclevel: number | undefined
 
-	if (script.match(/[#$][n0]s\./))
+	if (script.match(/[#$][n0]s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
 		detectedSeclevel = 0
-	else if (script.match(/[#$][l1]s\./))
+	else if (script.match(/[#$][l1]s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
 		detectedSeclevel = 1
-	else if (script.match(/[#$][m2]s\./))
+	else if (script.match(/[#$][m2]s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
 		detectedSeclevel = 2
-	else if (script.match(/[#$][h3]s\./))
+	else if (script.match(/[#$][h3]s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
 		detectedSeclevel = 3
-	else if (script.match(/[#$][f4]s\./))
+	else if (script.match(/[#$][f4]s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
 		detectedSeclevel = 4
 
 	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
@@ -588,7 +586,7 @@ export async function processScript(script: string) {
 	const semicolons = script.match(/;/g)?.length ?? 0
 
 	script = script
-		.replace(/[#$][fhmln43210]?s\.([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)\(/g, "SC$$$1$$$2(")
+		.replace(/[#$][fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/g, "SC$$$1$$$2(")
 		.replace(/^function\s*\(/, "function script(")
 		.replace(/#D\(/g, "$D(")
 		.replace(/#FMCL/g, "$FMCL")
