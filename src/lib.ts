@@ -1,36 +1,34 @@
-import { writeFile, mkdir as mkDir, copyFile } from "fs/promises"
-import { resolve as resolvePath } from "path"
-import { BaseEncodingOptions, Mode, OpenMode, PathLike } from "fs"
-import { Stream } from "stream"
-import { Abortable } from "events"
+import { dirname as pathDirectory } from "path"
+import { PathLike, writeFile as writeFile_, mkdir as makeDirectory_, copyFile as copyFile_, WriteFileOptions, readFile as readFile_, rmdir as removeDirectory_, readdir as readDirectory_, stat as getFileStatus_ } from "fs"
+import { promisify } from "util"
+import { exec as execute_ } from "child_process"
 
-export async function writeFilePersist(
-	path: string,
-	data: string | NodeJS.ArrayBufferView | Iterable<string | NodeJS.ArrayBufferView> | AsyncIterable<string | NodeJS.ArrayBufferView> | Stream,
-	options?: BaseEncodingOptions & { mode?: Mode, flag?: OpenMode } & Abortable | BufferEncoding | null
-) {
-	await writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
-		switch (error.code) {
-			case "ENOENT":
-				await mkDir(resolvePath(path, ".."), { recursive: true })
-				await writeFile(path, data, options)
-				break
-			default:
-				throw error
-		}
+export const readFile = promisify(readFile_)
+export const writeFile = promisify(writeFile_)
+export const copyFile = promisify(copyFile_)
+export const readDirectory = promisify(readDirectory_)
+export const makeDirectory = promisify(makeDirectory_)
+export const removeDirectory = promisify(removeDirectory_)
+export const getFileStatus = promisify(getFileStatus_)
+export const execute = promisify(execute_)
+
+export function writeFilePersist(path: string, data: any, options?: WriteFileOptions) {
+	return writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
+		if (error.code != "ENOENT")
+			throw error
+
+		await makeDirectory(pathDirectory(path), { recursive: true })
+		await writeFile(path, data, options)
 	})
 }
 
-export async function copyFilePersist(path: PathLike, dest: string, flags?: number) {
-	await copyFile(path, dest, flags).catch(async (error: NodeJS.ErrnoException) => {
-		switch (error.code) {
-			case "ENOENT":
-				await mkDir(resolvePath(dest, ".."), { recursive: true })
-				await copyFile(path, dest, flags)
-				break
-			default:
-				throw error
-		}
+export async function copyFilePersist(src: PathLike, dst: string, flags?: number) {
+	await copyFile(src, dst, flags).catch(async (error: NodeJS.ErrnoException) => {
+		if (error.code != "ENOENT")
+			throw error
+
+		await makeDirectory(pathDirectory(dst), { recursive: true })
+		await copyFile(src, dst, flags)
 	})
 }
 
@@ -53,4 +51,18 @@ export function positionToLineNumber(position: number, script: string) {
 
 export function stringSplice(original: string, replacement: string, start: number, end = start) {
 	return original.slice(0, start) + replacement + original.slice(end)
+}
+
+export async function catchError<T>(promise: Promise<T>) {
+	try {
+		return await promise
+	} catch (error) {
+		assert(error instanceof Error, "error was not an instanceof Error")
+		return error
+	}
+}
+
+export function assert(value: any, message = "assertion failed"): asserts value {
+	if (!value)
+		throw new Error(message)
 }

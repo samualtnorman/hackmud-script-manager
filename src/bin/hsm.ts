@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { readFile, mkdir as mkDir, writeFile, rmdir as rmDir } from "fs/promises"
-import { basename, extname, resolve as resolvePath } from "path"
+import { basename, dirname, extname, resolve as resolvePath } from "path"
 import { homedir as homeDir } from "os"
-import { generateTypings, pull, push, syncMacros, test, watch } from ".."
-import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "ansi-colors"
+import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "chalk"
+
+import { generateTypings, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
+import { assert, catchError, hackmudLength, writeFilePersist, readFile, writeFile, removeDirectory, makeDirectory } from "../lib"
 
 type ArgValue = boolean | number | string/* | ArgValue[]*/
 
@@ -21,30 +22,31 @@ let config: Record<string, any> &  Partial<{
 	}>
 }> | undefined
 
-for (let arg of process.argv.slice(2)) {
+for (const arg of process.argv.slice(2)) {
 	if (arg[0] == "-") {
-		let [ key, valueRaw ] = arg.split("=")
+		const [ key, valueRaw ] = arg.split("=")
 		let value: ArgValue = valueRaw
 
-		if (value)
+		if (value) {
 			if (value == "true")
 				value = true
 			else if (value == "false")
 				value = false
 			else {
-				let number = Number(value)
+				const number = Number(value)
 
 				if (isFinite(number))
 					value = number
 			}
-		else
+		} else
 			value = true
 
 		if (arg[1] == "-")
 			options.set(key.slice(2), value)
-		else
-			for (let option of key.slice(1))
+		else {
+			for (const option of key.slice(1))
 				options.set(option, value)
+		}
 	} else
 		commands.push(arg)
 }
@@ -54,7 +56,7 @@ for (let arg of process.argv.slice(2)) {
 		version()
 	else if (options.get("help") || options.get("h"))
 		help()
-	else
+	else {
 		switch (commands[0]) {
 			case "push": {
 				const config = await getConfig()
@@ -126,9 +128,7 @@ for (let arg of process.argv.slice(2)) {
 					)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
-
-				break
-			}
+			} break
 
 			case "pull": {
 				const config = await getConfig()
@@ -149,9 +149,7 @@ for (let arg of process.argv.slice(2)) {
 						help()
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
-
-				break
-			}
+			} break
 
 			case "sync-macros": {
 				const { hackmudPath } = await getConfig()
@@ -161,9 +159,7 @@ for (let arg of process.argv.slice(2)) {
 					console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
-
-				break
-			}
+			} break
 
 			case "test": {
 				const srcPath = resolvePath(commands[1] || ".")
@@ -181,9 +177,7 @@ for (let arg of process.argv.slice(2)) {
 					console.log(`\nencountered ${bold(String(errors))} errors`)
 				} else
 					console.log("no errors found")
-
-				break
-			}
+			} break
 
 			case "gen-types": {
 				const srcPath = resolvePath(commands[1] || ".")
@@ -201,9 +195,9 @@ for (let arg of process.argv.slice(2)) {
 
 			case "config":
 				switch (commands[1]) {
-					case "get":
+					case "get": {
 						console.log(exploreObject(await getConfig(), commands.slice(2)))
-						break
+					} break
 
 					case "delete": {
 						const config = await getConfig()
@@ -214,9 +208,7 @@ for (let arg of process.argv.slice(2)) {
 							console.log(config)
 						} else
 							help()
-
-						break
-					}
+					} break
 
 					case "set": {
 						const config = await getConfig()
@@ -241,61 +233,127 @@ for (let arg of process.argv.slice(2)) {
 						break
 					}
 
-					default:
+					default: {
 						if (commands[1])
 							console.log("unknown command")
 
-					help()
+						help()
+					}
+				} break
+
+			case "help":
+			case "h": {
+				help()
+			} break
+
+			case "version":
+			case "v": {
+				version()
+			} break
+
+			case "golf":
+			case "minify": {
+				if (!commands[1]) {
+					console.log(`Target required\nUsage: ${basename(process.argv[1])} ${commands[0]} <target> [output]`)
+					break
 				}
 
-				break
-			case "help":
-			case "h":
-				help()
-				break
-			case "version":
-			case "v":
-				version()
-				break
-			default:
+				const fileExtension = extname(commands[1])
+
+				if (!supportedExtensions.includes(fileExtension)) {
+					console.log(`Unsupported file extension "${bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(bold).join('", "')}"`)
+					break
+				}
+
+				const source = await catchError(readFile(commands[1], { encoding: "utf-8" }))
+
+				if (source instanceof Error) {
+					assert(source )
+					break
+				}
+
+				const { script, srcLength, warnings } = await processScript(source)
+
+				for (const { message, line } of warnings)
+					console.log(`warning "${bold(message)}" on line ${bold(String(line))}`)
+
+				let outputPath: string
+
+				if (commands[2])
+					outputPath = commands[2]
+				else {
+					const fileBaseName = basename(commands[1], fileExtension)
+
+					outputPath = resolvePath(
+						dirname(commands[1]),
+
+						fileBaseName.endsWith(".src")
+							? `${fileBaseName.slice(0, -4)}.js` :
+						fileExtension == ".js"
+							? `${fileBaseName}.min.js`
+							: `${fileBaseName}.js`
+					)
+				}
+
+				await writeFilePersist(resolvePath(dirname(commands[1])), script)
+
+				console.log(`wrote ${bold(String(hackmudLength(script)))} chars (from ${bold(String(srcLength))} chars) to ${bold(outputPath)}`)
+			} break
+
+			default: {
 				if (commands[0])
 					console.log("unknown command")
 
 				help()
+			}
 		}
+	}
 
 	updateConfig()
 })()
 
 function help() {
 	switch (commands[0]) {
-		case "config":
+		case "config": {
 			switch (commands[1]) {
-				case "get":
+				case "get": {
 					console.log("hsm config get <key>")
-					break
-				case "set":
-					console.log("hsm config set <key> <value>")
-					break
-				case "delete":
-					console.log("hsm config delete <key>")
-					break
-				default:
-					console.log("hsm config <get, delete, set>")
-			}
+				} break
 
-			break
-		case "push":
+				case "set": {
+					console.log("hsm config set <key> <value>")
+				} break
+
+				case "delete": {
+					console.log("hsm config delete <key>")
+				} break
+
+				default: {
+					console.log("hsm config <get, delete, set>")
+				}
+			}
+		} break
+
+		case "push": {
 			console.log("hsm push [dir]")
-			break
-		case "watch":
+		} break
+
+		case "watch": {
 			console.log("hsm watch [dir]")
-			break
-		case "pull":
+		} break
+
+		case "pull": {
 			console.log("hsm pull <user.script>")
-			break
-		default:
-			console.log("hsm <push, watch, pull, config>")
+		} break
+
+		case "minify":
+		case "golf": {
+			console.log(`${basename(process.argv[1])} ${commands[0]} <target> [output]`)
+		} break
+
+		default: {
+			console.log("hsm <push, watch, pull, config, golf>")
+		}
 	}
 }
 
@@ -332,11 +390,12 @@ async function getConfig() {
 }
 
 function exploreObject(object: any, keys: string[], createPath = false) {
-	for (let key of keys)
+	for (const key of keys) {
 		if (createPath)
 			object = typeof object[key] == "object" ? object[key] : object[key] = {}
 		else
 			object = object?.[key]
+	}
 
 	return object
 }
@@ -347,14 +406,17 @@ function updateConfig() {
 
 		writeFile(configFilePath, json).catch(async error => {
 			switch (error.code) {
-				case "EISDIR":
-					await rmDir(configFilePath)
-					break
-				case "ENOENT":
-					await mkDir(configDirPath)
-					break
-				default:
+				case "EISDIR": {
+					await removeDirectory(configFilePath)
+				} break
+
+				case "ENOENT": {
+					await makeDirectory(configDirPath)
+				} break
+
+				default: {
 					throw error
+				}
 			}
 
 			writeFile(configFilePath, json)

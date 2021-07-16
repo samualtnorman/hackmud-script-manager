@@ -1,13 +1,12 @@
-import { readdir as readDirectory, writeFile, readFile, stat } from "fs/promises"
 import { watch as watchDir } from "chokidar"
 import { minify } from "terser"
 import { resolve as resolvePath, basename, extname as getFileExtension } from "path"
 import typescript from "typescript"
-import { parse, Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
+import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 
-import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice, readDirectory, readFile, getFileStatus, writeFile } from "./lib"
 
-interface Info {
+export interface Info {
 	file: string
 	users: string[]
 	srcLength: number
@@ -15,7 +14,7 @@ interface Info {
 	error: any
 }
 
-const supportedExtensions = [ ".js", ".ts" ]
+export const supportedExtensions = [ ".js", ".ts" ]
 
 // TODO `clean()` function that delete all scripts in hackmud directory #70
 // TODO optional argument (defaults to false) for `clean()` that makes it only remove scripts without a source file #70
@@ -171,7 +170,7 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
  * @param scripts scripts to push from (pushes from all if empty)
  * @param onPush function that's called after each script has been built and written
  */
-export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string } = {}) {
+export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string | undefined } = {}) {
 	const watcher = watchDir("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
 		const extension = getFileExtension(path)
 
@@ -330,7 +329,7 @@ export async function syncMacros(hackmudPath: string) {
 		switch (getFileExtension(file.name)) {
 			case ".macros": {
 				const lines = (await readFile(resolvePath(hackmudPath, file.name), { encoding: "utf-8" })).split("\n")
-				const date = (await stat(resolvePath(hackmudPath, file.name))).mtime
+				const date = (await getFileStatus(resolvePath(hackmudPath, file.name))).mtime
 
 				for (let i = 0; i < lines.length / 2 - 1; i++) {
 					const macroName = lines[i * 2]
@@ -849,7 +848,7 @@ export async function processScript(script: string) {
 	}
 }
 
-function getFunctionBodyStart(code: string) {
+export function getFunctionBodyStart(code: string) {
 	const tokens = tokenize(code, { ecmaVersion: 2015 })
 
 	tokens.getToken() // function

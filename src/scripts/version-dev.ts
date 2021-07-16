@@ -1,28 +1,7 @@
-import { exec } from "child_process"
-import { readFile } from "fs/promises"
-import { inc } from "semver"
+import semver from "semver"
+import { readFile, execute } from "../lib"
 
-Promise.all([
-	readFile("package.json", { encoding: "utf-8" })
-		.then(JSON.parse)
-		.then(({ version }: { version: string }) => inc(version, "minor")),
-	execute("git rev-parse --short HEAD")
-		.then(({ stdout }) => stdout.trim())
-]).then(([ version, hash ]) =>
-	execute(`npm version ${version}-${hash}`)
-		.then(({ stdout }) => console.log(stdout))
-)
-
-function execute(command: string) {
-	return new Promise<{
-		stdout: string
-		stderr: string
-	}>((resolve, reject) =>
-		exec(command, (error, stdout, stderr) => {
-			if (error)
-				return reject(error)
-
-			resolve({ stdout, stderr })
-		})
-	)
-}
+(async () => {
+	const [ packageJSONFile, { stdout: gitGetHashStdout } ] = await Promise.all([ readFile("package.json", { encoding: "utf-8" }), execute("git rev-parse --short HEAD") ])
+	console.log((await execute(`npm version ${semver.inc(JSON.parse(packageJSONFile).version, "minor")}-${gitGetHashStdout.trim()}`)).stdout)
+})()
