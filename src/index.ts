@@ -1,10 +1,13 @@
-import { watch as watchDir } from "chokidar"
+import { watch as watchDirectory } from "chokidar"
 import { minify } from "terser"
-import { resolve as resolvePath, basename, extname as getFileExtension } from "path"
+import { resolve as resolvePath, basename as getBaseName, extname as getFileExtension } from "path"
 import typescript from "typescript"
 import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
+import fs from "fs"
 
-import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice, readDirectory, readFile, getFileStatus, writeFile } from "./lib"
+import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+
+const { readFile: readFile, readdir: readDirectory, stat: getFileStatus, writeFile: writeFile } = fs.promises
 
 export interface Info {
 	file: string
@@ -45,7 +48,7 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 				promises.push(readDirectory(resolvePath(srcDir, user), { withFileTypes: true }).then(files => {
 					for (const file of files) {
 						const extension = getFileExtension(file.name)
-						const name = basename(file.name, extension)
+						const name = getBaseName(file.name, extension)
 
 						if (supportedExtensions.includes(extension) && file.isFile() && (!scripts.length || scripts.includes(name))) {
 							let skip = skips.get(name)
@@ -96,7 +99,7 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 		if (!users.length) {
 			users = (await readDirectory(hackmudDir, { withFileTypes: true }))
 				.filter(a => a.isFile() && getFileExtension(a.name) == ".key")
-				.map(a => basename(a.name, ".key"))
+				.map(a => getBaseName(a.name, ".key"))
 		}
 
 		Promise.all(promises).then(() => {
@@ -107,7 +110,7 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
 					const extension = getFileExtension(file.name)
 
 					if (supportedExtensions.includes(extension)) {
-						const name = basename(file.name, extension)
+						const name = getBaseName(file.name, extension)
 
 						if (!scripts.length || scripts.includes(name)) {
 							promises.push(readFile(resolvePath(srcDir, file.name), { encoding: "utf-8" }).then(async code => {
@@ -171,12 +174,12 @@ export function push(srcDir: string, hackmudDir: string, users: string[], script
  * @param onPush function that's called after each script has been built and written
  */
 export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string | undefined } = {}) {
-	const watcher = watchDir("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
+	const watcher = watchDirectory("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
 		const extension = getFileExtension(path)
 
 		if (supportedExtensions.includes(extension)) {
-			const name = basename(path, extension)
-			const fileName = basename(path)
+			const name = getBaseName(path, extension)
+			const fileName = getBaseName(path)
 
 			if (path == fileName) {
 				if (!scripts.length || scripts.includes(name)) {
@@ -198,7 +201,7 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 								if (!supportedExtensions.includes(fileExtension))
 									continue
 
-								const name = basename(file.name, fileExtension)
+								const name = getBaseName(file.name, fileExtension)
 								const skip = skips.get(name)
 
 								if (skip)
@@ -241,7 +244,7 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 							if (!users.length) {
 								users = (await readDirectory(hackmudDir, { withFileTypes: true }))
 									.filter(a => a.isFile() && getFileExtension(a.name) == ".key")
-									.map(a => basename(a.name, ".key"))
+									.map(a => getBaseName(a.name, ".key"))
 							}
 
 							for (const user of users) {
@@ -261,7 +264,7 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 					}
 				}
 			} else {
-				const user = basename(resolvePath(path, ".."))
+				const user = getBaseName(resolvePath(path, ".."))
 
 				if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
 					const sourceCode = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
@@ -341,7 +344,7 @@ export async function syncMacros(hackmudPath: string) {
 			} break
 
 			case ".key": {
-				users.push(basename(file.name, ".key"))
+				users.push(getBaseName(file.name, ".key"))
 			} break
 		}
 	}
@@ -420,7 +423,7 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 	if (hackmudPath) {
 		for (const dirent of await readDirectory(hackmudPath, { withFileTypes: true })) {
 			if (dirent.isFile() && getFileExtension(dirent.name) == ".key")
-				users.add(basename(dirent.name, ".key"))
+				users.add(getBaseName(dirent.name, ".key"))
 		}
 	}
 
@@ -432,9 +435,9 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 	for (const dirent of await readDirectory(srcDir, { withFileTypes: true })) {
 		if (dirent.isFile()) {
 			if (getFileExtension(dirent.name) == ".ts")
-				wildScripts.push(basename(dirent.name, ".ts"))
+				wildScripts.push(getBaseName(dirent.name, ".ts"))
 			else if (getFileExtension(dirent.name) == ".js")
-				wildAnyScripts.push(basename(dirent.name, ".js"))
+				wildAnyScripts.push(getBaseName(dirent.name, ".js"))
 		} else if (dirent.isDirectory()) {
 			const scripts: string[] = allScripts[dirent.name] = []
 			const anyScripts: string[] = allAnyScripts[dirent.name] = []
@@ -444,9 +447,9 @@ export async function generateTypings(srcDir: string, target: string, hackmudPat
 			for (const file of await readDirectory(resolvePath(srcDir, dirent.name), { withFileTypes: true })) {
 				if (file.isFile()) {
 					if (getFileExtension(file.name) == ".ts")
-						scripts.push(basename(file.name, ".ts"))
+						scripts.push(getBaseName(file.name, ".ts"))
 					else if (getFileExtension(file.name) == ".js")
-						anyScripts.push(basename(file.name, ".js"))
+						anyScripts.push(getBaseName(file.name, ".js"))
 				}
 			}
 		}

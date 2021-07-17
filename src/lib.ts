@@ -1,18 +1,13 @@
 import { dirname as pathDirectory } from "path"
-import { PathLike, writeFile as writeFile_, mkdir as makeDirectory_, copyFile as copyFile_, WriteFileOptions, readFile as readFile_, rmdir as removeDirectory_, readdir as readDirectory_, stat as getFileStatus_ } from "fs"
-import { promisify } from "util"
-import { exec as execute_ } from "child_process"
+import fs, { PathLike } from "fs"
 
-export const readFile = promisify(readFile_)
-export const writeFile = promisify(writeFile_)
-export const copyFile = promisify(copyFile_)
-export const readDirectory = promisify(readDirectory_)
-export const makeDirectory = promisify(makeDirectory_)
-export const removeDirectory = promisify(removeDirectory_)
-export const getFileStatus = promisify(getFileStatus_)
-export const execute = promisify(execute_)
+const { writeFile, mkdir: makeDirectory, copyFile } = fs.promises
 
-export function writeFilePersist(path: string, data: any, options?: WriteFileOptions) {
+export function writeFilePersist(
+	path: string,
+	data: any,
+	options?: { encoding?: string | null | undefined, mode?: string | number | undefined, flag?: string | number | undefined } | string | null
+) {
 	return writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
 		if (error.code != "ENOENT")
 			throw error
@@ -22,13 +17,13 @@ export function writeFilePersist(path: string, data: any, options?: WriteFileOpt
 	})
 }
 
-export async function copyFilePersist(src: PathLike, dst: string, flags?: number) {
-	await copyFile(src, dst, flags).catch(async (error: NodeJS.ErrnoException) => {
+export async function copyFilePersist(src: PathLike, dest: string, flags?: number) {
+	await copyFile(src, dest, flags).catch(async (error: NodeJS.ErrnoException) => {
 		if (error.code != "ENOENT")
 			throw error
 
-		await makeDirectory(pathDirectory(dst), { recursive: true })
-		await copyFile(src, dst, flags)
+		await makeDirectory(pathDirectory(dest), { recursive: true })
+		await copyFile(src, dest, flags)
 	})
 }
 

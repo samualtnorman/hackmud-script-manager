@@ -1,14 +1,17 @@
 #!/usr/bin/env node
-import { basename, dirname, extname, resolve as resolvePath } from "path"
-import { homedir as homeDir } from "os"
-import { redBright, yellowBright, greenBright, blueBright, cyanBright, magentaBright, bold, dim } from "chalk"
+import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, resolve as resolvePath } from "path"
+import { homedir as getHomeDirectory } from "os"
+import chalk from "chalk"
+import fs from "fs"
 
 import { generateTypings, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
-import { assert, catchError, hackmudLength, writeFilePersist, readFile, writeFile, removeDirectory, makeDirectory } from "../lib"
+import { assert, catchError, hackmudLength, writeFilePersist } from "../lib"
+
+const { readFile: readFile, rmdir: removeDirectory, writeFile: writeFile, mkdir: makeDirectory } = fs.promises
 
 type ArgValue = boolean | number | string/* | ArgValue[]*/
 
-const configDirPath = resolvePath(homeDir(), ".config")
+const configDirPath = resolvePath(getHomeDirectory(), ".config")
 const configFilePath = resolvePath(configDirPath, "hsm.json")
 
 const options = new Map<string, ArgValue>()
@@ -66,7 +69,7 @@ for (const arg of process.argv.slice(2)) {
 					const hackmudPath = config.hackmudPath
 					const users = options.get("users")?.toString().split(",") || []
 					const scripts = options.get("scripts")?.toString().split(",") || []
-					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
+					const colours = [ chalk.redBright, chalk.greenBright, chalk.yellowBright, chalk.blueBright, chalk.magentaBright, chalk.cyanBright ]
 					const configUsers = config.users = config.users || {}
 
 					await push(
@@ -78,14 +81,14 @@ for (const arg of process.argv.slice(2)) {
 							error
 								? `error "${
 									error instanceof Error
-										? bold(error.message)
+										? chalk.bold(error.message)
 										: error
-								}" in ${dim(file)}`
-								: `pushed ${bold(file)} to ${
+								}" in ${chalk.dim(file)}`
+								: `pushed ${chalk.bold(file)} to ${
 									users.map(user =>
-										bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
+										chalk.bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
 									).join(", ")
-								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} (${bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
+								} | ${chalk.bold(String(minLength))} chars from ${chalk.bold(String(srcLength))} | saved ${chalk.bold(String(srcLength - minLength))} (${chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${chalk.bold(`${resolvePath(hackmudPath, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)}`
 								)
 					)
 
@@ -102,7 +105,7 @@ for (const arg of process.argv.slice(2)) {
 					const hackmudPath = config.hackmudPath
 					const users = options.get("users")?.toString().split(",") || []
 					const scripts = options.get("scripts")?.toString().split(",") || []
-					const colours = [ redBright, greenBright, yellowBright, blueBright, magentaBright, cyanBright ]
+					const colours = [ chalk.redBright, chalk.greenBright, chalk.yellowBright, chalk.blueBright, chalk.magentaBright, chalk.cyanBright ]
 					const configUsers = config.users = config.users || {}
 					const genTypes = options.get("gen-types")?.toString()
 
@@ -115,14 +118,14 @@ for (const arg of process.argv.slice(2)) {
 							error
 								? `error "${
 									error instanceof Error
-										? bold(error.message)
+										? chalk.bold(error.message)
 										: error
-								}" in ${dim(file)}`
-								: `pushed ${bold(file)} to ${
+								}" in ${chalk.dim(file)}`
+								: `pushed ${chalk.bold(file)} to ${
 									users.map(user =>
-										bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
+										chalk.bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
 									).join(", ")
-								} | ${bold(String(minLength))} chars from ${bold(String(srcLength))} | saved ${bold(String(srcLength - minLength))} (${bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${bold(`${resolvePath(hackmudPath, users[0], "scripts", basename(file, extname(file)))}.js`)}`
+								} | ${chalk.bold(String(minLength))} chars from ${chalk.bold(String(srcLength))} | saved ${chalk.bold(String(srcLength - minLength))} (${chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${chalk.bold(`${resolvePath(hackmudPath, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)}`
 						),
 						{ genTypes }
 					)
@@ -165,16 +168,16 @@ for (const arg of process.argv.slice(2)) {
 				const srcPath = resolvePath(commands[1] || ".")
 				let errors = 0
 
-				console.log(`testing scripts in ${bold(srcPath)}\n`)
+				console.log(`testing scripts in ${chalk.bold(srcPath)}\n`)
 
 				for (const { file, line, message } of await test(srcPath)) {
-					console.log(`error "${bold(message)}" in ${bold(file)} on line ${bold(String(line))}`)
+					console.log(`error "${chalk.bold(message)}" in ${chalk.bold(file)} on line ${chalk.bold(String(line))}`)
 					errors++
 				}
 
 				if (errors) {
 					process.exitCode = 1
-					console.log(`\nencountered ${bold(String(errors))} errors`)
+					console.log(`\nencountered ${chalk.bold(String(errors))} errors`)
 				} else
 					console.log("no errors found")
 			} break
@@ -254,14 +257,14 @@ for (const arg of process.argv.slice(2)) {
 			case "golf":
 			case "minify": {
 				if (!commands[1]) {
-					console.log(`Target required\nUsage: ${basename(process.argv[1])} ${commands[0]} <target> [output]`)
+					console.log(`Target required\nUsage: ${getBaseName(process.argv[1])} ${commands[0]} <target> [output]`)
 					break
 				}
 
-				const fileExtension = extname(commands[1])
+				const fileExtension = getFileExtension(commands[1])
 
 				if (!supportedExtensions.includes(fileExtension)) {
-					console.log(`Unsupported file extension "${bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(bold).join('", "')}"`)
+					console.log(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(chalk.bold).join('", "')}"`)
 					break
 				}
 
@@ -275,17 +278,17 @@ for (const arg of process.argv.slice(2)) {
 				const { script, srcLength, warnings } = await processScript(source)
 
 				for (const { message, line } of warnings)
-					console.log(`warning "${bold(message)}" on line ${bold(String(line))}`)
+					console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
 
 				let outputPath: string
 
 				if (commands[2])
 					outputPath = commands[2]
 				else {
-					const fileBaseName = basename(commands[1], fileExtension)
+					const fileBaseName = getBaseName(commands[1], fileExtension)
 
 					outputPath = resolvePath(
-						dirname(commands[1]),
+						getPathDirectory(commands[1]),
 
 						fileBaseName.endsWith(".src")
 							? `${fileBaseName.slice(0, -4)}.js` :
@@ -295,9 +298,9 @@ for (const arg of process.argv.slice(2)) {
 					)
 				}
 
-				await writeFilePersist(resolvePath(dirname(commands[1])), script)
+				await writeFilePersist(resolvePath(getPathDirectory(commands[1])), script)
 
-				console.log(`wrote ${bold(String(hackmudLength(script)))} chars (from ${bold(String(srcLength))} chars) to ${bold(outputPath)}`)
+				console.log(`wrote ${chalk.bold(String(hackmudLength(script)))} chars (from ${chalk.bold(String(srcLength))} chars) to ${chalk.bold(outputPath)}`)
 			} break
 
 			default: {
@@ -348,7 +351,7 @@ function help() {
 
 		case "minify":
 		case "golf": {
-			console.log(`${basename(process.argv[1])} ${commands[0]} <target> [output]`)
+			console.log(`${getBaseName(process.argv[1])} ${commands[0]} <target> [output]`)
 		} break
 
 		default: {
