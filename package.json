@@ -1,6 +1,6 @@
 {
 	"name": "hackmud-script-manager",
-	"version": "0.9.1",
+	"version": "0.9.2",
 	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"keywords": [
 		"api",
@@ -26,7 +26,9 @@
 		"lib.js"
 	],
 	"main": "index.js",
-	"bin": { "hsm": "bin/hsm.js" },
+	"bin": {
+		"hsm": "bin/hsm.js"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
@@ -48,6 +50,8 @@
 		"@types/semver": "7.x",
 		"semver": "7.x"
 	},
-	"engines" : { "node" : ">=12" },
+	"engines": {
+		"node": ">=12"
+	},
 	"types": "index.d.ts"
 }
