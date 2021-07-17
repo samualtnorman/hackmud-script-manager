@@ -1,28 +1,7 @@
 {
 	"name": "hackmud-script-manager",
-	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"version": "0.9.1",
-	"main": "index.js",
-	"files": [
-		"index.d.ts"
-	],
-	"types": "index.d.ts",
-	"bin": {
-		"hsm": "bin/hsm.js"
-	},
-	"scripts": {
-		"build": "tsc",
-		"dev": "tsc --watch",
-		"test": "tsc --noEmit"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
-	},
-	"author": "Samual Norman",
-	"license": "GPL-3.0-or-later",
-	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
-	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
+	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"keywords": [
 		"api",
 		"command-line",
@@ -38,6 +17,22 @@
 		"golf",
 		"golfer"
 	],
+	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
+	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
+	"license": "GPL-3.0-or-later",
+	"author": "Samual Norman",
+	"files": [ "index.d.ts" ],
+	"main": "index.js",
+	"bin": { "hsm": "bin/hsm.js" },
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"test": "tsc --noEmit"
+	},
 	"dependencies": {
 		"acorn": "8.x",
 		"chalk": "4.x",
@@ -49,5 +44,7 @@
 		"@types/node": "12.x",
 		"@types/semver": "7.x",
 		"semver": "7.x"
-	}
+	},
+	"engines" : { "node" : ">=12" },
+	"types": "index.d.ts"
 }
