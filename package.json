@@ -21,7 +21,10 @@
 	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"license": "GPL-3.0-or-later",
 	"author": "Samual Norman",
-	"files": [ "index.d.ts" ],
+	"files": [
+		"index.d.ts",
+		"lib.js"
+	],
 	"main": "index.js",
 	"bin": { "hsm": "bin/hsm.js" },
 	"repository": {
