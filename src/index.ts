@@ -582,8 +582,8 @@ export async function processScript(script: string) {
 
 	if (seclevel == undefined)
 		seclevel = seclevel ?? detectedSeclevel ?? 0
-	else if (detectedSeclevel != undefined && seclevel != detectedSeclevel)
-		throw new Error(`detected seclevel is ${seclevelNames[detectedSeclevel]} which does not match the provided seclevel of ${seclevelNames[seclevel]}`)
+	else if (detectedSeclevel != undefined && seclevel > detectedSeclevel)
+		throw new Error(`detected seclevel of ${seclevelNames[detectedSeclevel]} is lower than the provided seclevel of ${seclevelNames[seclevel]}`)
 
 	const semicolons = script.match(/;/g)?.length ?? 0
 
