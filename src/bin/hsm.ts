@@ -5,7 +5,7 @@ import chalk from "chalk"
 import fs from "fs"
 
 import { generateTypings, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
-import { assert, catchError, hackmudLength, writeFilePersist } from "../lib"
+import { assert, catchError, DynamicMap, hackmudLength, writeFilePersist } from "../lib"
 
 const { readFile: readFile, rmdir: removeDirectory, writeFile: writeFile, mkdir: makeDirectory } = fs.promises
 
@@ -24,6 +24,22 @@ let config: Record<string, any> &  Partial<{
 		colour: string
 	}>
 }> | undefined
+
+const colourJ = chalk.rgb(0xFF, 0xF4, 0x04)
+const colourK = chalk.rgb(0xF3, 0xF9, 0x98)
+const colourM = chalk.rgb(0xB3, 0xFF, 0x9B)
+const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
+const colourL = chalk.rgb(0x1E, 0xFF, 0x00)
+const colourB = chalk.rgb(0xCA, 0xCA, 0xCA)
+
+const userColours = new DynamicMap<string, string>(user => {
+	let hash = 0
+
+	for (const char of user)
+		hash += (hash >> 1) + hash + "abcdefghijklmnopqrstuvwxyz_0123456789".indexOf(char) + 1
+
+	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6](user)
+})
 
 for (const arg of process.argv.slice(2)) {
 	if (arg[0] == "-") {
@@ -69,8 +85,6 @@ for (const arg of process.argv.slice(2)) {
 					const hackmudPath = config.hackmudPath
 					const users = options.get("users")?.toString().split(",") || []
 					const scripts = options.get("scripts")?.toString().split(",") || []
-					const colours = [ chalk.redBright, chalk.greenBright, chalk.yellowBright, chalk.blueBright, chalk.magentaBright, chalk.cyanBright ]
-					const configUsers = config.users = config.users || {}
 
 					await push(
 						srcPath,
@@ -86,10 +100,10 @@ for (const arg of process.argv.slice(2)) {
 								}" in ${chalk.dim(file)}`
 								: `pushed ${chalk.bold(file)} to ${
 									users.map(user =>
-										chalk.bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
+										chalk.bold(userColours.get(user))
 									).join(", ")
 								} | ${chalk.bold(String(minLength))} chars from ${chalk.bold(String(srcLength))} | saved ${chalk.bold(String(srcLength - minLength))} (${chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${chalk.bold(`${resolvePath(hackmudPath, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)}`
-								)
+						)
 					)
 
 					updateConfig()
@@ -105,8 +119,6 @@ for (const arg of process.argv.slice(2)) {
 					const hackmudPath = config.hackmudPath
 					const users = options.get("users")?.toString().split(",") || []
 					const scripts = options.get("scripts")?.toString().split(",") || []
-					const colours = [ chalk.redBright, chalk.greenBright, chalk.yellowBright, chalk.blueBright, chalk.magentaBright, chalk.cyanBright ]
-					const configUsers = config.users = config.users || {}
 					const genTypes = options.get("gen-types")?.toString()
 
 					watch(
@@ -123,7 +135,7 @@ for (const arg of process.argv.slice(2)) {
 								}" in ${chalk.dim(file)}`
 								: `pushed ${chalk.bold(file)} to ${
 									users.map(user =>
-										chalk.bold((configUsers[user] = configUsers[user] || { colour: colours[Math.floor(Math.random() * colours.length)](user) }).colour)
+										chalk.bold(userColours.get(user))
 									).join(", ")
 								} | ${chalk.bold(String(minLength))} chars from ${chalk.bold(String(srcLength))} | saved ${chalk.bold(String(srcLength - minLength))} (${chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${chalk.bold(`${resolvePath(hackmudPath, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)}`
 						),
