@@ -10,7 +10,8 @@
 		"declaration": true,
 		"outDir": ".",
 		"useUnknownInCatchVariables": true,
-		"exactOptionalPropertyTypes": true
+		"exactOptionalPropertyTypes": true,
+		"noImplicitOverride": true
 	},
 	"exclude": [ "test" ]
 }
