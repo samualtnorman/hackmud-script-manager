@@ -36,7 +36,7 @@ const userColours = new DynamicMap<string, string>(user => {
 	let hash = 0
 
 	for (const char of user)
-		hash += (hash >> 1) + hash + "abcdefghijklmnopqrstuvwxyz_0123456789".indexOf(char) + 1
+		hash += (hash >> 1) + hash + "xi1_8ratvsw9hlbgm02y5zpdcn7uekof463qj".indexOf(char) + 1
 
 	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6](user)
 })
