@@ -588,6 +588,7 @@ export async function processScript(script: string) {
 	const semicolons = script.match(/;/g)?.length ?? 0
 
 	script = script
+		.replace(/#[fhmln43210]s\.scripts\.quine\(\)/g, JSON.stringify(script))
 		.replace(/[#$][fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/g, "SC$$$1$$$2(")
 		.replace(/^function\s*\(/, "function script(")
 		.replace(/#D\(/g, "$D(")
