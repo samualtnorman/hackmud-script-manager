@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, resolve as resolvePath } from "path"
+import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, resolve as resolvePath, relative as relativePath } from "path"
 import { homedir as getHomeDirectory } from "os"
 import chalk from "chalk"
 import fs from "fs"
@@ -276,43 +276,53 @@ for (const arg of process.argv.slice(2)) {
 				const fileExtension = getFileExtension(commands[1])
 
 				if (!supportedExtensions.includes(fileExtension)) {
-					console.log(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(chalk.bold).join('", "')}"`)
+					console.log(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(extension => chalk.bold(extension)).join('", "')}"`)
 					break
 				}
 
-				const source = await catchError(readFile(commands[1], { encoding: "utf-8" }))
+				await readFile(commands[1], { encoding: "utf-8" }).then(
+					async source => {
+						const { script, srcLength, warnings } = await processScript(source)
 
-				if (source instanceof Error) {
-					assert(source )
-					break
-				}
+						for (const { message, line } of warnings)
+							console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
 
-				const { script, srcLength, warnings } = await processScript(source)
+						let outputPath: string
 
-				for (const { message, line } of warnings)
-					console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
+						if (commands[2])
+							outputPath = commands[2]
+						else {
+							const fileBaseName = getBaseName(commands[1], fileExtension)
 
-				let outputPath: string
+							outputPath = resolvePath(
+								getPathDirectory(commands[1]),
 
-				if (commands[2])
-					outputPath = commands[2]
-				else {
-					const fileBaseName = getBaseName(commands[1], fileExtension)
+								fileBaseName.endsWith(".src")
+									? `${fileBaseName.slice(0, -4)}.js` :
+								fileExtension == ".js"
+									? `${fileBaseName}.min.js`
+									: `${fileBaseName}.js`
+							)
+						}
 
-					outputPath = resolvePath(
-						getPathDirectory(commands[1]),
+						const scriptLength = hackmudLength(script)
 
-						fileBaseName.endsWith(".src")
-							? `${fileBaseName.slice(0, -4)}.js` :
-						fileExtension == ".js"
-							? `${fileBaseName}.min.js`
-							: `${fileBaseName}.js`
-					)
-				}
+						await writeFilePersist(outputPath, script)
+							.catch(async (error: NodeJS.ErrnoException) => {
+								if (!commands[2] || error.code != "EISDIR")
+									throw error
 
-				await writeFilePersist(resolvePath(getPathDirectory(commands[1])), script)
+								outputPath = resolvePath(outputPath, `${getBaseName(commands[1], fileExtension)}.js`)
 
-				console.log(`wrote ${chalk.bold(String(hackmudLength(script)))} chars (from ${chalk.bold(String(srcLength))} chars) to ${chalk.bold(outputPath)}`)
+								await writeFilePersist(outputPath, script)
+							})
+							.then(
+								() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(relativePath(".", outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars`),
+								(error: NodeJS.ErrnoException) => console.log(error.message)
+							)
+					},
+					(error: NodeJS.ErrnoException) => console.log(error.message)
+				)
 			} break
 
 			default: {
