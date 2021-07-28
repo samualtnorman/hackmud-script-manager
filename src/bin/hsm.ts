@@ -109,6 +109,7 @@ for (const arg of process.argv.slice(2)) {
 					console.log("you need to set hackmudPath in config before you can use this command")
 			} break
 
+			case "dev":
 			case "watch": {
 				const config = await getConfig()
 
