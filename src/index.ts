@@ -14,7 +14,7 @@ export interface Info {
 	users: string[]
 	srcLength: number
 	minLength: number
-	error: any
+	error: Error | null
 }
 
 export const supportedExtensions = [ ".js", ".ts" ]

@@ -4,7 +4,7 @@ import { homedir as getHomeDirectory } from "os"
 import chalk from "chalk"
 import fs from "fs"
 
-import { generateTypings, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
+import { generateTypings, Info, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
 import { assert, catchError, DynamicMap, hackmudLength, writeFilePersist } from "../lib"
 
 const { readFile: readFile, rmdir: removeDirectory, writeFile: writeFile, mkdir: makeDirectory } = fs.promises
@@ -102,25 +102,7 @@ for (const arg of process.argv.slice(2)) {
 						scripts = options.get("scripts")?.toString().split(",") || []
 					}
 
-					await push(
-						srcPath,
-						hackmudPath,
-						users,
-						scripts,
-						({ file, users, error, minLength, srcLength }) => users.length && console.log(
-							error
-								? `error "${
-									error instanceof Error
-										? chalk.bold(error.message)
-										: error
-								}" in ${chalk.dim(file)}`
-								: `pushed ${chalk.bold(file)} to ${
-									users.map(user =>
-										chalk.bold(userColours.get(user))
-									).join(", ")
-								} | ${chalk.bold(String(minLength))} chars from ${chalk.bold(String(srcLength))} | saved ${chalk.bold(String(srcLength - minLength))} (${chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${chalk.bold(`${resolvePath(hackmudPath, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)}`
-						)
-					)
+					await push(srcPath, hackmudPath, users, scripts, onPushLogger)
 
 					updateConfig()
 				} else
@@ -137,26 +119,7 @@ for (const arg of process.argv.slice(2)) {
 					const scripts = options.get("scripts")?.toString().split(",") || []
 					const genTypes = options.get("gen-types")?.toString()
 
-					watch(
-						srcPath,
-						hackmudPath,
-						users,
-						scripts,
-						({ file, users, error, minLength, srcLength }) => users.length && console.log(
-							error
-								? `error "${
-									error instanceof Error
-										? chalk.bold(error.message)
-										: error
-								}" in ${chalk.dim(file)}`
-								: `pushed ${chalk.bold(file)} to ${
-									users.map(user =>
-										chalk.bold(userColours.get(user))
-									).join(", ")
-								} | ${chalk.bold(String(minLength))} chars from ${chalk.bold(String(srcLength))} | saved ${chalk.bold(String(srcLength - minLength))} (${chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)}) | ${chalk.bold(`${resolvePath(hackmudPath, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)}`
-						),
-						{ genTypes }
-					)
+					watch(srcPath, hackmudPath, users, scripts, onPushLogger, { genTypes })
 				} else
 					console.log("you need to set hackmudPath in config before you can use this command")
 			} break
@@ -463,4 +426,32 @@ function updateConfig() {
 			writeFile(configFilePath, json)
 		})
 	}
+}
+
+function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
+	if (!users.length)
+		return
+
+	if (error) {
+		console.log(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
+		return
+	}
+
+	console.log(
+		`pushed ${
+			chalk.bold(file)
+		} to ${
+			users.map(user => chalk.bold(userColours.get(user))).join(", ")
+		} | ${
+			chalk.bold(String(minLength))
+		} chars from ${
+			chalk.bold(String(srcLength))
+		} | saved ${
+			chalk.bold(String(srcLength - minLength))
+		} (${
+			chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)
+		}) | ${
+			chalk.bold(`${resolvePath(config!.hackmudPath!, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)
+		}`
+	)
 }
