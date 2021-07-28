@@ -789,6 +789,9 @@ export async function processScript(script: string) {
 			case tokenTypes._const: {
 				script = stringSplice(script, "let", token.start, token.end)
 			} break
+
+			case tokenTypes._this:
+				throw new Error('"this" keyword is not supported in hackmud')
 		}
 	}
 
