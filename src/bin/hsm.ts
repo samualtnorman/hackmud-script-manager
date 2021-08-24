@@ -5,7 +5,7 @@ import chalk from "chalk"
 import fs from "fs"
 
 import { generateTypings, Info, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
-import { assert, catchError, DynamicMap, hackmudLength, writeFilePersist } from "../lib"
+import { DynamicMap, hackmudLength, writeFilePersist } from "../lib"
 
 const { readFile: readFile, rmdir: removeDirectory, writeFile: writeFile, mkdir: makeDirectory } = fs.promises
 

@@ -8,7 +8,7 @@ export function writeFilePersist(
 	data: any,
 	options?: { encoding?: string | null | undefined, mode?: string | number | undefined, flag?: string | number | undefined } | string | null
 ) {
-	return writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
+   	return writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
 		if (error.code != "ENOENT")
 			throw error
 
@@ -46,20 +46,6 @@ export function positionToLineNumber(position: number, script: string) {
 
 export function stringSplice(original: string, replacement: string, start: number, end = start) {
 	return original.slice(0, start) + replacement + original.slice(end)
-}
-
-export async function catchError<T>(promise: Promise<T>) {
-	try {
-		return await promise
-	} catch (error) {
-		assert(error instanceof Error, "error was not an instanceof Error")
-		return error
-	}
-}
-
-export function assert(value: any, message = "assertion failed"): asserts value {
-	if (!value)
-		throw new Error(message)
 }
 
 export class DynamicMap<K, V> extends Map<K, V> {
