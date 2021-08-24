@@ -17,8 +17,8 @@ export function writeFilePersist(
 	})
 }
 
-export async function copyFilePersist(src: PathLike, dest: string, flags?: number) {
-	await copyFile(src, dest, flags).catch(async (error: NodeJS.ErrnoException) => {
+export function copyFilePersist(src: PathLike, dest: string, flags?: number) {
+	return copyFile(src, dest, flags).catch(async (error: NodeJS.ErrnoException) => {
 		if (error.code != "ENOENT")
 			throw error
 
@@ -71,7 +71,7 @@ export class DynamicMap<K, V> extends Map<K, V> {
 
 		const value = this.fallbackHandler(key)
 
-		this.set(key, value)
+		super.set(key, value)
 
 		return value
 	}
