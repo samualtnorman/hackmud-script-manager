@@ -660,6 +660,8 @@ export async function processScript(script: string) {
 	// replaced with a string of a different length which messes up indexes
 	const tokens = [ ...tokenize(script, { ecmaVersion: 2015 }) ].reverse().values()
 
+	let templateToRightOfPlaceholder = false
+
 	for (const token of tokens) {
 		// we can't replace any tokens before the block statement or we'll break stuff
 		if (token.start < blockStatementIndex)
@@ -693,6 +695,16 @@ export async function processScript(script: string) {
 
 					// there *is* a point in concatenating an empty string at the
 					// start because foo + bar is not the same thing as "" + foo + bar
+					// ...but foo + "<template>" + bar *is* the same thing as "" + foo + "<template>" + bar
+					// so we just need to check if there's a template to the right of the placeholder and skip that case
+
+					if (token.value == "" && templateToRightOfPlaceholder) {
+						templateToRightOfPlaceholder = false
+						script = stringSplice(script, "((", token.start - 1, token.end + 2)
+						break
+					}
+
+					templateToRightOfPlaceholder = false
 
 					let jsonValueIndex = jsonValues.indexOf(token.value)
 
@@ -705,9 +717,12 @@ export async function processScript(script: string) {
 
 				// no point in concatenating an empty string
 				if (token.value == "") {
+					templateToRightOfPlaceholder = false
 					script = stringSplice(script, ")+(", token.start - 1, token.end + 2)
 					break
 				}
+
+				templateToRightOfPlaceholder = true
 
 				let jsonValueIndex = jsonValues.indexOf(token.value)
 
