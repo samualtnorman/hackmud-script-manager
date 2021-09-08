@@ -642,7 +642,7 @@ export async function processScript(script: string) {
 		srcLength += 24
 	}
 
-	const scriptBeforeJSONValueReplacement = (await minify(script, {
+	let scriptBeforeJSONValueReplacement = (await minify(script, {
 		ecma: 2015,
 		compress: {
 			passes: Infinity,
@@ -657,6 +657,38 @@ export async function processScript(script: string) {
 		},
 		format: { semicolons: false }
 	})).code || ""
+
+	{
+		const tokens = [ ...tokenize(scriptBeforeJSONValueReplacement, { ecmaVersion: 2015 }) ].reverse().values()
+
+		for (const token of tokens) {
+			// we can't replace any tokens before the block statement or we'll break stuff
+			if (token.start < blockStatementIndex)
+				break
+
+			switch (token.type) {
+				case tokenTypes.name: {
+					if (token.value != "prototype" && token.value != "__proto__")
+						break
+
+					const tokenBefore = tokens.next().value as Token
+
+					if (tokenBefore.type != tokenTypes.dot)
+						break
+
+					srcLength += 3
+					scriptBeforeJSONValueReplacement = stringSplice(scriptBeforeJSONValueReplacement, `["${token.value}"]`, tokenBefore.start, token.end)
+				} break
+
+				case tokenTypes._const: {
+					scriptBeforeJSONValueReplacement = stringSplice(scriptBeforeJSONValueReplacement, "let", token.start, token.end)
+				} break
+
+				case tokenTypes._this:
+					throw new Error('"this" keyword is not supported in hackmud')
+			}
+		}
+	}
 
 	const jsonValues: any[] = []
 	let undefinedIsReferenced = false
