@@ -43,6 +43,8 @@
 		"chalk": "4.x",
 		"chokidar": "3.x",
 		"terser": "5.x",
+		"tree-sitter": "^0.19.0",
+		"tree-sitter-javascript": "^0.19.0",
 		"typescript": "^4.4.0-beta"
 	},
 	"devDependencies": {

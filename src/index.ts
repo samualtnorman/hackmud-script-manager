@@ -1,13 +1,18 @@
-import { watch as watchDirectory } from "chokidar"
-import { minify } from "terser"
-import { resolve as resolvePath, basename as getBaseName, extname as getFileExtension } from "path"
-import typescript from "typescript"
 import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
+import { watch as watchDirectory } from "chokidar"
 import fs from "fs"
-
-import { writeFilePersist, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
+import { minify } from "terser"
+import Parser from "tree-sitter"
+import JavaScript from "tree-sitter-javascript"
+import typescript from "typescript"
+import { copyFilePersist, hackmudLength, positionToLineNumber, stringSplice, writeFilePersist } from "./lib"
 
 const { readFile: readFile, readdir: readDirectory, stat: getFileStatus, writeFile: writeFile } = fs.promises
+
+const parser = new Parser()
+
+parser.setLanguage(JavaScript)
 
 export interface Info {
 	file: string
@@ -623,7 +628,8 @@ export async function processScript(script: string) {
 	// that aren't even used)
 	script = (await minify(script, {
 		ecma: 2015,
-		parse: { bare_returns: true }
+		parse: { bare_returns: true },
+		compress: { booleans: false }
 	})).code || ""
 
 	let blockStatementIndex: number
@@ -763,8 +769,24 @@ export async function processScript(script: string) {
 				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
 			} break
 
-			case tokenTypes._true:
-			case tokenTypes._false:
+			case tokenTypes._true: {
+				let jsonValueIndex = jsonValues.indexOf(true)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(true)
+
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+			} break
+
+			case tokenTypes._false: {
+				let jsonValueIndex = jsonValues.indexOf(false)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(false)
+
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+			} break
+
 			case tokenTypes.num: {
 				if (token.value == 0) {
 					const tokenBefore = tokens.next().value as Token
@@ -810,11 +832,24 @@ export async function processScript(script: string) {
 		}
 	}
 
+	let comment: string | null = null
+	let hasComment = false
+
 	if (jsonValues.length) {
-		if (jsonValues.length == 1)
-			script = stringSplice(script, `\nlet _JSON_VALUE_0_ = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
-		else
+		hasComment = true
+
+		if (jsonValues.length == 1) {
+			if (typeof jsonValues[0] == "string" && !jsonValues[0].includes("\n") && !jsonValues[0].includes("\t")) {
+				script = stringSplice(script, `\nlet _JSON_VALUE_0_ = SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_]${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+				comment = jsonValues[0]
+			} else {
+				script = stringSplice(script, `\nlet _JSON_VALUE_0_ = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+				comment = JSON.stringify(jsonValues[0])
+			}
+		} else {
 			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")} ] = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+			comment = JSON.stringify(jsonValues)
+		}
 	} else
 		script = script.replace(/_UNDEFINED_/g, "void 0")
 
@@ -835,20 +870,22 @@ export async function processScript(script: string) {
 	})).code || ""
 
 	// this step affects the chracter count and can't be done after the count comparison
-	if (jsonValues.length) {
-		const json = JSON.stringify(jsonValues.length == 1 ? jsonValues[0] : jsonValues)
-
-		script = stringSplice(script, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${json}\t\n`, getFunctionBodyStart(script) + 1)
+	if (comment != null) {
+		script = stringSplice(script, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${comment}\t\n`, getFunctionBodyStart(script) + 1)
 
 		for (const [ i, part ] of script.split("\t").entries()) {
-			if (part == json) {
-				script = script.replace("_SPLIT_INDEX_", (await minify(`$(${i})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1])
-				break
-			}
+			if (part != comment)
+				continue
+
+			script = script.replace("_SPLIT_INDEX_", (await minify(`$(${i})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1])
+			break
 		}
 	}
 
-	if (hackmudLength(scriptBeforeJSONValueReplacement) <= hackmudLength(script)) {
+	// if the script has a comment, it's gonna contain `SC$scripts$quine()`
+	// which is gonna eventually compile to `#fs.scripts.quine()` which contains
+	// an extra character so we have to account for that
+	if (hackmudLength(scriptBeforeJSONValueReplacement) <= (hackmudLength(script) + Number(hasComment))) {
 		script = scriptBeforeJSONValueReplacement
 
 		if (autocomplete)
