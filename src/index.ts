@@ -3,16 +3,10 @@ import { watch as watchDirectory } from "chokidar"
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { minify } from "terser"
-import Parser from "tree-sitter"
-import JavaScript from "tree-sitter-javascript"
 import typescript from "typescript"
 import { copyFilePersist, hackmudLength, positionToLineNumber, stringSplice, writeFilePersist } from "./lib"
 
 const { readFile: readFile, readdir: readDirectory, stat: getFileStatus, writeFile: writeFile } = fs.promises
-
-const parser = new Parser()
-
-parser.setLanguage(JavaScript)
 
 export interface Info {
 	file: string
