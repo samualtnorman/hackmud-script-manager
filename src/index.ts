@@ -1,10 +1,14 @@
 import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { watch as watchDirectory } from "chokidar"
+import { generate as generateCodeFromAST } from "escodegen"
+import { parseScript } from "esprima"
+import { query } from "esquery"
+import ASTNodes from "estree"
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { minify } from "terser"
 import typescript from "typescript"
-import { copyFilePersist, hackmudLength, positionToLineNumber, stringSplice, writeFilePersist } from "./lib"
+import { clearObject, copyFilePersist, hackmudLength, positionToLineNumber, stringSplice, writeFilePersist } from "./lib"
 
 const { readFile: readFile, readdir: readDirectory, stat: getFileStatus, writeFile: writeFile } = fs.promises
 
@@ -608,6 +612,82 @@ export async function processScript(script: string) {
 	}))
 
 	script = outputText.replace(/^export /, "")
+
+	await writeFile("./test.json", JSON.stringify(parseScript(script), null, "\t"))
+
+	const ast = parseScript(script)
+
+	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
+		node.body.unshift({
+			type: "VariableDeclaration",
+			declarations: [
+				{
+					type: "VariableDeclarator",
+					id: {
+						type: "Identifier",
+						name: "__THIS__"
+					}
+				}
+			],
+			kind: "let"
+		})
+	}
+
+	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement !CallExpression > Super") as ASTNodes.CallExpression[]) {
+		const newNode: ASTNodes.AssignmentExpression = {
+			type: "AssignmentExpression",
+			operator: "=",
+			left: {
+				type: "Identifier",
+				name: "__THIS__"
+			},
+			right: { ...node }
+		}
+
+		Object.assign(clearObject(node), newNode)
+	}
+
+	for (const node of query(ast, "ClassBody > MethodDefinition > FunctionExpression > BlockStatement !ThisExpression") as ASTNodes.ThisExpression[]) {
+		const newNode: ASTNodes.Identifier = {
+			type: "Identifier",
+			name: "__THIS__"
+		}
+
+		Object.assign(clearObject(node), newNode)
+	}
+
+	for (const node of query(ast, "ClassBody > MethodDefinition[kind=method] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
+		node.body.unshift({
+			type: "VariableDeclaration",
+			declarations: [ {
+				type: "VariableDeclarator",
+				id: {
+					type: "Identifier",
+					name: "__THIS__"
+				},
+				init: {
+					type: "CallExpression",
+					callee: {
+						type: "MemberExpression",
+						computed: false,
+						object: {
+							type: "Super"
+						},
+						property: {
+							type: "Identifier",
+							name: "valueOf"
+						},
+						optional: false
+					},
+					arguments: [],
+					optional: false
+				}
+			} ],
+			"kind": "let"
+		})
+	}
+
+	script = generateCodeFromAST(ast)
 
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
