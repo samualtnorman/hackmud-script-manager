@@ -62,3 +62,17 @@ export class DynamicMap<K, V> extends Map<K, V> {
 		return value
 	}
 }
+
+export function clearObject(object: {}) {
+	for (const propertyName of Object.getOwnPropertyNames(object) as any) {
+		// @ts-ignore
+		delete object[propertyName]
+	}
+
+	for (const propertySymbol of Object.getOwnPropertySymbols(object) as any) {
+		// @ts-ignore
+		delete object[propertyName]
+	}
+
+	return object
+}
