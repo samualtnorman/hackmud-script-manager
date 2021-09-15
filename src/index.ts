@@ -613,8 +613,6 @@ export async function processScript(script: string) {
 
 	script = outputText.replace(/^export /, "")
 
-	await writeFile("./test.json", JSON.stringify(parseScript(script), null, "\t"))
-
 	const ast = parseScript(script)
 
 	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
