@@ -108,3 +108,5 @@ dist
 !test/src/**
 test/src/user_1/**
 !test/hackmud/user_1/scripts/script_2.js
+!scripts/**
+!*.config.js
