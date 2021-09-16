@@ -8,7 +8,7 @@ export function writeFilePersist(
 	data: any,
 	options?: { encoding?: string | null | undefined, mode?: string | number | undefined, flag?: string | number | undefined } | string | null
 ) {
-   	return writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
+	return writeFile(path, data, options).catch(async (error: NodeJS.ErrnoException) => {
 		if (error.code != "ENOENT")
 			throw error
 

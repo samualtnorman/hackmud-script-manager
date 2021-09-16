@@ -17,7 +17,7 @@ const configFilePath = resolvePath(configDirPath, "hsm.json")
 const options = new Map<string, ArgValue>()
 const commands: string[] = []
 
-let config: Record<string, any> &  Partial<{
+let config: Record<string, any> & Partial<{
 	hackmudPath: string
 	defaultUser: string
 	users: Record<string, {

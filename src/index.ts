@@ -501,7 +501,7 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 		const scripts = allScripts[user]
 		const anyScripts = allAnyScripts[user]
 
-		if ((scripts && scripts.length) || (anyScripts  && anyScripts.length)) {
+		if ((scripts && scripts.length) || (anyScripts && anyScripts.length)) {
 			lastWasMultiLine = true
 
 			o += `\n\t\t${user}: WildFullsec & {\n`
