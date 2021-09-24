@@ -1,3 +1,4 @@
+import json from "@rollup/plugin-json"
 import typescript from "@rollup/plugin-typescript"
 import preserveShebang from "rollup-plugin-preserve-shebang"
 import { dependencies } from "./package.json"
@@ -9,10 +10,11 @@ export default {
 	},
 	output: {
 		dir: ".",
-		chunkFileNames: "shared.js"
+		chunkFileNames: "common.js"
 	},
 	plugins: [
-		typescript(),
+		json({ preferConst: true }),
+		typescript({ tsconfig: "src/tsconfig.json" }),
 		preserveShebang()
 	],
 	external: [

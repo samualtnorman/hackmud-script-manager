@@ -35,7 +35,8 @@
 	},
 	"scripts": {
 		"build": "rollup -c",
-		"dev": "rollup -cw"
+		"dev": "rollup -cw",
+		"gen-types": ""
 	},
 	"dependencies": {
 		"acorn": "8.x",
@@ -48,6 +49,7 @@
 		"typescript": "^4.4.0-beta"
 	},
 	"devDependencies": {
+		"@rollup/plugin-json": "^4.1.0",
 		"@rollup/plugin-typescript": "^8.2.5",
 		"@types/escodegen": "^0.0.7",
 		"@types/esprima": "^4.0.3",
