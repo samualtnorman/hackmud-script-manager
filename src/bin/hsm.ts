@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, resolve as resolvePath, relative as relativePath } from "path"
-import { homedir as getHomeDirectory } from "os"
 import chalk from "chalk"
 import fs from "fs"
-
+import { homedir as getHomeDirectory } from "os"
+import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, relative as relativePath, resolve as resolvePath } from "path"
 import { generateTypings, Info, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
+import { version as moduleVersion } from "../../package.json"
 import { DynamicMap, hackmudLength, writeFilePersist } from "../lib"
 
 const { readFile: readFile, rmdir: removeDirectory, writeFile: writeFile, mkdir: makeDirectory } = fs.promises
@@ -386,7 +386,7 @@ function help() {
 }
 
 async function version() {
-	console.log(JSON.parse(await readFile(resolvePath(__dirname, "../package.json"), { encoding: "utf-8" })).version || "unknown")
+	console.log(moduleVersion)
 }
 
 async function getConfig() {
