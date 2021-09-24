@@ -1,11 +1,10 @@
 {
 	"files.exclude": {
 		"**/.*": true,
-		"**/*.d.ts": true,
-		"**/*.js": { "when": "$(basename).ts" },
 		"node_modules": true,
 		"package-lock.json": true,
-		"LICENSE": true
+		"LICENSE": true,
+		"tsconfig.tsbuildinfo": true
 	},
 	"typescript.tsdk": "node_modules/typescript/lib"
 }
