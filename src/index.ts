@@ -674,14 +674,12 @@ export async function processScript(script: string) {
 						property: {
 							type: "Identifier",
 							name: "valueOf"
-						},
-						optional: false
+						}
 					},
-					arguments: [],
-					optional: false
+					arguments: []
 				}
 			} ],
-			"kind": "let"
+			kind: "let"
 		})
 	}
 
