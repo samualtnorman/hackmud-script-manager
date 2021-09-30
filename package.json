@@ -22,8 +22,9 @@
 	"license": "GPL-3.0-or-later",
 	"author": "Samual Norman",
 	"files": [
-		"index.d.ts",
-		"shared.js"
+		"*.d.ts",
+		"*.js",
+		"bin"
 	],
 	"main": "index.js",
 	"bin": {
