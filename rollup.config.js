@@ -1,8 +1,9 @@
 import json from "@rollup/plugin-json"
 import typescript from "@rollup/plugin-typescript"
-import preserveShebang from "rollup-plugin-preserve-shebang"
-import { dependencies } from "./package.json"
 import { promises as fsPromises } from "fs"
+import preserveShebang from "rollup-plugin-preserve-shebang"
+import { terser } from "rollup-plugin-terser"
+import { dependencies } from "./package.json"
 
 const { readdir: readDirectory } = fsPromises
 
@@ -17,7 +18,8 @@ export default async () => {
 		plugins: [
 			json({ preferConst: true }),
 			typescript({ tsconfig: `${sourceDirectory}/tsconfig.json` }),
-			preserveShebang()
+			preserveShebang(),
+			terser()
 		],
 		external: [
 			...Object.keys(dependencies),
