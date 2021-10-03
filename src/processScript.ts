@@ -394,6 +394,8 @@ export async function processScript(script: string) {
 				if (token.value.includes("\u0000"))
 					break
 
+				// BUG in the code `({ "-": "bar" })` `"-"` is recognised as a string and is replaced with `_JSON_VALUE_n_` which is not equivalent code
+
 				let jsonValueIndex = jsonValues.indexOf(token.value)
 
 				if (jsonValueIndex == -1)

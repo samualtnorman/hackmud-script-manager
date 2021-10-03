@@ -7,28 +7,32 @@ import { dependencies } from "./package.json"
 
 const { readdir: readDirectory } = fsPromises
 
+/** @typedef {import("rollup").RollupOptions} RollupOptions */
+
 const sourceDirectory = "src"
 
-export default async () => {
-	return {
-		input: Object.fromEntries((await findFiles(sourceDirectory)).filter(path => path.endsWith(".ts")).map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])),
-		output: {
-			dir: "."
-		},
-		plugins: [
-			json({ preferConst: true }),
-			typescript({ tsconfig: `${sourceDirectory}/tsconfig.json` }),
-			preserveShebang(),
-			terser()
-		],
-		external: [
-			...Object.keys(dependencies),
-			"fs",
-			"path",
-			"os"
-		]
-	}
-}
+/** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
+export default async () => ({
+	input: Object.fromEntries((await findFiles(sourceDirectory))
+		.filter(path => path.endsWith(".ts"))
+		.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
+	),
+	output: {
+		dir: "."
+	},
+	plugins: [
+		json({ preferConst: true }),
+		typescript({ tsconfig: `${sourceDirectory}/tsconfig.json` }),
+		preserveShebang(),
+		terser()
+	],
+	external: [
+		...Object.keys(dependencies),
+		"fs",
+		"path",
+		"os"
+	]
+})
 
 /**
  * @param path the directory to start recursively finding files in
