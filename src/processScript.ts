@@ -61,7 +61,7 @@ export async function processScript(script: string) {
 	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
 
 	if (seclevel == undefined)
-		seclevel = seclevel ?? detectedSeclevel ?? 0
+		seclevel = seclevel ?? detectedSeclevel ?? 4
 	else if (detectedSeclevel != undefined && seclevel > detectedSeclevel)
 		throw new Error(`detected seclevel of ${seclevelNames[detectedSeclevel]} is lower than the provided seclevel of ${seclevelNames[seclevel]}`)
 
