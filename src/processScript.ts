@@ -45,7 +45,7 @@ export async function processScript(script: string) {
 		}
 	}
 
-	let detectedSeclevel: number | undefined
+	let detectedSeclevel = 4
 
 	if (script.match(/[#$][n0]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
 		detectedSeclevel = 0
@@ -55,15 +55,13 @@ export async function processScript(script: string) {
 		detectedSeclevel = 2
 	else if (script.match(/[#$][h3]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
 		detectedSeclevel = 3
-	else if (script.match(/[#$][f4]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
-		detectedSeclevel = 4
 
 	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
 
 	if (seclevel == undefined)
-		seclevel = seclevel ?? detectedSeclevel ?? 4
-	else if (detectedSeclevel != undefined && seclevel > detectedSeclevel)
-		throw new Error(`detected seclevel of ${seclevelNames[detectedSeclevel]} is lower than the provided seclevel of ${seclevelNames[seclevel]}`)
+		seclevel = detectedSeclevel
+	else if (detectedSeclevel < seclevel)
+		throw new Error(`detected seclevel ${seclevelNames[detectedSeclevel]} is lower than stated seclevel ${seclevelNames[seclevel]}`)
 
 	const semicolons = script.match(/;/g)?.length ?? 0
 
@@ -95,15 +93,13 @@ export async function processScript(script: string) {
 	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
 		node.body.unshift({
 			type: "VariableDeclaration",
-			declarations: [
-				{
-					type: "VariableDeclarator",
-					id: {
-						type: "Identifier",
-						name: "__THIS__"
-					}
+			declarations: [ {
+				type: "VariableDeclarator",
+				id: {
+					type: "Identifier",
+					name: "__THIS__"
 				}
-			],
+			} ],
 			kind: "let"
 		})
 	}
@@ -145,9 +141,7 @@ export async function processScript(script: string) {
 					callee: {
 						type: "MemberExpression",
 						computed: false,
-						object: {
-							type: "Super"
-						},
+						object: { type: "Super" },
 						property: {
 							type: "Identifier",
 							name: "valueOf"
@@ -176,7 +170,11 @@ export async function processScript(script: string) {
 	script = (await minify(script, {
 		ecma: 2015,
 		parse: { bare_returns: true },
-		compress: { booleans: false }
+		compress: {
+			passes: Infinity,
+			unsafe: true,
+			booleans: false
+		}
 	})).code || ""
 
 	let blockStatementIndex: number
