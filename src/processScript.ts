@@ -89,6 +89,7 @@ export async function processScript(script: string) {
 	script = outputText.replace(/^export /, "")
 
 	const ast = parseScript(script)
+	const randomString = (Math.random() * (2 ** 53)).toString(36)
 
 	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
 		node.body.unshift({
@@ -97,7 +98,7 @@ export async function processScript(script: string) {
 				type: "VariableDeclarator",
 				id: {
 					type: "Identifier",
-					name: "__THIS__"
+					name: `_THIS_${randomString}_`
 				}
 			} ],
 			kind: "let"
@@ -110,7 +111,7 @@ export async function processScript(script: string) {
 			operator: "=",
 			left: {
 				type: "Identifier",
-				name: "__THIS__"
+				name: `_THIS_${randomString}_`
 			},
 			right: { ...node }
 		}
@@ -121,7 +122,7 @@ export async function processScript(script: string) {
 	for (const node of query(ast, "ClassBody > MethodDefinition > FunctionExpression > BlockStatement !ThisExpression") as ASTNodes.ThisExpression[]) {
 		const newNode: ASTNodes.Identifier = {
 			type: "Identifier",
-			name: "__THIS__"
+			name: `_THIS_${randomString}_`
 		}
 
 		Object.assign(clearObject(node), newNode)
@@ -134,7 +135,7 @@ export async function processScript(script: string) {
 				type: "VariableDeclarator",
 				id: {
 					type: "Identifier",
-					name: "__THIS__"
+					name: `_THIS_${randomString}_`
 				},
 				init: {
 					type: "CallExpression",
@@ -268,7 +269,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(templateToken.value)
 
-				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_)`, templateToken.start - 1, token.end)
+				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_${randomString}_)`, templateToken.start - 1, token.end)
 			} break
 
 			case tokenTypes.template: {
@@ -294,7 +295,7 @@ export async function processScript(script: string) {
 					if (jsonValueIndex == -1)
 						jsonValueIndex += jsonValues.push(token.value)
 
-					script = stringSplice(script, `(_JSON_VALUE_${jsonValueIndex}_+(`, token.start - 1, token.end + 2)
+					script = stringSplice(script, `(_JSON_VALUE_${jsonValueIndex}_${randomString}_+(`, token.start - 1, token.end + 2)
 					break
 				}
 
@@ -312,7 +313,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(token.value)
 
-				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_+(`, token.start - 1, token.end + 2)
+				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_${randomString}_+(`, token.start - 1, token.end + 2)
 			} break
 
 			case tokenTypes.name: {
@@ -327,12 +328,12 @@ export async function processScript(script: string) {
 					if (jsonValueIndex == -1)
 						jsonValueIndex += jsonValues.push(token.value)
 
-					script = stringSplice(script, `[_JSON_VALUE_${jsonValueIndex}_]`, tokenBefore.start, token.end)
+					script = stringSplice(script, `[_JSON_VALUE_${jsonValueIndex}_${randomString}_]`, tokenBefore.start, token.end)
 					break
 				}
 
 				if (token.value == "undefined") {
-					script = stringSplice(script, " _UNDEFINED_ ", token.start, token.end)
+					script = stringSplice(script, ` _UNDEFINED_${randomString}_ `, token.start, token.end)
 					undefinedIsReferenced = true
 				}
 			} break
@@ -343,7 +344,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(null)
 
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
 			} break
 
 			case tokenTypes._true: {
@@ -352,7 +353,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(true)
 
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
 			} break
 
 			case tokenTypes._false: {
@@ -361,7 +362,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(false)
 
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
 			} break
 
 			case tokenTypes.num: {
@@ -369,7 +370,7 @@ export async function processScript(script: string) {
 					const tokenBefore = tokens.next().value as Token
 
 					if (tokenBefore.type == tokenTypes._void) {
-						script = stringSplice(script, " _UNDEFINED_ ", tokenBefore.start, token.end)
+						script = stringSplice(script, ` _UNDEFINED_${randomString}_ `, tokenBefore.start, token.end)
 						undefinedIsReferenced = true
 					}
 
@@ -385,7 +386,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(token.value)
 
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
 			} break
 
 			case tokenTypes.string: {
@@ -399,7 +400,7 @@ export async function processScript(script: string) {
 				if (jsonValueIndex == -1)
 					jsonValueIndex += jsonValues.push(token.value)
 
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_ `, token.start, token.end)
+				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
 			} break
 
 			case tokenTypes._const: {
@@ -419,18 +420,18 @@ export async function processScript(script: string) {
 
 		if (jsonValues.length == 1) {
 			if (typeof jsonValues[0] == "string" && !jsonValues[0].includes("\n") && !jsonValues[0].includes("\t")) {
-				script = stringSplice(script, `\nlet _JSON_VALUE_0_ = SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_]${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+				script = stringSplice(script, `\nlet _JSON_VALUE_0_${randomString}_ = SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_${randomString}_]${undefinedIsReferenced ? `, _UNDEFINED_${randomString}_` : ""}\n`, blockStatementIndex + 1)
 				comment = jsonValues[0]
 			} else {
-				script = stringSplice(script, `\nlet _JSON_VALUE_0_ = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+				script = stringSplice(script, `\nlet _JSON_VALUE_0_${randomString}_ = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_${randomString}_])${undefinedIsReferenced ? `, _UNDEFINED_${randomString}_` : ""}\n`, blockStatementIndex + 1)
 				comment = JSON.stringify(jsonValues[0])
 			}
 		} else {
-			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_`).join(", ")} ] = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_])${undefinedIsReferenced ? ", _UNDEFINED_" : ""}\n`, blockStatementIndex + 1)
+			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_${randomString}_`).join(", ")} ] = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_${randomString}_])${undefinedIsReferenced ? `, _UNDEFINED_${randomString}_` : ""}\n`, blockStatementIndex + 1)
 			comment = JSON.stringify(jsonValues)
 		}
 	} else
-		script = script.replace(/_UNDEFINED_/g, "void 0")
+		script = script.replace(`_UNDEFINED_${randomString}_`, "void 0")
 
 	script = (await minify(script, {
 		ecma: 2015,
@@ -456,7 +457,7 @@ export async function processScript(script: string) {
 			if (part != comment)
 				continue
 
-			script = script.replace("_SPLIT_INDEX_", (await minify(`$(${i})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1])
+			script = script.replace(`_SPLIT_INDEX_${randomString}_`, (await minify(`$(${i})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1])
 			break
 		}
 	}
