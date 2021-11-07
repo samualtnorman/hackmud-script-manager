@@ -5,7 +5,9 @@
 		"package-lock.json": true,
 		"LICENSE": true,
 		"tsconfig.tsbuildinfo": true,
-		"**/*.js": { "when": "$(basename).d.ts" },
+		"**/*.js": {
+			"when": "$(basename).d.ts"
+		},
 		"**/*.d.ts": true
 	},
 	"typescript.tsdk": "node_modules/typescript/lib"
