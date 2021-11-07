@@ -1,3 +1,5 @@
+import babel from "@babel/core"
+import babelGenerator from "@babel/generator"
 import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { generate as generateCodeFromAST } from "escodegen"
 import { parseScript } from "esprima"
@@ -6,6 +8,8 @@ import ASTNodes from "estree"
 import { minify } from "terser"
 import typescript from "typescript"
 import { clearObject, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+
+const babelGenerate = (babelGenerator as any).default as typeof import("@babel/generator").default
 
 /**
  * Minifies a given script
@@ -156,6 +160,30 @@ export async function processScript(script: string) {
 	}
 
 	script = generateCodeFromAST(ast)
+
+	{
+		const program = await babel.parseAsync(script)
+
+		babel.traverse(program, {
+			BlockStatement({ node: blockStatement }) {
+				for (const [ i, child ] of blockStatement.body.entries()) {
+					if (child.type == "FunctionDeclaration" && !child.generator) {
+						blockStatement.body.splice(i, 1)
+
+						blockStatement.body.unshift(babel.types.variableDeclaration(
+							"let",
+							[ babel.types.variableDeclarator(
+								child.id!,
+								babel.types.arrowFunctionExpression(child.params, child.body, child.async)
+							) ]
+						))
+					}
+				}
+			}
+		})
+
+		script = babelGenerate(program!).code
+	}
 
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
