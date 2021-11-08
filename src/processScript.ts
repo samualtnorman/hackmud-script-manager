@@ -1,13 +1,9 @@
 import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
-import { generate as generateCodeFromAST } from "escodegen"
-import { parseScript } from "esprima"
-import query from "esquery"
-import ASTNodes from "estree"
 import { minify } from "terser"
 import typescript from "typescript"
-import { clearObject, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+import { hackmudLength, positionToLineNumber, stringSplice } from "./lib"
 
 const babelGenerate = (babelGenerator as any).default as typeof import("@babel/generator").default
 
@@ -92,98 +88,102 @@ export async function processScript(script: string) {
 
 	script = outputText.replace(/^export /, "")
 
-	const ast = parseScript(script)
 	const randomString = (Math.random() * (2 ** 53)).toString(36)
 
-	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
-		node.body.unshift({
-			type: "VariableDeclaration",
-			declarations: [ {
-				type: "VariableDeclarator",
-				id: {
-					type: "Identifier",
-					name: `_THIS_${randomString}_`
-				}
-			} ],
-			kind: "let"
-		})
-	}
+	const program = await babel.parseAsync(script)
 
-	for (const node of query(ast, "ClassBody > MethodDefinition[kind=constructor] > FunctionExpression > BlockStatement !CallExpression > Super") as ASTNodes.CallExpression[]) {
-		const newNode: ASTNodes.AssignmentExpression = {
-			type: "AssignmentExpression",
-			operator: "=",
-			left: {
-				type: "Identifier",
-				name: `_THIS_${randomString}_`
-			},
-			right: { ...node }
-		}
+	babel.traverse(program, {
+		BlockStatement({ node: blockStatement }) {
+			for (const [ i, functionDeclaration ] of blockStatement.body.entries()) {
+				if (functionDeclaration.type != "FunctionDeclaration" || functionDeclaration.generator)
+					continue
 
-		Object.assign(clearObject(node), newNode)
-	}
+				blockStatement.body.splice(i, 1)
 
-	for (const node of query(ast, "ClassBody > MethodDefinition > FunctionExpression > BlockStatement !ThisExpression") as ASTNodes.ThisExpression[]) {
-		const newNode: ASTNodes.Identifier = {
-			type: "Identifier",
-			name: `_THIS_${randomString}_`
-		}
-
-		Object.assign(clearObject(node), newNode)
-	}
-
-	for (const node of query(ast, "ClassBody > MethodDefinition[kind=method] > FunctionExpression > BlockStatement") as ASTNodes.BlockStatement[]) {
-		node.body.unshift({
-			type: "VariableDeclaration",
-			declarations: [ {
-				type: "VariableDeclarator",
-				id: {
-					type: "Identifier",
-					name: `_THIS_${randomString}_`
-				},
-				init: {
-					type: "CallExpression",
-					callee: {
-						type: "MemberExpression",
-						computed: false,
-						object: { type: "Super" },
-						property: {
-							type: "Identifier",
-							name: "valueOf"
-						}
-					},
-					arguments: []
-				}
-			} ],
-			kind: "let"
-		})
-	}
-
-	script = generateCodeFromAST(ast)
-
-	{
-		const program = await babel.parseAsync(script)
-
-		babel.traverse(program, {
-			BlockStatement({ node: blockStatement }) {
-				for (const [ i, child ] of blockStatement.body.entries()) {
-					if (child.type == "FunctionDeclaration" && !child.generator) {
-						blockStatement.body.splice(i, 1)
-
-						blockStatement.body.unshift(babel.types.variableDeclaration(
-							"let",
-							[ babel.types.variableDeclarator(
-								child.id!,
-								babel.types.arrowFunctionExpression(child.params, child.body, child.async)
-							) ]
-						))
-					}
-				}
+				blockStatement.body.unshift(
+					babel.types.variableDeclaration(
+						"let",
+						[
+							babel.types.variableDeclarator(
+								functionDeclaration.id!,
+								babel.types.arrowFunctionExpression(
+									functionDeclaration.params,
+									functionDeclaration.body,
+									functionDeclaration.async
+								)
+							)
+						]
+					)
+				)
 			}
-		})
+		},
 
-		script = babelGenerate(program!).code
-	}
+		ClassBody({ node: classBody, scope }) {
+			for (const classMethod of classBody.body) {
+				if (classMethod.type != "ClassMethod")
+					continue
+
+				babel.traverse(classMethod.body, {
+					ThisExpression(path) {
+						path.replaceWith(
+							babel.types.identifier(`_THIS_${randomString}_`)
+						)
+					}
+				}, scope)
+
+				if (classMethod.kind == "constructor") {
+					babel.traverse(classMethod.body, {
+						CallExpression(path) {
+							if (path.node.callee.type != "Super")
+								return
+
+							path.replaceWith(
+								babel.types.assignmentExpression(
+									"=",
+									babel.types.identifier(`_THIS_${randomString}_`),
+									path.node
+								)
+							)
+
+							path.skip()
+						}
+					}, scope)
+
+
+					classMethod.body.body.unshift(
+						babel.types.variableDeclaration(
+							"let",
+							[
+								babel.types.variableDeclarator(
+									babel.types.identifier(`_THIS_${randomString}_`)
+								)
+							]
+						)
+					)
+
+					continue
+				}
+
+				classMethod.body.body.unshift(babel.types.variableDeclaration(
+					"let",
+					[
+						babel.types.variableDeclarator(
+							babel.types.identifier(`_THIS_${randomString}_`),
+							babel.types.callExpression(
+								babel.types.memberExpression(
+									babel.types.super(),
+									babel.types.identifier("valueOf")
+								),
+								[]
+							)
+						)
+					]
+				))
+			}
+		}
+	})
+
+	script = babelGenerate(program!).code
 
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
