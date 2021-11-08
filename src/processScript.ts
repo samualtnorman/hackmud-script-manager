@@ -365,6 +365,9 @@ export async function processScript(script: string) {
 				if (Number.isInteger(path.node.value) && path.node.value < 10)
 					return
 
+				if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
+					path.parent.computed = true
+
 				let jsonValueIndex = jsonValues.indexOf(path.node.value)
 
 				if (jsonValueIndex == -1)
@@ -376,6 +379,9 @@ export async function processScript(script: string) {
 			StringLiteral(path) {
 				if (path.node.value.includes("\u0000"))
 					return
+
+				if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
+					path.parent.computed = true
 
 				let jsonValueIndex = jsonValues.indexOf(path.node.value)
 
