@@ -291,6 +291,20 @@ export async function processScript(script: string) {
 		const file = await babel.parseAsync(script) as babel.types.File
 
 		babel.traverse(file, {
+			ObjectExpression(path) {
+				const o: Record<string, unknown> = {}
+
+				if (parseObjectExpression(path.node, o))
+					path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
+			},
+
+			ArrayExpression(path) {
+				const o: unknown[] = []
+
+				if (parseArrayExpression(path.node, o))
+					path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
+			},
+
 			TemplateLiteral(path) {
 				const templateLiteral = path.node
 				let replacement: babel.Node = babel.types.stringLiteral(templateLiteral.quasis[0].value.cooked!)
@@ -595,3 +609,61 @@ function getFunctionBodyStart(code: string) {
 }
 
 export default processScript
+
+function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<string, unknown>) {
+	for (const property of node.properties) {
+		if (property.type != "ObjectProperty" || property.computed)
+			return false
+
+		assert(property.key.type == "Identifier" || property.key.type == "NumericLiteral" || property.key.type == "StringLiteral")
+
+		if (property.value.type == "ArrayExpression") {
+			const childArray: unknown[] = []
+
+			if (parseArrayExpression(property.value, childArray))
+				o[property.key.type == "Identifier" ? property.key.name : property.key.value] = childArray
+		} else if (property.value.type == "ObjectExpression") {
+			const childObject: Record<string, unknown> = {}
+
+			if (parseObjectExpression(property.value, childObject))
+				o[property.key.type == "Identifier" ? property.key.name : property.key.value] = childObject
+		} else if (property.value.type == "NullLiteral")
+			o[property.key.type == "Identifier" ? property.key.name : property.key.value] = null
+		else if (property.value.type == "BooleanLiteral" || property.value.type == "NumericLiteral" || property.value.type == "StringLiteral")
+			o[property.key.type == "Identifier" ? property.key.name : property.key.value] = property.value.value
+		else
+			return false
+	}
+
+	return true
+}
+
+function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
+	for (const element of node.elements) {
+		if (!element)
+			return false
+
+		if (element.type == "ArrayExpression") {
+			const childArray: unknown[] = []
+
+			if (parseArrayExpression(element, childArray))
+				childArray.push(childArray)
+			else
+				return false
+		} else if (element.type == "ObjectExpression") {
+			const childObject: Record<string, unknown> = {}
+
+			if (parseObjectExpression(element, childObject))
+				o.push(childObject)
+			else
+				return false
+		} else if (element.type == "NullLiteral")
+			o.push(null)
+		else if (element.type == "BooleanLiteral" || element.type == "NumericLiteral" || element.type == "StringLiteral")
+			o.push(element.value)
+		else
+			return false
+	}
+
+	return true
+}
