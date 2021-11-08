@@ -1,9 +1,9 @@
 import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
-import { Token, tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
+import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { minify } from "terser"
 import typescript from "typescript"
-import { hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+import { assert, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
 
 const babelGenerate = (babelGenerator as any).default as typeof import("@babel/generator").default
 
@@ -89,8 +89,10 @@ export async function processScript(script: string) {
 	script = outputText.replace(/^export /, "")
 
 	const randomString = (Math.random() * (2 ** 53)).toString(36)
-
 	const program = await babel.parseAsync(script)
+	const jsonValues: any[] = []
+
+	let undefinedIsReferenced = false
 
 	babel.traverse(program, {
 		BlockStatement({ node: blockStatement }) {
@@ -180,6 +182,15 @@ export async function processScript(script: string) {
 					]
 				))
 			}
+		},
+
+		VariableDeclaration({ node: variableDeclaration }) {
+			if (variableDeclaration.kind == "const")
+				variableDeclaration.kind = "let"
+		},
+
+		ThisExpression(path) {
+			path.replaceWith(babel.types.identifier(`_UNDEFINED_${randomString}_`))
 		}
 	})
 
@@ -233,233 +244,241 @@ export async function processScript(script: string) {
 	})).code || ""
 
 	{
-		const tokens = [ ...tokenize(scriptBeforeJSONValueReplacement, { ecmaVersion: 2015 }) ].reverse().values()
+		const program = await babel.parseAsync(scriptBeforeJSONValueReplacement)
 
-		for (const token of tokens) {
-			// we can't replace any tokens before the block statement or we'll break stuff
-			if (token.start < blockStatementIndex)
-				break
+		babel.traverse(program, {
+			MemberExpression({ node: memberExpression }) {
+				if (memberExpression.computed)
+					return
 
-			switch (token.type) {
-				case tokenTypes.name: {
-					if (token.value != "prototype" && token.value != "__proto__")
-						break
+				assert(memberExpression.property.type == "Identifier")
 
-					const tokenBefore = tokens.next().value as Token
+				if (memberExpression.property.name.length < 3 || (memberExpression.property.name != "prototype" && memberExpression.property.name != "__proto__"))
+					return
 
-					if (tokenBefore.type != tokenTypes.dot)
-						break
-
-					srcLength += 3
-					scriptBeforeJSONValueReplacement = stringSplice(scriptBeforeJSONValueReplacement, `["${token.value}"]`, tokenBefore.start, token.end)
-				} break
-
-				case tokenTypes._const: {
-					scriptBeforeJSONValueReplacement = stringSplice(scriptBeforeJSONValueReplacement, "let", token.start, token.end)
-				} break
-
-				case tokenTypes._this:
-					throw new Error('"this" keyword is not supported in hackmud')
+				memberExpression.computed = true
+				memberExpression.property = babel.types.stringLiteral(memberExpression.property.name)
 			}
-		}
-	}
+		})
 
-	const jsonValues: any[] = []
-	let undefinedIsReferenced = false
-
-	// we iterate through the tokens backwards so that substring replacements
-	// don't affect future replacements since a part of the string could be
-	// replaced with a string of a different length which messes up indexes
-	const tokens = [ ...tokenize(script, { ecmaVersion: 2015 }) ].reverse().values()
-
-	let templateToRightOfPlaceholder = false
-
-	for (const token of tokens) {
-		// we can't replace any tokens before the block statement or we'll break stuff
-		if (token.start < blockStatementIndex)
-			break
-
-		switch (token.type) {
-			case tokenTypes.backQuote: {
-				const templateToken = tokens.next().value as Token
-
-				if ((tokens.next().value as Token).type == tokenTypes.backQuote)
-					throw new Error("tagged templates not supported yet")
-
-				// no point in concatenating an empty string
-				if (templateToken.value == "") {
-					script = stringSplice(script, "))", templateToken.start - 1, token.end)
-					break
-				}
-
-				let jsonValueIndex = jsonValues.indexOf(templateToken.value)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(templateToken.value)
-
-				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_${randomString}_)`, templateToken.start - 1, token.end)
-			} break
-
-			case tokenTypes.template: {
-				if ((tokens.next().value as Token).type == tokenTypes.backQuote) {
-					if ((tokens.next().value as Token).type == tokenTypes.name)
-						throw new Error("tagged templates not supported yet")
-
-					// there *is* a point in concatenating an empty string at the
-					// start because foo + bar is not the same thing as "" + foo + bar
-					// ...but foo + "<template>" + bar *is* the same thing as "" + foo + "<template>" + bar
-					// so we just need to check if there's a template to the right of the placeholder and skip that case
-
-					if (token.value == "" && templateToRightOfPlaceholder) {
-						templateToRightOfPlaceholder = false
-						script = stringSplice(script, "((", token.start - 1, token.end + 2)
-						break
-					}
-
-					templateToRightOfPlaceholder = false
-
-					let jsonValueIndex = jsonValues.indexOf(token.value)
-
-					if (jsonValueIndex == -1)
-						jsonValueIndex += jsonValues.push(token.value)
-
-					script = stringSplice(script, `(_JSON_VALUE_${jsonValueIndex}_${randomString}_+(`, token.start - 1, token.end + 2)
-					break
-				}
-
-				// no point in concatenating an empty string
-				if (token.value == "") {
-					templateToRightOfPlaceholder = false
-					script = stringSplice(script, ")+(", token.start - 1, token.end + 2)
-					break
-				}
-
-				templateToRightOfPlaceholder = true
-
-				let jsonValueIndex = jsonValues.indexOf(token.value)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(token.value)
-
-				script = stringSplice(script, `)+_JSON_VALUE_${jsonValueIndex}_${randomString}_+(`, token.start - 1, token.end + 2)
-			} break
-
-			case tokenTypes.name: {
-				if (token.value.length < 3)
-					break
-
-				const tokenBefore = tokens.next().value as Token
-
-				if (tokenBefore.type == tokenTypes.dot) {
-					let jsonValueIndex = jsonValues.indexOf(token.value)
-
-					if (jsonValueIndex == -1)
-						jsonValueIndex += jsonValues.push(token.value)
-
-					script = stringSplice(script, `[_JSON_VALUE_${jsonValueIndex}_${randomString}_]`, tokenBefore.start, token.end)
-					break
-				}
-
-				if (token.value == "undefined") {
-					script = stringSplice(script, ` _UNDEFINED_${randomString}_ `, token.start, token.end)
-					undefinedIsReferenced = true
-				}
-			} break
-
-			case tokenTypes._null: {
-				let jsonValueIndex = jsonValues.indexOf(null)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(null)
-
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
-			} break
-
-			case tokenTypes._true: {
-				let jsonValueIndex = jsonValues.indexOf(true)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(true)
-
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
-			} break
-
-			case tokenTypes._false: {
-				let jsonValueIndex = jsonValues.indexOf(false)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(false)
-
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
-			} break
-
-			case tokenTypes.num: {
-				if (token.value == 0) {
-					const tokenBefore = tokens.next().value as Token
-
-					if (tokenBefore.type == tokenTypes._void) {
-						script = stringSplice(script, ` _UNDEFINED_${randomString}_ `, tokenBefore.start, token.end)
-						undefinedIsReferenced = true
-					}
-
-					// may as well break here since we're gonna break anyway
-					break
-				}
-
-				if (token.value < 10)
-					break
-
-				let jsonValueIndex = jsonValues.indexOf(token.value)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(token.value)
-
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
-			} break
-
-			case tokenTypes.string: {
-				if (token.value.includes("\u0000"))
-					break
-
-				// BUG in the code `({ "-": "bar" })` `"-"` is recognised as a string and is replaced with `_JSON_VALUE_n_` which is not equivalent code
-
-				let jsonValueIndex = jsonValues.indexOf(token.value)
-
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(token.value)
-
-				script = stringSplice(script, ` _JSON_VALUE_${jsonValueIndex}_${randomString}_ `, token.start, token.end)
-			} break
-
-			case tokenTypes._const: {
-				script = stringSplice(script, "let", token.start, token.end)
-			} break
-
-			case tokenTypes._this:
-				throw new Error('"this" keyword is not supported in hackmud')
-		}
+		scriptBeforeJSONValueReplacement = babelGenerate(program!).code
 	}
 
 	let comment: string | null = null
 	let hasComment = false
 
-	if (jsonValues.length) {
-		hasComment = true
+	{
+		const file = await babel.parseAsync(script) as babel.types.File
 
-		if (jsonValues.length == 1) {
-			if (typeof jsonValues[0] == "string" && !jsonValues[0].includes("\n") && !jsonValues[0].includes("\t")) {
-				script = stringSplice(script, `\nlet _JSON_VALUE_0_${randomString}_ = SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_${randomString}_]${undefinedIsReferenced ? `, _UNDEFINED_${randomString}_` : ""}\n`, blockStatementIndex + 1)
-				comment = jsonValues[0]
-			} else {
-				script = stringSplice(script, `\nlet _JSON_VALUE_0_${randomString}_ = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_${randomString}_])${undefinedIsReferenced ? `, _UNDEFINED_${randomString}_` : ""}\n`, blockStatementIndex + 1)
-				comment = JSON.stringify(jsonValues[0])
+		babel.traverse(file, {
+			TemplateLiteral(path) {
+				const templateLiteral = path.node
+				let replacement: babel.Node = babel.types.stringLiteral(templateLiteral.quasis[0].value.cooked!)
+
+				for (let i = 0; i < templateLiteral.expressions.length; i++) {
+					const expression = templateLiteral.expressions[i] as babel.types.Expression
+					const templateElement = templateLiteral.quasis[i + 1]
+
+					replacement = babel.types.binaryExpression(
+						"+",
+						replacement,
+						expression
+					)
+
+					if (!templateElement.value.cooked)
+						continue
+
+					replacement = babel.types.binaryExpression(
+						"+",
+						replacement,
+						babel.types.stringLiteral(templateElement.value.cooked!)
+					)
+				}
+
+				path.replaceWith(replacement)
+			},
+
+			MemberExpression({ node: memberExpression }) {
+				if (memberExpression.computed)
+					return
+
+				assert(memberExpression.property.type == "Identifier")
+
+				if (memberExpression.property.name.length < 3)
+					return
+
+				memberExpression.computed = true
+				memberExpression.property = babel.types.stringLiteral(memberExpression.property.name)
+			},
+
+			UnaryExpression(path) {
+				if (path.node.operator == "void" && path.node.argument.type == "NumericLiteral" && !path.node.argument.value) {
+					path.replaceWith(babel.types.identifier(`_UNDEFINED_${randomString}_`))
+					undefinedIsReferenced = true
+				}
+			},
+
+			NullLiteral(path) {
+				let jsonValueIndex = jsonValues.indexOf(null)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(null)
+
+				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+			},
+
+			BooleanLiteral(path) {
+				let jsonValueIndex = jsonValues.indexOf(path.node.value)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(path.node.value)
+
+				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+			},
+
+			NumericLiteral(path) {
+				if (Number.isInteger(path.node.value) && path.node.value < 10)
+					return
+
+				let jsonValueIndex = jsonValues.indexOf(path.node.value)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(path.node.value)
+
+				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+			},
+
+			StringLiteral(path) {
+				if (path.node.value.includes("\u0000"))
+					return
+
+				let jsonValueIndex = jsonValues.indexOf(path.node.value)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(path.node.value)
+
+				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
 			}
-		} else {
-			script = stringSplice(script, `\nlet [ ${jsonValues.map((_, i) => `_JSON_VALUE_${i}_${randomString}_`).join(", ")} ] = JSON.parse(SC$scripts$quine().split\`\t\`[_SPLIT_INDEX_${randomString}_])${undefinedIsReferenced ? `, _UNDEFINED_${randomString}_` : ""}\n`, blockStatementIndex + 1)
-			comment = JSON.stringify(jsonValues)
+		})
+
+		const [ functionDeclaration ] = file.program.body
+
+		assert(functionDeclaration.type == "FunctionDeclaration")
+
+		if (jsonValues.length) {
+			hasComment = true
+
+			if (jsonValues.length == 1) {
+				if (typeof jsonValues[0] == "string" && !jsonValues[0].includes("\n") && !jsonValues[0].includes("\t")) {
+					const variableDeclaration = babel.types.variableDeclaration(
+						"let",
+						[
+							babel.types.variableDeclarator(
+								babel.types.identifier(`_JSON_VALUE_0_${randomString}_`),
+								babel.types.memberExpression(
+									babel.types.taggedTemplateExpression(
+										babel.types.memberExpression(
+											babel.types.callExpression(babel.types.identifier(`SC$scripts$quine`), []),
+											babel.types.identifier("split")
+										),
+										babel.types.templateLiteral([ babel.types.templateElement({ raw: "\t", cooked: "\t" }, true) ], [])
+									),
+									babel.types.identifier(`_SPLIT_INDEX_${randomString}_`),
+									true
+								)
+							)
+						]
+					)
+
+					if (undefinedIsReferenced)
+						variableDeclaration.declarations.push(babel.types.variableDeclarator(babel.types.identifier(`_UNDEFINED_${randomString}_`)))
+
+					functionDeclaration.body.body.unshift(variableDeclaration)
+
+					comment = jsonValues[0]
+				} else {
+					const variableDeclaration = babel.types.variableDeclaration(
+						"let",
+						[
+							babel.types.variableDeclarator(
+								babel.types.identifier(`_JSON_VALUE_0_${randomString}_`),
+								babel.types.callExpression(
+									babel.types.memberExpression(
+										babel.types.identifier("JSON"),
+										babel.types.identifier("parse")
+									),
+									[
+										babel.types.memberExpression(
+											babel.types.taggedTemplateExpression(
+												babel.types.memberExpression(
+													babel.types.callExpression(babel.types.identifier(`SC$scripts$quine`), []),
+													babel.types.identifier("split")
+												),
+												babel.types.templateLiteral([ babel.types.templateElement({ raw: "\t", cooked: "\t" }, true) ], [])
+											),
+											babel.types.identifier(`_SPLIT_INDEX_${randomString}_`),
+											true
+										)
+									]
+								)
+							)
+						]
+					)
+
+					if (undefinedIsReferenced)
+						variableDeclaration.declarations.push(babel.types.variableDeclarator(babel.types.identifier(`_UNDEFINED_${randomString}_`)))
+
+					functionDeclaration.body.body.unshift(variableDeclaration)
+
+					comment = JSON.stringify(jsonValues[0])
+				}
+			} else {
+				const variableDeclaration = babel.types.variableDeclaration(
+					"let",
+					[
+						babel.types.variableDeclarator(
+							babel.types.arrayPattern(jsonValues.map((_, i) => babel.types.identifier(`_JSON_VALUE_${i}_${randomString}_`))),
+							babel.types.callExpression(
+								babel.types.memberExpression(
+									babel.types.identifier("JSON"),
+									babel.types.identifier("parse")
+								),
+								[
+									babel.types.memberExpression(
+										babel.types.taggedTemplateExpression(
+											babel.types.memberExpression(
+												babel.types.callExpression(babel.types.identifier(`SC$scripts$quine`), []),
+												babel.types.identifier("split")
+											),
+											babel.types.templateLiteral([ babel.types.templateElement({ raw: "\t", cooked: "\t" }, true) ], [])
+										),
+										babel.types.identifier(`_SPLIT_INDEX_${randomString}_`),
+										true
+									)
+								]
+							)
+						)
+					]
+				)
+
+				if (undefinedIsReferenced)
+					variableDeclaration.declarations.push(babel.types.variableDeclarator(babel.types.identifier(`_UNDEFINED_${randomString}_`)))
+
+				functionDeclaration.body.body.unshift(variableDeclaration)
+
+				comment = JSON.stringify(jsonValues)
+			}
+		} else if (undefinedIsReferenced) {
+			functionDeclaration.body.body.unshift(
+				babel.types.variableDeclaration(
+					"let",
+					[ babel.types.variableDeclarator(babel.types.identifier(`_UNDEFINED_${randomString}_`)) ]
+				)
+			)
 		}
-	} else
-		script = script.replace(`_UNDEFINED_${randomString}_`, "void 0")
+
+		script = babelGenerate(file!).code
+	}
 
 	script = (await minify(script, {
 		ecma: 2015,

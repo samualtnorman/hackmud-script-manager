@@ -62,3 +62,14 @@ export class DynamicMap<K, V> extends Map<K, V> {
 		return value
 	}
 }
+
+export class CustomError extends Error {
+	override name = this.constructor.name
+}
+
+export class AssertError extends CustomError {}
+
+export function assert(value: any, message = "assertion failed"): asserts value {
+	if (!value)
+		throw new AssertError(message)
+}
