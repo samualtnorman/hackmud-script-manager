@@ -2,8 +2,7 @@ import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { minify } from "terser"
-import typescript from "typescript"
-import { assert, hackmudLength, positionToLineNumber, stringSplice } from "./lib"
+import { assert, hackmudLength, stringSplice } from "./lib"
 
 const babelGenerate = (babelGenerator as any).default as typeof import("@babel/generator").default
 
@@ -74,27 +73,47 @@ export async function processScript(script: string) {
 		.replace(/#G/g, "$G")
 		.replace(/[#$]db\./g, "DB$")
 
-	// typescript compilation, this runs on regular javascript too to convert
-	// any post es2015 syntax into es2015 syntax
-	const { outputText, diagnostics = [] } = typescript.transpileModule(script, {
-		compilerOptions: { target: typescript.ScriptTarget.ES2015 },
-		reportDiagnostics: true
-	})
+	// TODO check for references to `BigInt` and insert `const BigInt = new DataView(new ArrayBuffer(64)).getBigInt64(0).constructor` to the top of the script
+	// TODO polyfill bigint syntax with a call to `BigInt()`
 
-	const warnings = diagnostics.map(({ messageText, start }) => ({
-		message: typeof messageText == "string" ? messageText : messageText.messageText,
-		line: positionToLineNumber(start!, script)
-	}))
+	const file = (await babel.transformAsync(script, {
+		plugins: [
+			"@babel/plugin-transform-typescript",
+			[ "@babel/plugin-proposal-decorators", { decoratorsBeforeExport: true } ],
+			"@babel/plugin-proposal-do-expressions",
+			"@babel/plugin-proposal-function-bind",
+			"@babel/plugin-proposal-function-sent",
+			"@babel/plugin-proposal-partial-application",
+			[ "@babel/plugin-proposal-pipeline-operator", { proposal: "hack", topicToken: "%" } ],
+			"@babel/plugin-proposal-throw-expressions",
+			[ "@babel/plugin-proposal-record-and-tuple", { syntaxType: "hash" } ],
+			"@babel/plugin-proposal-class-properties",
+			"@babel/plugin-proposal-class-static-block",
+			"@babel/plugin-proposal-private-property-in-object",
+			"@babel/plugin-proposal-logical-assignment-operators",
+			"@babel/plugin-proposal-numeric-separator",
+			"@babel/plugin-proposal-nullish-coalescing-operator",
+			"@babel/plugin-proposal-optional-chaining",
+			"@babel/plugin-proposal-optional-catch-binding",
+			"@babel/plugin-proposal-json-strings",
+			"@babel/plugin-proposal-object-rest-spread",
+			"@babel/plugin-transform-exponentiation-operator"
+		],
+		code: false,
+		ast: true
+	}))!.ast!
 
-	script = outputText.replace(/^export /, "")
+	const [ exportNamedDeclaration ] = file.program.body
+
+	if (exportNamedDeclaration.type == "ExportNamedDeclaration")
+		file.program.body[0] = exportNamedDeclaration.declaration!
 
 	const randomString = (Math.random() * (2 ** 53)).toString(36)
-	const program = await babel.parseAsync(script)
 	const jsonValues: any[] = []
 
 	let undefinedIsReferenced = false
 
-	babel.traverse(program, {
+	babel.traverse(file, {
 		BlockStatement({ node: blockStatement }) {
 			for (const [ i, functionDeclaration ] of blockStatement.body.entries()) {
 				if (functionDeclaration.type != "FunctionDeclaration" || functionDeclaration.generator)
@@ -194,7 +213,7 @@ export async function processScript(script: string) {
 		}
 	})
 
-	script = babelGenerate(program!).code
+	script = babelGenerate(file!).code
 
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
@@ -227,41 +246,47 @@ export async function processScript(script: string) {
 		srcLength += 24
 	}
 
-	let scriptBeforeJSONValueReplacement = (await minify(script, {
-		ecma: 2015,
-		compress: {
-			passes: Infinity,
-			unsafe: true,
-			unsafe_arrows: true,
-			unsafe_comps: true,
-			unsafe_symbols: true,
-			unsafe_methods: true,
-			unsafe_proto: true,
-			unsafe_regexp: true,
-			unsafe_undefined: true
-		},
-		format: { semicolons: false }
-	})).code || ""
+	let scriptBeforeJSONValueReplacement
 
 	{
-		const program = await babel.parseAsync(scriptBeforeJSONValueReplacement)
+		// BUG when this script is used, the source char count is off
 
-		babel.traverse(program, {
+		const file = await babel.parseAsync(script) as babel.types.File
+
+		babel.traverse(file, {
 			MemberExpression({ node: memberExpression }) {
 				if (memberExpression.computed)
 					return
 
 				assert(memberExpression.property.type == "Identifier")
 
-				if (memberExpression.property.name.length < 3 || (memberExpression.property.name != "prototype" && memberExpression.property.name != "__proto__"))
-					return
-
-				memberExpression.computed = true
-				memberExpression.property = babel.types.stringLiteral(memberExpression.property.name)
+				if (memberExpression.property.name == "prototype") {
+					memberExpression.computed = true
+					memberExpression.property = babel.types.identifier(`_PROTOTYPE_PROPERTY_${randomString}_`)
+				} else if (memberExpression.property.name == "__proto__") {
+					memberExpression.computed = true
+					memberExpression.property = babel.types.identifier(`_PROTO_PROPERTY_${randomString}_`)
+				}
 			}
 		})
 
-		scriptBeforeJSONValueReplacement = babelGenerate(program!).code
+		scriptBeforeJSONValueReplacement = (await minify(babelGenerate(file!).code, {
+			ecma: 2015,
+			compress: {
+				passes: Infinity,
+				unsafe: true,
+				unsafe_arrows: true,
+				unsafe_comps: true,
+				unsafe_symbols: true,
+				unsafe_methods: true,
+				unsafe_proto: true,
+				unsafe_regexp: true,
+				unsafe_undefined: true
+			},
+			format: { semicolons: false }
+		})).code!
+			.replace(new RegExp(`_PROTOTYPE_PROPERTY_${randomString}_`, "g"), `"prototype"`)
+			.replace(new RegExp(`_PROTO_PROPERTY_${randomString}_`, "g"), `"__proto__"`)
 	}
 
 	let comment: string | null = null
@@ -530,7 +555,7 @@ export async function processScript(script: string) {
 	return {
 		srcLength,
 		script,
-		warnings
+		warnings: []
 	}
 }
 
