@@ -236,13 +236,8 @@ export async function processScript(script: string) {
 		}
 	})).code || ""
 
-	let blockStatementIndex: number
-
-	if (script.startsWith("function "))
-		blockStatementIndex = getFunctionBodyStart(script)
-	else {
+	if (!script.startsWith("function ")) {
 		script = `function script(context, args) {\n${script}\n}`
-		blockStatementIndex = 31
 		srcLength += 24
 	}
 
