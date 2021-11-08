@@ -389,6 +389,19 @@ export async function processScript(script: string) {
 					jsonValueIndex += jsonValues.push(path.node.value)
 
 				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+			},
+
+			ObjectProperty({ node }) {
+				if (node.computed || node.key.type != "Identifier" || node.key.name.length < 4)
+					return
+
+				let jsonValueIndex = jsonValues.indexOf(node.key.name)
+
+				if (jsonValueIndex == -1)
+					jsonValueIndex += jsonValues.push(node.key.name)
+
+				node.computed = true
+				node.key = babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`)
 			}
 		})
 
