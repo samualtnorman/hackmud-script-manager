@@ -211,11 +211,11 @@ for (const arg of process.argv.slice(2)) {
 		case "config":
 			switch (commands[1]) {
 				case "get": {
-					console.log(exploreObject(await getConfig(), commands.slice(2)))
+					console.log(exploreObject(await getConfig(), commands[2].split(".")))
 				} break
 
 				case "delete": {
-					const keys = commands.slice(2)
+					const keys = commands[2].split(".")
 
 					if (!keys.length) {
 						help()
@@ -224,14 +224,13 @@ for (const arg of process.argv.slice(2)) {
 
 					const config = await getConfig()
 
-					delete exploreObject(config, keys.slice(0, -1))?.[keys.slice(-1)[0]]
+					delete exploreObject(config, keys)?.[commands[3]]
 
 					console.log(config)
 				} break
 
 				case "set": {
-					const keys = commands.slice(2)
-					const value = keys.pop()
+					const keys = commands[2].split(".")
 
 					if (!keys.length) {
 						help()
@@ -244,7 +243,7 @@ for (const arg of process.argv.slice(2)) {
 					for (let key of keys.slice(0, -1))
 						object = typeof object[key] == "object" ? object[key] : object[key] = {}
 
-					object[keys.slice(-1)[0]] = value
+					object[keys.slice(-1)[0]] = commands[3]
 
 					if (config.hackmudPath)
 						config.hackmudPath = resolvePath(config.hackmudPath)
