@@ -73,7 +73,6 @@ export async function processScript(script: string) {
 		.replace(/#G/g, "$G")
 		.replace(/[#$]db\./g, "DB$")
 
-	// TODO check for references to `BigInt` and insert `const BigInt = new DataView(new ArrayBuffer(64)).getBigInt64(0).constructor` to the top of the script
 	// TODO polyfill bigint syntax with a call to `BigInt()`
 
 	const file = (await babel.transformAsync(script, {
@@ -291,126 +290,143 @@ export async function processScript(script: string) {
 		const file = await babel.parseAsync(script) as babel.types.File
 
 		babel.traverse(file, {
-			ObjectExpression(path) {
-				const o: Record<string, unknown> = {}
+			FunctionDeclaration(path) {
+				path.traverse({
+					Function(path) {
+						if (path.parent.type != "CallExpression" && path.parentKey != "callee")
+							path.skip()
+					},
 
-				if (parseObjectExpression(path.node, o))
-					path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
-			},
+					Loop(path) {
+						path.skip()
+					},
 
-			ArrayExpression(path) {
-				const o: unknown[] = []
+					ObjectExpression(path) {
+						const o: Record<string, unknown> = {}
 
-				if (parseArrayExpression(path.node, o))
-					path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
-			},
+						if (parseObjectExpression(path.node, o))
+							path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
+					},
 
-			TemplateLiteral(path) {
-				const templateLiteral = path.node
-				let replacement: babel.Node = babel.types.stringLiteral(templateLiteral.quasis[0].value.cooked!)
+					ArrayExpression(path) {
+						const o: unknown[] = []
 
-				for (let i = 0; i < templateLiteral.expressions.length; i++) {
-					const expression = templateLiteral.expressions[i] as babel.types.Expression
-					const templateElement = templateLiteral.quasis[i + 1]
+						if (parseArrayExpression(path.node, o))
+							path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
+					}
+				})
 
-					replacement = babel.types.binaryExpression(
-						"+",
-						replacement,
-						expression
-					)
+				path.traverse({
+					TemplateLiteral(path) {
+						const templateLiteral = path.node
+						let replacement: babel.Node = babel.types.stringLiteral(templateLiteral.quasis[0].value.cooked!)
 
-					if (!templateElement.value.cooked)
-						continue
+						for (let i = 0; i < templateLiteral.expressions.length; i++) {
+							const expression = templateLiteral.expressions[i] as babel.types.Expression
+							const templateElement = templateLiteral.quasis[i + 1]
 
-					replacement = babel.types.binaryExpression(
-						"+",
-						replacement,
-						babel.types.stringLiteral(templateElement.value.cooked!)
-					)
-				}
+							replacement = babel.types.binaryExpression(
+								"+",
+								replacement,
+								expression
+							)
 
-				path.replaceWith(replacement)
-			},
+							if (!templateElement.value.cooked)
+								continue
 
-			MemberExpression({ node: memberExpression }) {
-				if (memberExpression.computed)
-					return
+							replacement = babel.types.binaryExpression(
+								"+",
+								replacement,
+								babel.types.stringLiteral(templateElement.value.cooked!)
+							)
+						}
 
-				assert(memberExpression.property.type == "Identifier")
+						path.replaceWith(replacement)
+					},
 
-				if (memberExpression.property.name.length < 3)
-					return
+					MemberExpression({ node: memberExpression }) {
+						if (memberExpression.computed)
+							return
 
-				memberExpression.computed = true
-				memberExpression.property = babel.types.stringLiteral(memberExpression.property.name)
-			},
+						assert(memberExpression.property.type == "Identifier")
 
-			UnaryExpression(path) {
-				if (path.node.operator == "void" && path.node.argument.type == "NumericLiteral" && !path.node.argument.value) {
-					path.replaceWith(babel.types.identifier(`_UNDEFINED_${randomString}_`))
-					undefinedIsReferenced = true
-				}
-			},
+						if (memberExpression.property.name.length < 3)
+							return
 
-			NullLiteral(path) {
-				let jsonValueIndex = jsonValues.indexOf(null)
+						memberExpression.computed = true
+						memberExpression.property = babel.types.stringLiteral(memberExpression.property.name)
+					},
 
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(null)
+					UnaryExpression(path) {
+						if (path.node.operator == "void" && path.node.argument.type == "NumericLiteral" && !path.node.argument.value) {
+							path.replaceWith(babel.types.identifier(`_UNDEFINED_${randomString}_`))
+							undefinedIsReferenced = true
+						}
+					},
 
-				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
-			},
+					NullLiteral(path) {
+						let jsonValueIndex = jsonValues.indexOf(null)
 
-			BooleanLiteral(path) {
-				let jsonValueIndex = jsonValues.indexOf(path.node.value)
+						if (jsonValueIndex == -1)
+							jsonValueIndex += jsonValues.push(null)
 
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(path.node.value)
+						path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+					},
 
-				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
-			},
+					BooleanLiteral(path) {
+						let jsonValueIndex = jsonValues.indexOf(path.node.value)
 
-			NumericLiteral(path) {
-				if (Number.isInteger(path.node.value) && path.node.value < 10)
-					return
+						if (jsonValueIndex == -1)
+							jsonValueIndex += jsonValues.push(path.node.value)
 
-				if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
-					path.parent.computed = true
+						path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+					},
 
-				let jsonValueIndex = jsonValues.indexOf(path.node.value)
+					NumericLiteral(path) {
+						if (Number.isInteger(path.node.value) && path.node.value < 10)
+							return
 
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(path.node.value)
+						if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
+							path.parent.computed = true
 
-				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
-			},
+						let jsonValueIndex = jsonValues.indexOf(path.node.value)
 
-			StringLiteral(path) {
-				if (path.node.value.includes("\u0000"))
-					return
+						if (jsonValueIndex == -1)
+							jsonValueIndex += jsonValues.push(path.node.value)
 
-				if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
-					path.parent.computed = true
+						path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+					},
 
-				let jsonValueIndex = jsonValues.indexOf(path.node.value)
+					StringLiteral(path) {
+						if (path.node.value.includes("\u0000"))
+							return
 
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(path.node.value)
+						if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
+							path.parent.computed = true
 
-				path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
-			},
+						let jsonValueIndex = jsonValues.indexOf(path.node.value)
 
-			ObjectProperty({ node }) {
-				if (node.computed || node.key.type != "Identifier" || node.key.name.length < 4)
-					return
+						if (jsonValueIndex == -1)
+							jsonValueIndex += jsonValues.push(path.node.value)
 
-				let jsonValueIndex = jsonValues.indexOf(node.key.name)
+						path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+					},
 
-				if (jsonValueIndex == -1)
-					jsonValueIndex += jsonValues.push(node.key.name)
+					ObjectProperty({ node }) {
+						if (node.computed || node.key.type != "Identifier" || node.key.name.length < 4)
+							return
 
-				node.computed = true
-				node.key = babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`)
+						let jsonValueIndex = jsonValues.indexOf(node.key.name)
+
+						if (jsonValueIndex == -1)
+							jsonValueIndex += jsonValues.push(node.key.name)
+
+						node.computed = true
+						node.key = babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`)
+					}
+				})
+
+				path.skip()
 			}
 		})
 
@@ -611,6 +627,9 @@ function getFunctionBodyStart(code: string) {
 export default processScript
 
 function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<string, unknown>) {
+	if (!node.properties.length)
+		return false
+
 	for (const property of node.properties) {
 		if (property.type != "ObjectProperty" || property.computed)
 			return false
@@ -639,6 +658,9 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 }
 
 function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
+	if (!node.elements.length)
+		return false
+
 	for (const element of node.elements) {
 		if (!element)
 			return false
