@@ -1,5 +1,6 @@
 import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
+import { FunctionDeclaration, Statement } from "@babel/types"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { minify } from "terser"
 import { assert, hackmudLength, stringSplice } from "./lib"
@@ -11,14 +12,11 @@ const babelGenerate = (babelGenerator as any).default as typeof import("@babel/g
  *
  * @param script JavaScript or TypeScript code
  */
-export async function processScript(script: string) {
+export async function processScript(script: string): Promise<{ srcLength: number,  script: string, warnings: { message: string, line: number }[] }> {
 	let preScriptComments: string | undefined
 	let autocomplete: string | undefined
 
 	[ , preScriptComments, script, autocomplete ] = script.match(/((?:^\s*\/\/.*\n)*)\s*((?:.+?\/\/\s*(.+?)\s*$)?[^]*)/m)!
-
-	if (!script)
-		throw new Error("script was empty")
 
 	if (script.match(/(?:SC|DB)\$/))
 		throw new Error("SC$ and DB$ are protected and cannot appear in a script")
@@ -100,15 +98,129 @@ export async function processScript(script: string) {
 		ast: true
 	}))!.ast!
 
-	const [ exportNamedDeclaration ] = file.program.body
+	if (!file.program.body.length) {
+		return {
+			srcLength: 12,
+			script: "function(){}",
+			warnings: [ { message: "script is empty", line: 0 } ]
+		}
+	}
 
-	if (exportNamedDeclaration.type == "ExportNamedDeclaration")
-		file.program.body[0] = exportNamedDeclaration.declaration!
+	let mainFunction: FunctionDeclaration | undefined
+	const globalStatements: Statement[] = []
+	const globalVariables: string[] = []
+
+	for (const statement of file.program.body) {
+		if (!mainFunction) {
+			if (statement.type == "FunctionDeclaration") {
+				mainFunction = statement
+				continue
+			}
+
+			if (statement.type == "ExportNamedDeclaration" && statement.declaration && statement.declaration.type == "FunctionDeclaration") {
+				mainFunction = statement.declaration
+				continue
+			}
+		}
+
+		if (statement.type == "VariableDeclaration") {
+			for (const variableDeclarator of statement.declarations) {
+				assert(variableDeclarator.id.type == "Identifier", `global variables using destructure syntax is currently unsupported`)
+
+				globalVariables.push(variableDeclarator.id.name)
+
+				if (!variableDeclarator.init)
+					continue
+
+				globalStatements.push(
+					babel.types.expressionStatement(
+						babel.types.assignmentExpression(
+							"=",
+							babel.types.memberExpression(
+								babel.types.identifier("$G"),
+								babel.types.identifier(variableDeclarator.id.name)
+							),
+							variableDeclarator.init
+						)
+					)
+				)
+			}
+		} else
+			globalStatements.push(statement)
+	}
+
+	mainFunction ||= babel.types.functionDeclaration(
+		babel.types.identifier("main"),
+		[
+			babel.types.identifier("context"),
+			babel.types.identifier("args")
+		],
+		babel.types.blockStatement([])
+	)
+
+	if (globalStatements.length) {
+		mainFunction.body.body.unshift(
+			babel.types.ifStatement(
+				babel.types.unaryExpression(
+					"!",
+					babel.types.identifier("$FMCL")
+				),
+				babel.types.blockStatement(globalStatements)
+			)
+		)
+	}
+
+	file.program.body = [ mainFunction ]
 
 	const randomString = (Math.random() * (2 ** 53)).toString(36)
 	const jsonValues: any[] = []
 
 	let undefinedIsReferenced = false
+
+	babel.traverse(file, {
+		enter(path) {
+			{
+				const binding = path.scope.getBinding("_START")
+
+				if (binding) {
+					for (const path of binding.referencePaths) {
+						assert(path.node.type == "Identifier")
+						path.node.name = "_ST"
+					}
+				}
+			}
+
+			{
+				const binding = path.scope.getBinding("_TIMEOUT")
+
+				if (binding) {
+					for (const path of binding.referencePaths) {
+						assert(path.node.type == "Identifier")
+						path.node.name = "_TO"
+					}
+				}
+			}
+
+			for (const globalVariable of globalVariables) {
+				const binding = path.scope.getBinding(globalVariable)
+
+				assert(binding)
+
+				for (const path of binding.referencePaths) {
+					assert(path.node.type == "Identifier")
+
+					path.replaceWith(
+						babel.types.memberExpression(
+							babel.types.identifier("$G"),
+							babel.types.identifier(path.node.name)
+						)
+					)
+				}
+			}
+
+			path.skip()
+		}
+	})
 
 	babel.traverse(file, {
 		BlockStatement({ node: blockStatement }) {
@@ -227,13 +339,6 @@ export async function processScript(script: string) {
 					)
 				)
 			}
-		},
-
-		Identifier({ node }) {
-			if (node.name == "_START")
-				node.name = "_ST"
-			else if (node.name == "_TIMEOUT")
-				node.name = "_TO"
 		}
 	})
 
@@ -259,11 +364,6 @@ export async function processScript(script: string) {
 			booleans: false
 		}
 	})).code || ""
-
-	if (!script.startsWith("function ")) {
-		script = `function script(context, args) {\n${script}\n}`
-		srcLength += 24
-	}
 
 	let scriptBeforeJSONValueReplacement
 
