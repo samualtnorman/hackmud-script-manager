@@ -227,6 +227,13 @@ export async function processScript(script: string) {
 					)
 				)
 			}
+		},
+
+		Identifier({ node }) {
+			if (node.name == "_START")
+				node.name = "_ST"
+			else if (node.name == "_TIMEOUT")
+				node.name = "_TO"
 		}
 	})
 
