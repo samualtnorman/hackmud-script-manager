@@ -73,8 +73,6 @@ export async function processScript(script: string) {
 		.replace(/#G/g, "$G")
 		.replace(/[#$]db\./g, "DB$")
 
-	// TODO polyfill bigint syntax with a call to `BigInt()`
-
 	const file = (await babel.transformAsync(script, {
 		plugins: [
 			"@babel/plugin-transform-typescript",
@@ -209,6 +207,26 @@ export async function processScript(script: string) {
 
 		ThisExpression(path) {
 			path.replaceWith(babel.types.identifier(`_UNDEFINED_${randomString}_`))
+		},
+
+		BigIntLiteral(path) {
+			const bigIntAsNumber = Number(path.node.value)
+
+			if (BigInt(bigIntAsNumber) == BigInt(path.node.value)) {
+				path.replaceWith(
+					babel.types.callExpression(
+						babel.types.identifier("BigInt"),
+						[ babel.types.numericLiteral(bigIntAsNumber) ]
+					)
+				)
+			} else {
+				path.replaceWith(
+					babel.types.callExpression(
+						babel.types.identifier("BigInt"),
+						[ babel.types.stringLiteral(path.node.value) ]
+					)
+				)
+			}
 		}
 	})
 
@@ -288,6 +306,8 @@ export async function processScript(script: string) {
 
 	{
 		const file = await babel.parseAsync(script) as babel.types.File
+
+		const promises: Promise<any>[] = []
 
 		babel.traverse(file, {
 			FunctionDeclaration(path) {
@@ -383,22 +403,24 @@ export async function processScript(script: string) {
 					},
 
 					NumericLiteral(path) {
-						if (Number.isInteger(path.node.value) && path.node.value < 10)
-							return
+						promises.push((async () => {
+							if ((await minifyNumber(path.node.value)).length <= 3)
+								return
 
-						if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
-							path.parent.computed = true
+							if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
+								path.parent.computed = true
 
-						let jsonValueIndex = jsonValues.indexOf(path.node.value)
+							let jsonValueIndex = jsonValues.indexOf(path.node.value)
 
-						if (jsonValueIndex == -1)
-							jsonValueIndex += jsonValues.push(path.node.value)
+							if (jsonValueIndex == -1)
+								jsonValueIndex += jsonValues.push(path.node.value)
 
-						path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+							path.replaceWith(babel.types.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+						})())
 					},
 
 					StringLiteral(path) {
-						if (path.node.value.includes("\u0000"))
+						if (path.node.value.includes("\u0000") || path.node.value.length < 2)
 							return
 
 						if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
@@ -429,6 +451,8 @@ export async function processScript(script: string) {
 				path.skip()
 			}
 		})
+
+		await Promise.all(promises)
 
 		const [ functionDeclaration ] = file.program.body
 
@@ -573,7 +597,7 @@ export async function processScript(script: string) {
 			if (part != comment)
 				continue
 
-			script = script.replace(`_SPLIT_INDEX_${randomString}_`, (await minify(`$(${i})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1])
+			script = script.replace(`_SPLIT_INDEX_${randomString}_`, await minifyNumber(i))
 			break
 		}
 	}
@@ -601,6 +625,10 @@ export async function processScript(script: string) {
 		script,
 		warnings: []
 	}
+}
+
+async function minifyNumber(number: number) {
+	return (await minify(`$(${number})`, { ecma: 2015 })).code!.match(/\$\((.+)\)/)![1]
 }
 
 function getFunctionBodyStart(code: string) {
