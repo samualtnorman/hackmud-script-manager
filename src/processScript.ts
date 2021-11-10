@@ -1,9 +1,10 @@
 import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
-import { FunctionDeclaration, Statement } from "@babel/types"
+import { NodePath } from "@babel/traverse"
+import { FunctionDeclaration, Identifier, Statement } from "@babel/types"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { minify } from "terser"
-import { assert, hackmudLength, stringSplice } from "./lib"
+import { assert, ensure, hackmudLength, stringSplice } from "./lib"
 
 const babelGenerate = (babelGenerator as any).default as typeof import("@babel/generator").default
 
@@ -95,7 +96,8 @@ export async function processScript(script: string): Promise<{ srcLength: number
 			"@babel/plugin-transform-exponentiation-operator"
 		],
 		code: false,
-		ast: true
+		ast: true,
+		configFile: false
 	}))!.ast!
 
 	if (!file.program.body.length) {
@@ -106,121 +108,187 @@ export async function processScript(script: string): Promise<{ srcLength: number
 		}
 	}
 
-	let mainFunction: FunctionDeclaration | undefined
-	const globalStatements: Statement[] = []
-	const globalVariables: string[] = []
+	const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
+	const topFunctionName = `_SCRIPT_${randomString}_`
 
-	for (const statement of file.program.body) {
-		if (!mainFunction) {
-			if (statement.type == "FunctionDeclaration") {
-				mainFunction = statement
-				continue
+	babel.traverse(file, {
+		Program(program) {
+			if (program.scope.hasGlobal("_START")) {
+				for (const referencePath of getReferencePathsToGlobal("_START", program))
+					referencePath.node.name = "_ST"
 			}
 
-			if (statement.type == "ExportNamedDeclaration" && statement.declaration && statement.declaration.type == "FunctionDeclaration") {
-				mainFunction = statement.declaration
-				continue
+			if (program.scope.hasGlobal("_TIMEOUT")) {
+				for (const referencePath of getReferencePathsToGlobal("_START", program))
+					referencePath.node.name = "_TO"
 			}
-		}
 
-		if (statement.type == "VariableDeclaration") {
-			for (const variableDeclarator of statement.declarations) {
-				assert(variableDeclarator.id.type == "Identifier", `global variables using destructure syntax is currently unsupported`)
+			const globalStatements: Statement[] = []
+			let mainFunction: NodePath<FunctionDeclaration> | undefined
 
-				globalVariables.push(variableDeclarator.id.name)
+			for (const statement of program.get("body")) {
+				if (statement.node.type == "ExportDefaultDeclaration") {
+					const declaration = statement.node.declaration
 
-				if (!variableDeclarator.init)
-					continue
-
-				globalStatements.push(
-					babel.types.expressionStatement(
-						babel.types.assignmentExpression(
-							"=",
-							babel.types.memberExpression(
-								babel.types.identifier("$G"),
-								babel.types.identifier(variableDeclarator.id.name)
-							),
-							variableDeclarator.init
+					if (declaration.type == "FunctionDeclaration" || declaration.type == "FunctionExpression" || declaration.type == "ArrowFunctionExpression") {
+						[ mainFunction ] = statement.replaceWith(
+							babel.types.functionDeclaration(
+								babel.types.identifier(topFunctionName),
+								declaration.params,
+								declaration.body.type == "BlockStatement"
+									? declaration.body
+									: babel.types.blockStatement([
+										babel.types.returnStatement(declaration.body)
+									])
+							)
 						)
+					} else {
+						assert(babel.types.isExpression(declaration))
+
+						;[ mainFunction ] = statement.replaceWith(
+							babel.types.functionDeclaration(
+								babel.types.identifier(topFunctionName),
+								[
+									babel.types.identifier("context"),
+									babel.types.identifier("args")
+								],
+								babel.types.blockStatement([
+									babel.types.returnStatement(
+										babel.types.callExpression(declaration, [])
+									)
+								])
+							)
+						)
+					}
+				} else {
+					globalStatements.push(statement.node)
+					statement.remove()
+				}
+			}
+
+			mainFunction ||= program.pushContainer(
+				"body",
+				babel.types.functionDeclaration(
+					babel.types.identifier(topFunctionName),
+					[
+						babel.types.identifier("context"),
+						babel.types.identifier("args")
+					],
+					babel.types.blockStatement([])
+				)
+			)[0]
+
+			const statementsToBeInsertedIntoRunOnceBlock: Statement[] = []
+
+			for (const statement of globalStatements) {
+				if (statement.type == "VariableDeclaration") {
+					for (const declarator of statement.declarations) {
+						assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+
+						if (program.scope.hasGlobal(declarator.id.name)) {
+							if (declarator.init) {
+								statementsToBeInsertedIntoRunOnceBlock.push(
+									babel.types.expressionStatement(
+										babel.types.assignmentExpression(
+											"=",
+											babel.types.memberExpression(
+												babel.types.identifier("$G"),
+												babel.types.identifier(declarator.id.name)
+											),
+											declarator.init
+										)
+									)
+								)
+							}
+
+							for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
+								referencePath.replaceWith(
+									babel.types.memberExpression(
+										babel.types.identifier("$G"),
+										babel.types.identifier(referencePath.node.name)
+									)
+								)
+							}
+						} else {
+							statementsToBeInsertedIntoRunOnceBlock.push(
+								babel.types.variableDeclaration(
+									"let",
+									[ declarator ]
+								)
+							)
+						}
+					}
+				} else if (statement.type == "FunctionDeclaration") {
+					assert(statement.id)
+
+					if (program.scope.hasGlobal(statement.id.name)) {
+						const [ functionDeclaration ] = program.unshiftContainer(
+							"body",
+							statement
+						)
+
+						program.scope.crawl()
+
+						const binding = program.scope.getBinding(statement.id.name)
+
+						assert(binding)
+
+						for (const referencePath of binding.referencePaths) {
+							assert(referencePath.node.type == "Identifier")
+
+							referencePath.replaceWith(
+								babel.types.memberExpression(
+									babel.types.identifier("$G"),
+									babel.types.identifier(referencePath.node.name)
+								)
+							)
+						}
+
+						statementsToBeInsertedIntoRunOnceBlock.push(
+							babel.types.expressionStatement(
+								babel.types.assignmentExpression(
+									"=",
+									babel.types.memberExpression(
+										babel.types.identifier("$G"),
+										babel.types.identifier(statement.id.name)
+									),
+									babel.types.functionExpression(
+										null,
+										functionDeclaration.node.params,
+										functionDeclaration.node.body,
+										functionDeclaration.node.generator,
+										functionDeclaration.node.async
+									)
+								)
+							)
+						)
+					} else
+						statementsToBeInsertedIntoRunOnceBlock.push(statement)
+				} else
+					statementsToBeInsertedIntoRunOnceBlock.push(statement)
+			}
+
+			program.node.body = [ mainFunction.node ]
+
+			if (statementsToBeInsertedIntoRunOnceBlock.length) {
+				mainFunction.node.body.body.unshift(
+					babel.types.ifStatement(
+						babel.types.unaryExpression(
+							"!",
+							babel.types.identifier("$FMCL")
+						),
+						babel.types.blockStatement(statementsToBeInsertedIntoRunOnceBlock)
 					)
 				)
 			}
-		} else
-			globalStatements.push(statement)
-	}
 
-	mainFunction ||= babel.types.functionDeclaration(
-		babel.types.identifier("main"),
-		[
-			babel.types.identifier("context"),
-			babel.types.identifier("args")
-		],
-		babel.types.blockStatement([])
-	)
+			program.skip()
+		}
+	})
 
-	if (globalStatements.length) {
-		mainFunction.body.body.unshift(
-			babel.types.ifStatement(
-				babel.types.unaryExpression(
-					"!",
-					babel.types.identifier("$FMCL")
-				),
-				babel.types.blockStatement(globalStatements)
-			)
-		)
-	}
-
-	file.program.body = [ mainFunction ]
-
-	const randomString = (Math.random() * (2 ** 53)).toString(36)
 	const jsonValues: any[] = []
 
 	let undefinedIsReferenced = false
-
-	babel.traverse(file, {
-		enter(path) {
-			{
-				const binding = path.scope.getBinding("_START")
-
-				if (binding) {
-					for (const path of binding.referencePaths) {
-						assert(path.node.type == "Identifier")
-						path.node.name = "_ST"
-					}
-				}
-			}
-
-			{
-				const binding = path.scope.getBinding("_TIMEOUT")
-
-				if (binding) {
-					for (const path of binding.referencePaths) {
-						assert(path.node.type == "Identifier")
-						path.node.name = "_TO"
-					}
-				}
-			}
-
-			for (const globalVariable of globalVariables) {
-				const binding = path.scope.getBinding(globalVariable)
-
-				assert(binding)
-
-				for (const path of binding.referencePaths) {
-					assert(path.node.type == "Identifier")
-
-					path.replaceWith(
-						babel.types.memberExpression(
-							babel.types.identifier("$G"),
-							babel.types.identifier(path.node.name)
-						)
-					)
-				}
-			}
-
-			path.skip()
-		}
-	})
 
 	babel.traverse(file, {
 		BlockStatement({ node: blockStatement }) {
@@ -361,7 +429,8 @@ export async function processScript(script: string): Promise<{ srcLength: number
 		compress: {
 			passes: Infinity,
 			unsafe: true,
-			booleans: false
+			booleans: false,
+			sequences: false
 		}
 	})).code || ""
 
@@ -370,7 +439,7 @@ export async function processScript(script: string): Promise<{ srcLength: number
 	{
 		// BUG when this script is used, the source char count is off
 
-		const file = await babel.parseAsync(script) as babel.types.File
+		const file = await babel.parseAsync(script, { configFile: false }) as babel.types.File
 
 		babel.traverse(file, {
 			MemberExpression({ node: memberExpression }) {
@@ -400,7 +469,8 @@ export async function processScript(script: string): Promise<{ srcLength: number
 				unsafe_methods: true,
 				unsafe_proto: true,
 				unsafe_regexp: true,
-				unsafe_undefined: true
+				unsafe_undefined: true,
+				sequences: false
 			},
 			format: { semicolons: false }
 		})).code!
@@ -412,8 +482,7 @@ export async function processScript(script: string): Promise<{ srcLength: number
 	let hasComment = false
 
 	{
-		const file = await babel.parseAsync(script) as babel.types.File
-
+		const file = await babel.parseAsync(script, { configFile: false }) as babel.types.File
 		const promises: Promise<any>[] = []
 
 		babel.traverse(file, {
@@ -691,7 +760,8 @@ export async function processScript(script: string): Promise<{ srcLength: number
 			unsafe_methods: true,
 			unsafe_proto: true,
 			unsafe_regexp: true,
-			unsafe_undefined: true
+			unsafe_undefined: true,
+			sequences: false
 		},
 		format: { semicolons: false }
 	})).code || ""
@@ -823,4 +893,21 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 	}
 
 	return true
+}
+
+function getReferencePathsToGlobal(name: string, program: babel.NodePath<babel.types.Program>) {
+	program.node.body.unshift(
+		babel.types.variableDeclaration(
+			"let",
+			[ babel.types.variableDeclarator(babel.types.identifier(name)) ]
+		)
+	)
+
+	program.scope.crawl()
+
+	const binding = ensure(program.scope.getBinding(name))
+
+	program.node.body.shift()
+
+	return binding.referencePaths as NodePath<Identifier>[]
 }

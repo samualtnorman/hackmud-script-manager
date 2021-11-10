@@ -1,5 +1,7 @@
+import babel from "@rollup/plugin-babel"
+import commonJS from "@rollup/plugin-commonjs"
 import json from "@rollup/plugin-json"
-import typescript from "@rollup/plugin-typescript"
+import nodeResolve from "@rollup/plugin-node-resolve"
 import { promises as fsPromises } from "fs"
 import preserveShebang from "rollup-plugin-preserve-shebang"
 import { terser } from "rollup-plugin-terser"
@@ -13,16 +15,19 @@ const sourceDirectory = "src"
 
 /** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
 export default async () => ({
-	input: Object.fromEntries((await findFiles(sourceDirectory))
-		.filter(path => path.endsWith(".ts"))
-		.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
+	input: Object.fromEntries(
+		(await findFiles(sourceDirectory))
+			.filter(path => path.endsWith(".ts"))
+			.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
 	),
 	output: {
 		dir: "."
 	},
 	plugins: [
+		babel({ babelHelpers: "bundled", extensions: [ ".ts" ] }),
+		commonJS({ include: [] }),
 		json({ preferConst: true }),
-		typescript({ tsconfig: `${sourceDirectory}/tsconfig.json` }),
+		nodeResolve({ extensions: [ ".ts" ] }),
 		preserveShebang(),
 		terser()
 	],

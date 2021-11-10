@@ -3,7 +3,8 @@
 		"rootDir": ".",
 		"outDir": ".",
 		"resolveJsonModule": true,
-		"composite": true
+		"composite": true,
+		"emitDeclarationOnly": true
 	},
 	"files": [ "package.json" ],
 	"exclude": [ "src" ]

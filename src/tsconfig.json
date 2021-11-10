@@ -12,7 +12,8 @@
 		"exactOptionalPropertyTypes": true,
 		"noImplicitOverride": true,
 		"moduleResolution": "Node",
-		"resolveJsonModule": true
+		"resolveJsonModule": true,
+		"emitDeclarationOnly": true
 	},
 	"exclude": [],
 	"references": [ { "path": ".." } ]
