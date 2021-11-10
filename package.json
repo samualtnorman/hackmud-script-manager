@@ -92,5 +92,8 @@
 	"exports": {
 		"require": "./index.cjs",
 		"import": "./index.js"
+	},
+	"optionalDependencies": {
+		"deasync": "^0.1.23"
 	}
 }
