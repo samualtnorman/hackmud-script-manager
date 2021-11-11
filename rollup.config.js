@@ -11,33 +11,39 @@ const { readdir: readDirectory } = fsPromises
 
 /** @typedef {import("rollup").RollupOptions} RollupOptions */
 
+const plugins = [
+	babel({ babelHelpers: "bundled", extensions: [ ".ts" ] }),
+	commonJS({ include: [] }),
+	json({ preferConst: true }),
+	nodeResolve({ extensions: [ ".ts" ] }),
+	preserveShebang()
+]
+
 const sourceDirectory = "src"
 
 /** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
-export default async () => ({
-	input: Object.fromEntries(
-		(await findFiles(sourceDirectory))
-			.filter(path => path.endsWith(".ts"))
-			.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
-	),
-	output: {
-		dir: "."
-	},
-	plugins: [
-		babel({ babelHelpers: "bundled", extensions: [ ".ts" ] }),
-		commonJS({ include: [] }),
-		json({ preferConst: true }),
-		nodeResolve({ extensions: [ ".ts" ] }),
-		preserveShebang(),
-		terser()
-	],
-	external: [
-		...Object.keys(dependencies),
-		"fs",
-		"path",
-		"os"
-	]
-})
+export default async ({ w }) => {
+	if (!w)
+		plugins.push(terser())
+
+	return {
+		input: Object.fromEntries(
+			(await findFiles(sourceDirectory))
+				.filter(path => path.endsWith(".ts"))
+				.map(path => [path.slice(sourceDirectory.length + 1, -3), path])
+		),
+		output: {
+			dir: "."
+		},
+		plugins,
+		external: [
+			...Object.keys(dependencies),
+			"fs",
+			"path",
+			"os"
+		]
+	}
+}
 
 /**
  * @param path the directory to start recursively finding files in
