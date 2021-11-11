@@ -451,20 +451,26 @@ export async function processScript(script: string): Promise<{
 		ClassBody({ node: classBody, scope, parent }) {
 			assert(t.isClass(parent))
 
-			if (!parent.superClass)
-				parent.superClass = t.identifier("Object")
+			let thisIsReferenced = false
 
 			for (const classMethod of classBody.body) {
 				if (classMethod.type != "ClassMethod")
 					continue
 
+				let methodReferencesThis = false
+
 				babel.traverse(classMethod.body, {
 					ThisExpression(path) {
+						methodReferencesThis = true
+						thisIsReferenced = true
 						path.replaceWith(
 							babel.types.identifier(`_THIS_${randomString}_`)
 						)
 					}
 				}, scope)
+
+				if (!methodReferencesThis)
+					continue
 
 				if (classMethod.kind == "constructor") {
 					const superCalls: NodePath<CallExpression>[] = []
@@ -547,6 +553,9 @@ export async function processScript(script: string): Promise<{
 					]
 				))
 			}
+
+			if (!parent.superClass && thisIsReferenced)
+				parent.superClass = t.identifier("Object")
 		},
 
 		VariableDeclaration({ node: variableDeclaration }) {
