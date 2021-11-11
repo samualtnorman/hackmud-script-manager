@@ -206,6 +206,24 @@ export async function processScript(script: string): Promise<{
 					)
 				)
 			}
+		} else if (statement.type == "FunctionDeclaration") {
+			globalBlock.body.push(
+				babel.types.variableDeclaration(
+					"let",
+					[
+						babel.types.variableDeclarator(
+							statement.id!,
+							babel.types.functionExpression(
+								null,
+								statement.params,
+								statement.body,
+								statement.generator,
+								statement.async
+							)
+						)
+					]
+				)
+			)
 		} else
 			globalBlock.body.push(statement)
 	}
@@ -235,45 +253,6 @@ export async function processScript(script: string): Promise<{
 				if (program.scope.hasGlobal(declarator.id.name)) {
 					globalBlock.body.splice(globalBlockIndex, 1)
 
-					if (declarator.init) {
-						globalBlock.body.splice(
-							globalBlockIndex,
-							0,
-							babel.types.expressionStatement(
-								babel.types.assignmentExpression(
-									"=",
-									babel.types.memberExpression(
-										babel.types.identifier("$G"),
-										babel.types.identifier(declarator.id.name)
-									),
-									declarator.init
-								)
-							)
-						)
-					}
-
-					program.node.body.unshift(globalBlock)
-					program.scope.crawl()
-
-					for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
-						referencePath.replaceWith(
-							babel.types.memberExpression(
-								babel.types.identifier("$G"),
-								babel.types.identifier(referencePath.node.name)
-							)
-						)
-					}
-
-					program.node.body.shift()
-				}
-			} else if (globalBlockStatement.type == "FunctionDeclaration") {
-				assert(globalBlockStatement.id)
-
-				program.scope.crawl()
-
-				if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
-					globalBlock.body.splice(globalBlockIndex, 1)
-
 					const [ globalBlockPath ] = program.unshiftContainer(
 						"body",
 						globalBlock
@@ -286,7 +265,7 @@ export async function processScript(script: string): Promise<{
 
 					program.scope.crawl()
 
-					const binding = program.scope.getBinding(globalBlockStatement.id.name)
+					const binding = program.scope.getBinding(declarator.id.name)
 
 					assert(binding)
 
@@ -304,26 +283,22 @@ export async function processScript(script: string): Promise<{
 					globalBlockPath.remove()
 					globalBlockStatementPath.remove()
 
-					globalBlock.body.splice(
-						globalBlockIndex,
-						0,
-						babel.types.expressionStatement(
-							babel.types.assignmentExpression(
-								"=",
-								babel.types.memberExpression(
-									babel.types.identifier("$G"),
-									babel.types.identifier(globalBlockStatement.id.name)
-								),
-								babel.types.functionExpression(
-									null,
-									globalBlockStatement.params,
-									globalBlockStatement.body,
-									globalBlockStatement.generator,
-									globalBlockStatement.async
+					if (declarator.init) {
+						globalBlock.body.splice(
+							globalBlockIndex,
+							0,
+							babel.types.expressionStatement(
+								babel.types.assignmentExpression(
+									"=",
+									babel.types.memberExpression(
+										babel.types.identifier("$G"),
+										babel.types.identifier(declarator.id.name)
+									),
+									declarator.init
 								)
 							)
 						)
-					)
+					}
 				}
 			}
 		}
