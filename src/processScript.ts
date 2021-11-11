@@ -1,7 +1,7 @@
 import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { Hub, NodePath } from "@babel/traverse"
-import t, { BlockStatement, FunctionDeclaration, Identifier } from "@babel/types"
+import t, { BlockStatement, CallExpression, FunctionDeclaration, Identifier } from "@babel/types"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { minify } from "terser"
 import { assert, ensure, hackmudLength, stringSplice } from "./lib"
@@ -462,11 +462,29 @@ export async function processScript(script: string): Promise<{
 				}, scope)
 
 				if (classMethod.kind == "constructor") {
+					const superCalls: NodePath<CallExpression>[] = []
+
 					babel.traverse(classMethod.body, {
 						CallExpression(path) {
-							if (path.node.callee.type != "Super")
-								return
+							if (path.node.callee.type == "Super")
+								superCalls.push(path)
+						}
+					}, scope)
 
+					if (superCalls.length == 1 && superCalls[0].parent.type == "ExpressionStatement" && superCalls[0].parentPath.parentPath!.parent == classMethod) {
+						superCalls[0].parentPath.replaceWith(
+							t.variableDeclaration(
+								"let",
+								[
+									t.variableDeclarator(
+										t.identifier(`_THIS_${randomString}_`),
+										superCalls[0].node
+									)
+								]
+							)
+						)
+					} else {
+						for (const path of superCalls) {
 							path.replaceWith(
 								babel.types.assignmentExpression(
 									"=",
@@ -474,22 +492,19 @@ export async function processScript(script: string): Promise<{
 									path.node
 								)
 							)
-
-							path.skip()
 						}
-					}, scope)
 
-
-					classMethod.body.body.unshift(
-						babel.types.variableDeclaration(
-							"let",
-							[
-								babel.types.variableDeclarator(
-									babel.types.identifier(`_THIS_${randomString}_`)
-								)
-							]
+						classMethod.body.body.unshift(
+							babel.types.variableDeclaration(
+								"let",
+								[
+									babel.types.variableDeclarator(
+										babel.types.identifier(`_THIS_${randomString}_`)
+									)
+								]
+							)
 						)
-					)
+					}
 
 					continue
 				}
