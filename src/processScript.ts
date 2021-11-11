@@ -13,7 +13,13 @@ const babelGenerate = (babelGenerator as any).default as typeof import("@babel/g
  *
  * @param script JavaScript or TypeScript code
  */
-export async function processScript(script: string): Promise<{ srcLength: number,  script: string, warnings: { message: string, line: number }[] }> {
+export async function processScript(script: string): Promise<{
+	srcLength: number
+	script: string
+	warnings: { message: string, line: number }[]
+	timeTook: number
+}> {
+	const time = performance.now()
 	let preScriptComments: string | undefined
 	let autocomplete: string | undefined
 
@@ -104,7 +110,8 @@ export async function processScript(script: string): Promise<{ srcLength: number
 		return {
 			srcLength: 12,
 			script: "function(){}",
-			warnings: [ { message: "script is empty", line: 0 } ]
+			warnings: [ { message: "script is empty", line: 0 } ],
+			timeTook: performance.now() - time
 		}
 	}
 
@@ -894,7 +901,8 @@ export async function processScript(script: string): Promise<{ srcLength: number
 	return {
 		srcLength,
 		script,
-		warnings: []
+		warnings: [],
+		timeTook: performance.now() - time
 	}
 }
 

@@ -285,7 +285,7 @@ for (const arg of process.argv.slice(2)) {
 
 			await readFile(commands[1], { encoding: "utf-8" }).then(
 				async source => {
-					const { script, srcLength, warnings } = await processScript(source)
+					const { script, srcLength, warnings, timeTook } = await processScript(source)
 
 					for (const { message, line } of warnings)
 						console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
@@ -320,7 +320,7 @@ for (const arg of process.argv.slice(2)) {
 							await writeFilePersist(outputPath, script)
 						})
 						.then(
-							() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(relativePath(".", outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars`),
+							() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(relativePath(".", outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),
 							(error: NodeJS.ErrnoException) => console.log(error.message)
 						)
 				},
