@@ -161,12 +161,18 @@ export async function processScript(script: string): Promise<{ srcLength: number
 			}
 		} else if (statement.type == "ExportNamedDeclaration") {
 			assert(statement.declaration, "`export {}` syntax currently unsupported")
-			globalBlock.body.push(statement.declaration)
 
 			if (statement.declaration.type == "VariableDeclaration") {
 				for (const declarator of statement.declaration.declarations) {
 					assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
 					exports.push(declarator.id.name)
+
+					globalBlock.body.push(
+						t.variableDeclaration(
+							"let",
+							[ t.variableDeclarator(declarator.id, declarator.init) ]
+						)
+					)
 				}
 			} else {
 				assert("id" in statement.declaration && statement.declaration.id, `unsupported export type "${statement.declaration.type}"`)
@@ -175,6 +181,17 @@ export async function processScript(script: string): Promise<{ srcLength: number
 					statement.declaration.id.type == "Identifier"
 						? statement.declaration.id.name
 						: statement.declaration.id.value
+				)
+
+				globalBlock.body.push(statement.declaration)
+			}
+		} else if (statement.type == "VariableDeclaration") {
+			for (const declarator of statement.declarations) {
+				globalBlock.body.push(
+					t.variableDeclaration(
+						"let",
+						[ t.variableDeclarator(declarator.id, declarator.init) ]
+					)
 				)
 			}
 		} else
@@ -196,45 +213,45 @@ export async function processScript(script: string): Promise<{ srcLength: number
 
 	for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
 		if (globalBlockStatement.type == "VariableDeclaration") {
-			for (const [ declaratorIndex, declarator ] of globalBlockStatement.declarations.entries()) {
-				assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+			const declarator = globalBlockStatement.declarations[0]
 
+			assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+
+			program.scope.crawl()
+
+			if (program.scope.hasGlobal(declarator.id.name)) {
+				globalBlock.body.splice(globalBlockIndex, 1)
+
+				if (declarator.init) {
+					globalBlock.body.splice(
+						globalBlockIndex,
+						0,
+						babel.types.expressionStatement(
+							babel.types.assignmentExpression(
+								"=",
+								babel.types.memberExpression(
+									babel.types.identifier("$G"),
+									babel.types.identifier(declarator.id.name)
+								),
+								declarator.init
+							)
+						)
+					)
+				}
+
+				program.node.body.unshift(globalBlock)
 				program.scope.crawl()
 
-				if (program.scope.hasGlobal(declarator.id.name)) {
-					globalBlockStatement.declarations.splice(declaratorIndex, 1)
-
-					if (declarator.init) {
-						globalBlock.body.splice(
-							globalBlockIndex,
-							0,
-							babel.types.expressionStatement(
-								babel.types.assignmentExpression(
-									"=",
-									babel.types.memberExpression(
-										babel.types.identifier("$G"),
-										babel.types.identifier(declarator.id.name)
-									),
-									declarator.init
-								)
-							)
+				for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
+					referencePath.replaceWith(
+						babel.types.memberExpression(
+							babel.types.identifier("$G"),
+							babel.types.identifier(referencePath.node.name)
 						)
-					}
-
-					program.node.body.unshift(globalBlock)
-					program.scope.crawl()
-
-					for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
-						referencePath.replaceWith(
-							babel.types.memberExpression(
-								babel.types.identifier("$G"),
-								babel.types.identifier(referencePath.node.name)
-							)
-						)
-					}
-
-					program.node.body.shift()
+					)
 				}
+
+				program.node.body.shift()
 			}
 		} else if (globalBlockStatement.type == "FunctionDeclaration") {
 			assert(globalBlockStatement.id)
