@@ -300,6 +300,62 @@ export async function processScript(script: string): Promise<{
 						)
 					}
 				}
+			} else if (globalBlockStatement.type == "ClassDeclaration") {
+				program.scope.crawl()
+
+				if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
+					globalBlock.body.splice(globalBlockIndex, 1)
+
+					const [ globalBlockPath ] = program.unshiftContainer(
+						"body",
+						globalBlock
+					)
+
+					const [ globalBlockStatementPath ] = program.unshiftContainer(
+						"body",
+						globalBlockStatement
+					)
+
+					program.scope.crawl()
+
+					const binding = program.scope.getBinding(globalBlockStatement.id.name)
+
+					assert(binding)
+
+					for (const referencePath of binding.referencePaths) {
+						assert(referencePath.node.type == "Identifier")
+
+						referencePath.replaceWith(
+							babel.types.memberExpression(
+								babel.types.identifier("$G"),
+								babel.types.identifier(referencePath.node.name)
+							)
+						)
+					}
+
+					globalBlockPath.remove()
+					globalBlockStatementPath.remove()
+
+					globalBlock.body.splice(
+						globalBlockIndex,
+						0,
+						babel.types.expressionStatement(
+							babel.types.assignmentExpression(
+								"=",
+								babel.types.memberExpression(
+									babel.types.identifier("$G"),
+									babel.types.identifier(globalBlockStatement.id.name)
+								),
+								t.classExpression(
+									null,
+									globalBlockStatement.superClass,
+									globalBlockStatement.body,
+									globalBlockStatement.decorators
+								)
+							)
+						)
+					)
+				}
 			}
 		}
 
