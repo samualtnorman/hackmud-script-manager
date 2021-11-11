@@ -111,6 +111,7 @@ export async function processScript(script: string): Promise<{ srcLength: number
 	const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
 	const topFunctionName = `_SCRIPT_${randomString}_`
 	const exports: string[] = []
+	const liveExports: string[] = []
 
 	const program = NodePath.get({
 		container: file,
@@ -165,7 +166,11 @@ export async function processScript(script: string): Promise<{ srcLength: number
 			if (statement.declaration.type == "VariableDeclaration") {
 				for (const declarator of statement.declaration.declarations) {
 					assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
-					exports.push(declarator.id.name)
+
+					if (statement.declaration.kind == "const")
+						exports.push(declarator.id.name)
+					else
+						liveExports.push(declarator.id.name)
 
 					globalBlock.body.push(
 						t.variableDeclaration(
@@ -209,20 +214,89 @@ export async function processScript(script: string): Promise<{ srcLength: number
 
 	program.node.body = [ mainFunction ]
 
-	program.scope.crawl()
+	if (globalBlock.body.length) {
+		program.scope.crawl()
 
-	for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
-		if (globalBlockStatement.type == "VariableDeclaration") {
-			const declarator = globalBlockStatement.declarations[0]
+		for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
+			if (globalBlockStatement.type == "VariableDeclaration") {
+				const declarator = globalBlockStatement.declarations[0]
 
-			assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+				assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
 
-			program.scope.crawl()
+				program.scope.crawl()
 
-			if (program.scope.hasGlobal(declarator.id.name)) {
-				globalBlock.body.splice(globalBlockIndex, 1)
+				if (program.scope.hasGlobal(declarator.id.name)) {
+					globalBlock.body.splice(globalBlockIndex, 1)
 
-				if (declarator.init) {
+					if (declarator.init) {
+						globalBlock.body.splice(
+							globalBlockIndex,
+							0,
+							babel.types.expressionStatement(
+								babel.types.assignmentExpression(
+									"=",
+									babel.types.memberExpression(
+										babel.types.identifier("$G"),
+										babel.types.identifier(declarator.id.name)
+									),
+									declarator.init
+								)
+							)
+						)
+					}
+
+					program.node.body.unshift(globalBlock)
+					program.scope.crawl()
+
+					for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
+						referencePath.replaceWith(
+							babel.types.memberExpression(
+								babel.types.identifier("$G"),
+								babel.types.identifier(referencePath.node.name)
+							)
+						)
+					}
+
+					program.node.body.shift()
+				}
+			} else if (globalBlockStatement.type == "FunctionDeclaration") {
+				assert(globalBlockStatement.id)
+
+				program.scope.crawl()
+
+				if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
+					globalBlock.body.splice(globalBlockIndex, 1)
+
+					const [ globalBlockPath ] = program.unshiftContainer(
+						"body",
+						globalBlock
+					)
+
+					const [ globalBlockStatementPath ] = program.unshiftContainer(
+						"body",
+						globalBlockStatement
+					)
+
+					program.scope.crawl()
+
+					const binding = program.scope.getBinding(globalBlockStatement.id.name)
+
+					assert(binding)
+
+					for (const referencePath of binding.referencePaths) {
+						assert(referencePath.node.type == "Identifier")
+
+						referencePath.replaceWith(
+							babel.types.memberExpression(
+								babel.types.identifier("$G"),
+								babel.types.identifier(referencePath.node.name)
+							)
+						)
+					}
+
+					globalBlockPath.remove()
+					globalBlockStatementPath.remove()
+
 					globalBlock.body.splice(
 						globalBlockIndex,
 						0,
@@ -231,99 +305,80 @@ export async function processScript(script: string): Promise<{ srcLength: number
 								"=",
 								babel.types.memberExpression(
 									babel.types.identifier("$G"),
-									babel.types.identifier(declarator.id.name)
+									babel.types.identifier(globalBlockStatement.id.name)
 								),
-								declarator.init
+								babel.types.functionExpression(
+									null,
+									globalBlockStatement.params,
+									globalBlockStatement.body,
+									globalBlockStatement.generator,
+									globalBlockStatement.async
+								)
 							)
 						)
 					)
 				}
-
-				program.node.body.unshift(globalBlock)
-				program.scope.crawl()
-
-				for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
-					referencePath.replaceWith(
-						babel.types.memberExpression(
-							babel.types.identifier("$G"),
-							babel.types.identifier(referencePath.node.name)
-						)
-					)
-				}
-
-				program.node.body.shift()
-			}
-		} else if (globalBlockStatement.type == "FunctionDeclaration") {
-			assert(globalBlockStatement.id)
-
-			program.scope.crawl()
-
-			if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
-				globalBlock.body.splice(globalBlockIndex, 1)
-
-				const [ globalBlockPath ] = program.unshiftContainer(
-					"body",
-					globalBlock
-				)
-
-				const [ globalBlockStatementPath ] = program.unshiftContainer(
-					"body",
-					globalBlockStatement
-				)
-
-				program.scope.crawl()
-
-				const binding = program.scope.getBinding(globalBlockStatement.id.name)
-
-				assert(binding)
-
-				for (const referencePath of binding.referencePaths) {
-					assert(referencePath.node.type == "Identifier")
-
-					referencePath.replaceWith(
-						babel.types.memberExpression(
-							babel.types.identifier("$G"),
-							babel.types.identifier(referencePath.node.name)
-						)
-					)
-				}
-
-				globalBlockPath.remove()
-				globalBlockStatementPath.remove()
-
-				globalBlock.body.splice(
-					globalBlockIndex,
-					0,
-					babel.types.expressionStatement(
-						babel.types.assignmentExpression(
-							"=",
-							babel.types.memberExpression(
-								babel.types.identifier("$G"),
-								babel.types.identifier(globalBlockStatement.id.name)
-							),
-							babel.types.functionExpression(
-								null,
-								globalBlockStatement.params,
-								globalBlockStatement.body,
-								globalBlockStatement.generator,
-								globalBlockStatement.async
-							)
-						)
-					)
-				)
 			}
 		}
-	}
 
-	mainFunction.body.body.unshift(
-		babel.types.ifStatement(
-			babel.types.unaryExpression(
-				"!",
-				babel.types.identifier("$FMCL")
-			),
-			globalBlock
+		if (exports.length) {
+			globalBlock.body.push(
+				t.expressionStatement(
+					t.assignmentExpression(
+						"=",
+						t.memberExpression(
+							t.identifier("$G"),
+							t.identifier("_")
+						),
+						t.callExpression(
+							t.memberExpression(
+								t.identifier("Object"),
+								t.identifier("freeze")
+							),
+							[
+								t.objectExpression([
+									...exports.map(
+										name => t.objectProperty(t.identifier(name), t.identifier(name))
+									),
+									...liveExports.map(
+										name => t.objectMethod(
+											"get",
+											t.identifier(name),
+											[],
+											t.blockStatement([
+												t.returnStatement(
+													t.identifier(name)
+												)
+											])
+										)
+									)
+								])
+							]
+						)
+					)
+				)
+			)
+
+			mainFunction.body.body.push(
+				t.returnStatement(
+					t.memberExpression(
+						t.identifier("$G"),
+						t.identifier("_")
+					)
+				)
+			)
+		}
+
+		mainFunction.body.body.unshift(
+			babel.types.ifStatement(
+				babel.types.unaryExpression(
+					"!",
+					babel.types.identifier("$FMCL")
+				),
+				globalBlock
+			)
 		)
-	)
+	}
 
 	const jsonValues: any[] = []
 
