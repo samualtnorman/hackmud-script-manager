@@ -448,7 +448,12 @@ export async function processScript(script: string): Promise<{
 			}
 		},
 
-		ClassBody({ node: classBody, scope }) {
+		ClassBody({ node: classBody, scope, parent }) {
+			assert(t.isClass(parent))
+
+			if (!parent.superClass)
+				parent.superClass = t.identifier("Object")
+
 			for (const classMethod of classBody.body) {
 				if (classMethod.type != "ClassMethod")
 					continue
@@ -471,7 +476,19 @@ export async function processScript(script: string): Promise<{
 						}
 					}, scope)
 
-					if (superCalls.length == 1 && superCalls[0].parent.type == "ExpressionStatement" && superCalls[0].parentPath.parentPath!.parent == classMethod) {
+					if (!superCalls.length) {
+						classMethod.body.body.unshift(
+							babel.types.variableDeclaration(
+								"let",
+								[
+									babel.types.variableDeclarator(
+										babel.types.identifier(`_THIS_${randomString}_`),
+										t.callExpression(t.super(), [])
+									)
+								]
+							)
+						)
+					} else if (superCalls.length == 1 && superCalls[0].parent.type == "ExpressionStatement" && superCalls[0].parentPath.parentPath!.parent == classMethod) {
 						superCalls[0].parentPath.replaceWith(
 							t.variableDeclaration(
 								"let",
@@ -508,6 +525,11 @@ export async function processScript(script: string): Promise<{
 
 					continue
 				}
+
+				// BUG if the class or a super class overwrites `valueOf()` (or `Object.prototype` isn't even in the chain), this breaks
+				// TODO track whether the class is extending a class that at some point extends from `Object` (if unsure, assume no)
+				// TODO track whether any class in the chain overwrites `valueOf()` (if unsure, assume yes)
+				// TODO for classes that need it, create a super class for this one to extend from with `valueOf()` assigned to an unused name
 
 				classMethod.body.body.unshift(babel.types.variableDeclaration(
 					"let",
