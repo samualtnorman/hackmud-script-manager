@@ -1,7 +1,7 @@
 import babel from "@babel/core"
 import babelGenerator from "@babel/generator"
-import { NodePath } from "@babel/traverse"
-import { FunctionDeclaration, Identifier, Statement } from "@babel/types"
+import { Hub, NodePath } from "@babel/traverse"
+import t, { BlockStatement, FunctionDeclaration, Identifier } from "@babel/types"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import { minify } from "terser"
 import { assert, ensure, hackmudLength, stringSplice } from "./lib"
@@ -110,181 +110,203 @@ export async function processScript(script: string): Promise<{ srcLength: number
 
 	const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
 	const topFunctionName = `_SCRIPT_${randomString}_`
+	const exports: string[] = []
 
-	babel.traverse(file, {
-		Program(program) {
-			if (program.scope.hasGlobal("_START")) {
-				for (const referencePath of getReferencePathsToGlobal("_START", program))
-					referencePath.node.name = "_ST"
-			}
+	const program = NodePath.get({
+		container: file,
+		hub: new Hub,
+		key: "program",
+		parent: file,
+		parentPath: null
+	})
 
-			if (program.scope.hasGlobal("_TIMEOUT")) {
-				for (const referencePath of getReferencePathsToGlobal("_START", program))
-					referencePath.node.name = "_TO"
-			}
+	if (program.scope.hasGlobal("_START")) {
+		for (const referencePath of getReferencePathsToGlobal("_START", program))
+			referencePath.replaceWith(t.identifier("_ST"))
+	}
 
-			const globalStatements: Statement[] = []
-			let mainFunction: NodePath<FunctionDeclaration> | undefined
+	if (program.scope.hasGlobal("_TIMEOUT")) {
+		for (const referencePath of getReferencePathsToGlobal("_START", program))
+			referencePath.replaceWith(t.identifier("_TO"))
+	}
 
-			for (const statement of program.get("body")) {
-				if (statement.node.type == "ExportDefaultDeclaration") {
-					const declaration = statement.node.declaration
+	const globalBlock: BlockStatement = babel.types.blockStatement([])
+	let mainFunction: FunctionDeclaration | undefined
 
-					if (declaration.type == "FunctionDeclaration" || declaration.type == "FunctionExpression" || declaration.type == "ArrowFunctionExpression") {
-						[ mainFunction ] = statement.replaceWith(
-							babel.types.functionDeclaration(
-								babel.types.identifier(topFunctionName),
-								declaration.params,
-								declaration.body.type == "BlockStatement"
-									? declaration.body
-									: babel.types.blockStatement([
-										babel.types.returnStatement(declaration.body)
-									])
-							)
-						)
-					} else {
-						assert(babel.types.isExpression(declaration))
-
-						;[ mainFunction ] = statement.replaceWith(
-							babel.types.functionDeclaration(
-								babel.types.identifier(topFunctionName),
-								[
-									babel.types.identifier("context"),
-									babel.types.identifier("args")
-								],
-								babel.types.blockStatement([
-									babel.types.returnStatement(
-										babel.types.callExpression(declaration, [])
-									)
-								])
-							)
-						)
-					}
-				} else {
-					globalStatements.push(statement.node)
-					statement.remove()
-				}
-			}
-
-			mainFunction ||= program.pushContainer(
-				"body",
-				babel.types.functionDeclaration(
-					babel.types.identifier(topFunctionName),
-					[
-						babel.types.identifier("context"),
-						babel.types.identifier("args")
-					],
-					babel.types.blockStatement([])
+	for (const statement of program.node.body) {
+		if (statement.type == "ExportDefaultDeclaration") {
+			if (statement.declaration.type == "FunctionDeclaration" || statement.declaration.type == "FunctionExpression" || statement.declaration.type == "ArrowFunctionExpression") {
+				mainFunction = t.functionDeclaration(
+					t.identifier(topFunctionName),
+					statement.declaration.params,
+					statement.declaration.body.type == "BlockStatement"
+						? statement.declaration.body
+						: t.blockStatement([ t.returnStatement(statement.declaration.body) ])
 				)
-			)[0]
+			} else {
+				assert(t.isExpression(statement.declaration))
 
-			const statementsToBeInsertedIntoRunOnceBlock: Statement[] = []
-
-			for (const statement of globalStatements) {
-				if (statement.type == "VariableDeclaration") {
-					for (const declarator of statement.declarations) {
-						assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
-
-						if (program.scope.hasGlobal(declarator.id.name)) {
-							if (declarator.init) {
-								statementsToBeInsertedIntoRunOnceBlock.push(
-									babel.types.expressionStatement(
-										babel.types.assignmentExpression(
-											"=",
-											babel.types.memberExpression(
-												babel.types.identifier("$G"),
-												babel.types.identifier(declarator.id.name)
-											),
-											declarator.init
-										)
-									)
-								)
-							}
-
-							for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
-								referencePath.replaceWith(
-									babel.types.memberExpression(
-										babel.types.identifier("$G"),
-										babel.types.identifier(referencePath.node.name)
-									)
-								)
-							}
-						} else {
-							statementsToBeInsertedIntoRunOnceBlock.push(
-								babel.types.variableDeclaration(
-									"let",
-									[ declarator ]
-								)
-							)
-						}
-					}
-				} else if (statement.type == "FunctionDeclaration") {
-					assert(statement.id)
-
-					if (program.scope.hasGlobal(statement.id.name)) {
-						const [ functionDeclaration ] = program.unshiftContainer(
-							"body",
-							statement
+				mainFunction = t.functionDeclaration(
+					t.identifier(topFunctionName),
+					[
+						t.identifier("context"),
+						t.identifier("args")
+					],
+					t.blockStatement([
+						t.returnStatement(
+							t.callExpression(statement.declaration, [])
 						)
+					])
+				)
+			}
+		} else if (statement.type == "ExportNamedDeclaration") {
+			assert(statement.declaration, "`export {}` syntax currently unsupported")
+			globalBlock.body.push(statement.declaration)
 
-						program.scope.crawl()
+			if (statement.declaration.type == "VariableDeclaration") {
+				for (const declarator of statement.declaration.declarations) {
+					assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+					exports.push(declarator.id.name)
+				}
+			} else {
+				assert("id" in statement.declaration && statement.declaration.id, `unsupported export type "${statement.declaration.type}"`)
 
-						const binding = program.scope.getBinding(statement.id.name)
+				exports.push(
+					statement.declaration.id.type == "Identifier"
+						? statement.declaration.id.name
+						: statement.declaration.id.value
+				)
+			}
+		} else
+			globalBlock.body.push(statement)
+	}
 
-						assert(binding)
+	mainFunction ||= babel.types.functionDeclaration(
+		babel.types.identifier(topFunctionName),
+		[
+			babel.types.identifier("context"),
+			babel.types.identifier("args")
+		],
+		babel.types.blockStatement([])
+	)
 
-						for (const referencePath of binding.referencePaths) {
-							assert(referencePath.node.type == "Identifier")
+	program.node.body = [ mainFunction ]
 
-							referencePath.replaceWith(
-								babel.types.memberExpression(
-									babel.types.identifier("$G"),
-									babel.types.identifier(referencePath.node.name)
-								)
-							)
-						}
+	program.scope.crawl()
 
-						statementsToBeInsertedIntoRunOnceBlock.push(
+	for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
+		if (globalBlockStatement.type == "VariableDeclaration") {
+			for (const [ declaratorIndex, declarator ] of globalBlockStatement.declarations.entries()) {
+				assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+
+				program.scope.crawl()
+
+				if (program.scope.hasGlobal(declarator.id.name)) {
+					globalBlockStatement.declarations.splice(declaratorIndex, 1)
+
+					if (declarator.init) {
+						globalBlock.body.splice(
+							globalBlockIndex,
+							0,
 							babel.types.expressionStatement(
 								babel.types.assignmentExpression(
 									"=",
 									babel.types.memberExpression(
 										babel.types.identifier("$G"),
-										babel.types.identifier(statement.id.name)
+										babel.types.identifier(declarator.id.name)
 									),
-									babel.types.functionExpression(
-										null,
-										functionDeclaration.node.params,
-										functionDeclaration.node.body,
-										functionDeclaration.node.generator,
-										functionDeclaration.node.async
-									)
+									declarator.init
 								)
 							)
 						)
-					} else
-						statementsToBeInsertedIntoRunOnceBlock.push(statement)
-				} else
-					statementsToBeInsertedIntoRunOnceBlock.push(statement)
+					}
+
+					program.node.body.unshift(globalBlock)
+					program.scope.crawl()
+
+					for (const referencePath of getReferencePathsToGlobal(declarator.id.name, program)) {
+						referencePath.replaceWith(
+							babel.types.memberExpression(
+								babel.types.identifier("$G"),
+								babel.types.identifier(referencePath.node.name)
+							)
+						)
+					}
+
+					program.node.body.shift()
+				}
 			}
+		} else if (globalBlockStatement.type == "FunctionDeclaration") {
+			assert(globalBlockStatement.id)
 
-			program.node.body = [ mainFunction.node ]
+			program.scope.crawl()
 
-			if (statementsToBeInsertedIntoRunOnceBlock.length) {
-				mainFunction.node.body.body.unshift(
-					babel.types.ifStatement(
-						babel.types.unaryExpression(
-							"!",
-							babel.types.identifier("$FMCL")
-						),
-						babel.types.blockStatement(statementsToBeInsertedIntoRunOnceBlock)
+			if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
+				globalBlock.body.splice(globalBlockIndex, 1)
+
+				const [ globalBlockPath ] = program.unshiftContainer(
+					"body",
+					globalBlock
+				)
+
+				const [ globalBlockStatementPath ] = program.unshiftContainer(
+					"body",
+					globalBlockStatement
+				)
+
+				program.scope.crawl()
+
+				const binding = program.scope.getBinding(globalBlockStatement.id.name)
+
+				assert(binding)
+
+				for (const referencePath of binding.referencePaths) {
+					assert(referencePath.node.type == "Identifier")
+
+					referencePath.replaceWith(
+						babel.types.memberExpression(
+							babel.types.identifier("$G"),
+							babel.types.identifier(referencePath.node.name)
+						)
+					)
+				}
+
+				globalBlockPath.remove()
+				globalBlockStatementPath.remove()
+
+				globalBlock.body.splice(
+					globalBlockIndex,
+					0,
+					babel.types.expressionStatement(
+						babel.types.assignmentExpression(
+							"=",
+							babel.types.memberExpression(
+								babel.types.identifier("$G"),
+								babel.types.identifier(globalBlockStatement.id.name)
+							),
+							babel.types.functionExpression(
+								null,
+								globalBlockStatement.params,
+								globalBlockStatement.body,
+								globalBlockStatement.generator,
+								globalBlockStatement.async
+							)
+						)
 					)
 				)
 			}
-
-			program.skip()
 		}
-	})
+	}
+
+	mainFunction.body.body.unshift(
+		babel.types.ifStatement(
+			babel.types.unaryExpression(
+				"!",
+				babel.types.identifier("$FMCL")
+			),
+			globalBlock
+		)
+	)
 
 	const jsonValues: any[] = []
 
@@ -896,10 +918,11 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 }
 
 function getReferencePathsToGlobal(name: string, program: babel.NodePath<babel.types.Program>) {
-	program.node.body.unshift(
-		babel.types.variableDeclaration(
+	const [ variableDeclaration ] = program.unshiftContainer(
+		"body",
+		t.variableDeclaration(
 			"let",
-			[ babel.types.variableDeclarator(babel.types.identifier(name)) ]
+			[ t.variableDeclarator(t.identifier(name)) ]
 		)
 	)
 
@@ -907,7 +930,7 @@ function getReferencePathsToGlobal(name: string, program: babel.NodePath<babel.t
 
 	const binding = ensure(program.scope.getBinding(name))
 
-	program.node.body.shift()
+	variableDeclaration.remove()
 
 	return binding.referencePaths as NodePath<Identifier>[]
 }
