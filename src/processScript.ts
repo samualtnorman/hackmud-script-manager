@@ -117,8 +117,8 @@ export async function processScript(script: string): Promise<{
 
 	const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
 	const topFunctionName = `_SCRIPT_${randomString}_`
-	const exports: string[] = []
-	const liveExports: string[] = []
+	const exports = new Map<string, string>()
+	const liveExports = new Map<string, string>()
 
 	const program = NodePath.get({
 		container: file,
@@ -168,34 +168,44 @@ export async function processScript(script: string): Promise<{
 				)
 			}
 		} else if (statement.type == "ExportNamedDeclaration") {
-			assert(statement.declaration, "`export {}` syntax currently unsupported")
+			if (statement.declaration) {
+				if (statement.declaration.type == "VariableDeclaration") {
+					for (const declarator of statement.declaration.declarations) {
+						assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
 
-			if (statement.declaration.type == "VariableDeclaration") {
-				for (const declarator of statement.declaration.declarations) {
-					assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+						if (statement.declaration.kind == "const")
+							exports.set(declarator.id.name, declarator.id.name)
+						else
+							liveExports.set(declarator.id.name, declarator.id.name)
 
-					if (statement.declaration.kind == "const")
-						exports.push(declarator.id.name)
-					else
-						liveExports.push(declarator.id.name)
-
-					globalBlock.body.push(
-						t.variableDeclaration(
-							"let",
-							[ t.variableDeclarator(declarator.id, declarator.init) ]
+						globalBlock.body.push(
+							t.variableDeclaration(
+								"let",
+								[ t.variableDeclarator(declarator.id, declarator.init) ]
+							)
 						)
-					)
-				}
-			} else {
-				assert("id" in statement.declaration && statement.declaration.id, `unsupported export type "${statement.declaration.type}"`)
+					}
+				} else {
+					assert("id" in statement.declaration && statement.declaration.id, `unsupported export type "${statement.declaration.type}"`)
 
-				exports.push(
-					statement.declaration.id.type == "Identifier"
+					const name = statement.declaration.id.type == "Identifier"
 						? statement.declaration.id.name
 						: statement.declaration.id.value
-				)
 
-				globalBlock.body.push(statement.declaration)
+					exports.set(name, name)
+					globalBlock.body.push(statement.declaration)
+				}
+			} else if (statement.specifiers) {
+				for (const specifier of statement.specifiers) {
+					assert(specifier.type == "ExportSpecifier", `${specifier.type} is currently unsupported`)
+
+					exports.set(
+						specifier.local.name,
+						specifier.exported.type == "Identifier"
+							? specifier.exported.name
+							: specifier.exported.value
+					)
+				}
 			}
 		} else if (statement.type == "VariableDeclaration") {
 			for (const declarator of statement.declarations) {
@@ -359,7 +369,7 @@ export async function processScript(script: string): Promise<{
 			}
 		}
 
-		if (exports.length) {
+		if (exports.size || liveExports.size) {
 			globalBlock.body.push(
 				t.expressionStatement(
 					t.assignmentExpression(
@@ -375,17 +385,18 @@ export async function processScript(script: string): Promise<{
 							),
 							[
 								t.objectExpression([
-									...exports.map(
-										name => t.objectProperty(t.identifier(name), t.identifier(name))
+									...[ ...exports ].map(
+										([ local, exported ]) =>
+											t.objectProperty(t.identifier(exported), t.identifier(local))
 									),
-									...liveExports.map(
-										name => t.objectMethod(
+									...[ ...liveExports ].map(
+										([ local, exported ]) => t.objectMethod(
 											"get",
-											t.identifier(name),
+											t.identifier(exported),
 											[],
 											t.blockStatement([
 												t.returnStatement(
-													t.identifier(name)
+													t.identifier(local)
 												)
 											])
 										)
