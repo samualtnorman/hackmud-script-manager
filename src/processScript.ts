@@ -466,6 +466,10 @@ export async function processScript(script: string): Promise<{
 						path.replaceWith(
 							babel.types.identifier(`_THIS_${randomString}_`)
 						)
+					},
+
+					Function(path) {
+						path.skip()
 					}
 				}, scope)
 
