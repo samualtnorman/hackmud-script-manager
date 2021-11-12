@@ -1,4 +1,24 @@
 import { transformAsync as transform } from "@babel/core"
+import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
+import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
+import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
+import babelPluginProposalDoExpressions from "@babel/plugin-proposal-do-expressions"
+import babelPluginProposalFunctionBind from "@babel/plugin-proposal-function-bind"
+import babelPluginProposalFunctionSent from "@babel/plugin-proposal-function-sent"
+import babelPluginProposalJSONStrings from "@babel/plugin-proposal-json-strings"
+import babelPluginProposalLogicalAssignmentOperators from "@babel/plugin-proposal-logical-assignment-operators"
+import babelPluginProposalNullishCoalescingOperator from "@babel/plugin-proposal-nullish-coalescing-operator"
+import babelPluginProposalNumericSeparator from "@babel/plugin-proposal-numeric-separator"
+import babelPluginProposalObjectRestSpread from "@babel/plugin-proposal-object-rest-spread"
+import babelPluginProposalOptionalCatchBinding from "@babel/plugin-proposal-optional-catch-binding"
+import babelPluginProposalOptionalChaining from "@babel/plugin-proposal-optional-chaining"
+import babelPluginProposalPartialApplication from "@babel/plugin-proposal-partial-application"
+import babelPluginProposalPipelineOperator from "@babel/plugin-proposal-pipeline-operator"
+import babelPluginProposalPrivatePropertyInObject from "@babel/plugin-proposal-private-property-in-object"
+import babelPluginProposalRecordAndTuple from "@babel/plugin-proposal-record-and-tuple"
+import babelPluginProposalThrowExpressions from "@babel/plugin-proposal-throw-expressions"
+import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
+import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
 import babelTraverse, { Hub, NodePath } from "@babel/traverse"
 import t, { BlockStatement, CallExpression, FunctionDeclaration, Identifier, Program } from "@babel/types"
 import { assert, ensure } from "../lib"
@@ -8,26 +28,26 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 export async function compile(code: string, randomString = "0") {
 	const file = (await transform(code, {
 		plugins: [
-			"@babel/plugin-transform-typescript",
-			[ "@babel/plugin-proposal-decorators", { decoratorsBeforeExport: true } ],
-			"@babel/plugin-proposal-do-expressions",
-			"@babel/plugin-proposal-function-bind",
-			"@babel/plugin-proposal-function-sent",
-			"@babel/plugin-proposal-partial-application",
-			[ "@babel/plugin-proposal-pipeline-operator", { proposal: "hack", topicToken: "%" } ],
-			"@babel/plugin-proposal-throw-expressions",
-			[ "@babel/plugin-proposal-record-and-tuple", { syntaxType: "hash" } ],
-			"@babel/plugin-proposal-class-properties",
-			"@babel/plugin-proposal-class-static-block",
-			"@babel/plugin-proposal-private-property-in-object",
-			"@babel/plugin-proposal-logical-assignment-operators",
-			"@babel/plugin-proposal-numeric-separator",
-			"@babel/plugin-proposal-nullish-coalescing-operator",
-			"@babel/plugin-proposal-optional-chaining",
-			"@babel/plugin-proposal-optional-catch-binding",
-			"@babel/plugin-proposal-json-strings",
-			"@babel/plugin-proposal-object-rest-spread",
-			"@babel/plugin-transform-exponentiation-operator"
+			[ babelPluginTransformTypescript.default ],
+			[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
+			[ babelPluginProposalDoExpressions.default ],
+			[ babelPluginProposalFunctionBind.default ],
+			[ babelPluginProposalFunctionSent.default ],
+			[ babelPluginProposalPartialApplication.default ],
+			[ babelPluginProposalPipelineOperator.default, { proposal: "hack", topicToken: "%" } ],
+			[ babelPluginProposalThrowExpressions.default ],
+			[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash" } ],
+			[ babelPluginProposalClassProperties.default ],
+			[ babelPluginProposalClassStaticBlock.default ],
+			[ babelPluginProposalPrivatePropertyInObject.default ],
+			[ babelPluginProposalLogicalAssignmentOperators.default ],
+			[ babelPluginProposalNumericSeparator.default ],
+			[ babelPluginProposalNullishCoalescingOperator.default ],
+			[ babelPluginProposalOptionalChaining.default ],
+			[ babelPluginProposalOptionalCatchBinding.default ],
+			[ babelPluginProposalJSONStrings.default ],
+			[ babelPluginProposalObjectRestSpread.default ],
+			[ babelPluginTransformExponentiationOperator.default ]
 		],
 		code: false,
 		ast: true,
