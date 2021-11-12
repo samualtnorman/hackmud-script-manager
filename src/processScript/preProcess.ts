@@ -51,7 +51,7 @@ export function preProcess(code: string) {
 	code = code
 		.replace(/#[fhmln43210]s\.scripts\.quine\(\)/g, JSON.stringify(code))
 		.replace(/[#$][fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/g, "SC$$$1$$$2(")
-		.replace(/^function\s*\(/, "function script(")
+		.replace(/^function\s*\(/, "export default function (")
 		.replace(/#D\(/g, "$D(")
 		.replace(/#FMCL/g, "$FMCL")
 		.replace(/#G/g, "$G")
