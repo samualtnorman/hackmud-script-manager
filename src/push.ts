@@ -17,6 +17,9 @@ interface PushOptions {
 
 	/** callback when a script is pushed */
 	onPush: (info: Info) => void
+
+	/** whether to do the minify step (defaults to `true`) */
+	minify: boolean
 }
 
 /**
@@ -33,7 +36,8 @@ export async function push(
 	hackmudDirectory: string,
 	{
 		scripts = "*.*",
-		onPush = (info: Info) => {}
+		onPush = (info: Info) => {},
+		minify = true
 	}: Partial<PushOptions> = {}
 ) {
 	if (typeof scripts == "string")
@@ -104,7 +108,8 @@ export async function push(
 
 				if (dirent.isFile() && supportedExtensions.includes(extension)) {
 					const { srcLength, script: minifiedCode } = await processScript(
-						await readFile(resolvePath(sourceDirectory, user, dirent.name), { encoding: "utf-8" })
+						await readFile(resolvePath(sourceDirectory, user, dirent.name), { encoding: "utf-8" }),
+						{ minify }
 					)
 
 					const info: Info = {
@@ -149,7 +154,7 @@ export async function push(
 			}
 
 			if (code) {
-				const { srcLength, script: minifiedCode } = await processScript(code)
+				const { srcLength, script: minifiedCode } = await processScript(code, { minify })
 
 				const info: Info = {
 					file: `${user}/${fileName}`,
@@ -184,7 +189,8 @@ export async function push(
 				return
 
 			const { srcLength, script: minifiedCode } = await processScript(
-				await readFile(resolvePath(sourceDirectory, dirent.name), { encoding: "utf-8" })
+				await readFile(resolvePath(sourceDirectory, dirent.name), { encoding: "utf-8" }),
+				{ minify }
 			)
 
 			const info: Info = {
@@ -217,7 +223,7 @@ export async function push(
 			}
 
 			if (code) {
-				const { srcLength, script: minifiedCode } = await processScript(code)
+				const { srcLength, script: minifiedCode } = await processScript(code, { minify })
 
 				const info: Info = {
 					file: fileName,

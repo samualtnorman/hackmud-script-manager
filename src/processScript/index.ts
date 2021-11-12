@@ -18,7 +18,7 @@ export { preProcess } from "./preProcess"
  *
  * @param code JavaScript or TypeScript code
  */
-export async function processScript(code: string): Promise<{
+export async function processScript(code: string, { minify: shouldMinify = true } = {}): Promise<{
 	srcLength: number
 	script: string
 	warnings: { message: string, line: number }[]
@@ -43,7 +43,8 @@ export async function processScript(code: string): Promise<{
 		+ (code.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
 		+ (code.match(/DB\$/g)?.length ?? 0)
 
-	code = await minify(code, autocomplete, randomString)
+	if (shouldMinify)
+		code = await minify(code, autocomplete, randomString)
 
 	code = postProcess(code, seclevel)
 

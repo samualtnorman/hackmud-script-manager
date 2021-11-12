@@ -98,7 +98,8 @@ for (const arg of process.argv.slice(2)) {
 				hackmudPath,
 				{
 					scripts: commands.slice(2),
-					onPush: onPushLogger
+					onPush: onPushLogger,
+					minify: !options.get("skip-minify")
 				}
 			)
 
@@ -274,7 +275,7 @@ for (const arg of process.argv.slice(2)) {
 
 			await readFile(commands[1], { encoding: "utf-8" }).then(
 				async source => {
-					const { script, srcLength, warnings, timeTook } = await processScript(source)
+					const { script, srcLength, warnings, timeTook } = await processScript(source, { minify: !options.get("skip-minify") })
 
 					for (const { message, line } of warnings)
 						console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
