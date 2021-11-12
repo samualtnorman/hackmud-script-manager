@@ -92,12 +92,16 @@ for (const arg of process.argv.slice(2)) {
 
 			const srcPath = commands[1] || "."
 			const hackmudPath = config.hackmudPath
+			const scripts = commands.slice(2)
+
+			if (!scripts.length)
+				scripts.push("*.*")
 
 			await push(
 				srcPath,
 				hackmudPath,
 				{
-					scripts: commands.slice(2),
+					scripts,
 					onPush: onPushLogger,
 					minify: !options.get("skip-minify")
 				}
