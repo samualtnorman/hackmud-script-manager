@@ -26,7 +26,8 @@
 		"*.js",
 		"!*.config.js",
 		"index.cjs",
-		"bin"
+		"bin",
+		"processScript"
 	],
 	"main": "index.js",
 	"bin": {
@@ -37,7 +38,7 @@
 		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"scripts": {
-		"build": "rollup -c && tsc",
+		"build": "rollup -c && tsc -p src",
 		"dev": "rollup -cw",
 		"prepublishOnly": "npm run build"
 	},
