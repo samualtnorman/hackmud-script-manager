@@ -404,11 +404,15 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 
 			if (parseArrayExpression(property.value, childArray))
 				o[property.key.type == "Identifier" ? property.key.name : property.key.value] = childArray
+			else
+				return false
 		} else if (property.value.type == "ObjectExpression") {
 			const childObject: Record<string, unknown> = {}
 
 			if (parseObjectExpression(property.value, childObject))
 				o[property.key.type == "Identifier" ? property.key.name : property.key.value] = childObject
+			else
+				return false
 		} else if (property.value.type == "NullLiteral")
 			o[property.key.type == "Identifier" ? property.key.name : property.key.value] = null
 		else if (property.value.type == "BooleanLiteral" || property.value.type == "NumericLiteral" || property.value.type == "StringLiteral")
