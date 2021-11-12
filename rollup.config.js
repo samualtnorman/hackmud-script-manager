@@ -12,8 +12,11 @@ const { readdir: readDirectory } = fsPromises
 /** @typedef {import("rollup").RollupOptions} RollupOptions */
 
 const plugins = [
-	babel({ babelHelpers: "bundled", extensions: [ ".ts" ] }),
-	commonJS({ include: [] }),
+	babel({
+		babelHelpers: "bundled",
+		extensions: [ ".ts" ]
+	}),
+	commonJS(),
 	json({ preferConst: true }),
 	nodeResolve({ extensions: [ ".ts" ] }),
 	preserveShebang()
