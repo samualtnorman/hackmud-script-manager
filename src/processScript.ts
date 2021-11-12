@@ -140,6 +140,7 @@ export async function processScript(script: string): Promise<{
 
 	const globalBlock: BlockStatement = babel.types.blockStatement([])
 	let mainFunction: FunctionDeclaration | undefined
+	const liveGlobalVariables: string[] = []
 
 	for (const statement of program.node.body) {
 		if (statement.type == "ExportDefaultDeclaration") {
@@ -199,16 +200,35 @@ export async function processScript(script: string): Promise<{
 				for (const specifier of statement.specifiers) {
 					assert(specifier.type == "ExportSpecifier", `${specifier.type} is currently unsupported`)
 
-					exports.set(
-						specifier.local.name,
-						specifier.exported.type == "Identifier"
-							? specifier.exported.name
-							: specifier.exported.value
-					)
+					if (liveGlobalVariables.includes(specifier.local.name)) {
+						liveExports.set(
+							specifier.local.name,
+							specifier.exported.type == "Identifier"
+								? specifier.exported.name
+								: specifier.exported.value
+						)
+					} else {
+						exports.set(
+							specifier.local.name,
+							specifier.exported.type == "Identifier"
+								? specifier.exported.name
+								: specifier.exported.value
+						)
+					}
 				}
 			}
 		} else if (statement.type == "VariableDeclaration") {
 			for (const declarator of statement.declarations) {
+				assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+
+				if (statement.kind != "const") {
+					if (exports.has(declarator.id.name)) {
+						liveExports.set(declarator.id.name, exports.get(declarator.id.name)!)
+						exports.delete(declarator.id.name)
+					} else
+						liveGlobalVariables.push(declarator.id.name)
+				}
+
 				globalBlock.body.push(
 					t.variableDeclaration(
 						"let",
