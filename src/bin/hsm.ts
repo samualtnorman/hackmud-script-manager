@@ -93,25 +93,14 @@ for (const arg of process.argv.slice(2)) {
 			const srcPath = commands[1] || "."
 			const hackmudPath = config.hackmudPath
 
-			let users
-			let scripts
-
-			if (commands[2]) {
-				const match = commands[2].match(/^([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})$/)
-
-				if (!match) {
-					console.log(`"${chalk.bold(commands[2])}" is not a valid script name`)
-					break
+			await push(
+				srcPath,
+				hackmudPath,
+				{
+					scripts: commands.slice(2),
+					onPush: onPushLogger
 				}
-
-				users = [ match[1] ]
-				scripts = [ match[2] ]
-			} else {
-				users = options.get("users")?.toString().split(",") || []
-				scripts = options.get("scripts")?.toString().split(",") || []
-			}
-
-			await push(srcPath, hackmudPath, users, scripts, onPushLogger)
+			)
 
 			updateConfig()
 		} break
@@ -362,7 +351,7 @@ function help() {
 		} break
 
 		case "push": {
-			console.log("hsm push [dir]")
+			console.log("hsm push [<dir> [...\"<script user>.<script name>\"]]")
 		} break
 
 		case "watch": {
@@ -370,7 +359,7 @@ function help() {
 		} break
 
 		case "pull": {
-			console.log("hsm pull <user.script>")
+			console.log("hsm pull <script user>.<script name>")
 		} break
 
 		case "minify":

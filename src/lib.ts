@@ -65,3 +65,12 @@ export function ensure<T>(value: T | undefined | null, message = "ensure failed"
 	assert(value, message)
 	return value
 }
+
+export function forEachAsync<I, O>(iterable: Iterable<I>, callback: (value: I) => Promise<O>) {
+	const promises = []
+
+	for (const value of iterable)
+		promises.push(callback(value))
+
+	return Promise.all(promises)
+}

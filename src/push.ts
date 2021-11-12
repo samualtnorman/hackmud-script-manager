@@ -1,150 +1,244 @@
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { Info, processScript, supportedExtensions } from "."
-import { hackmudLength, writeFilePersist } from "./lib"
+import { DynamicMap, forEachAsync, hackmudLength, writeFilePersist } from "./lib"
 
 const { readFile, readdir: readDirectory } = fs.promises
 
+interface PushOptions {
+	/**
+	 * array of scripts in the format `foo.bar`
+	 *
+	 * also accepts wild card e.g. `*.bar` or `foo.*`
+	 *
+	 * pushes everything by default
+	 */
+	scripts: string | string[]
+
+	/** callback when a script is pushed */
+	onPush: (info: Info) => void
+}
+
 /**
- * Push a specific or all scripts to a specific or all users.
- * In source directory, scripts in folders will override scripts with same name for user with folder name.
+ * Push scripts from a source directory to the hackmud directory.
  *
- * e.g. foo/bar.js overrides other bar.js script just for user foo.
- *
- * @param srcDir path to folder containing source files
- * @param hackmudDir path to hackmud directory
- * @param users users to push to (pushes to all if empty)
- * @param scripts scripts to push from (pushes from all if empty)
- * @param onPush function that's called when a script has been pushed
+ * Files directly in the source folder are pushed to all users
+ * @param sourceDirectory directory containing source code
+ * @param hackmudDirectory directory created by hackmud containing user data including scripts
+ * @param options {@link PushOptions details}
+ * @returns array of info on pushed scripts
  */
-export function push(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void) {
-	return new Promise<Info[]>(async resolve => {
-		const infoAll: Info[] = []
-		const files = await readDirectory(srcDir, { withFileTypes: true })
-		const skips = new Map<string, string[]>()
-		const promises: Promise<any>[] = []
+export async function push(
+	sourceDirectory: string,
+	hackmudDirectory: string,
+	{
+		scripts = "*.*",
+		onPush = (info: Info) => {}
+	}: Partial<PushOptions> = {}
+) {
+	if (typeof scripts == "string")
+		scripts = [ scripts ]
 
-		for (const dir of files) {
-			const user = dir.name
+	const scriptNamesByUser = new DynamicMap((user: string) => new Set<string>())
+	const wildScriptUsers = new Set<string>()
+	const wildUserScripts = new Set<string>()
 
-			if (dir.isDirectory() && (!users.length || users.includes(user))) {
-				promises.push(readDirectory(resolvePath(srcDir, user), { withFileTypes: true }).then(files => {
-					for (const file of files) {
-						const extension = getFileExtension(file.name)
-						const name = getBaseName(file.name, extension)
+	let pushEverything = false
 
-						if (supportedExtensions.includes(extension) && file.isFile() && (!scripts.length || scripts.includes(name))) {
-							let skip = skips.get(name)
+	for (const fullScriptName of scripts) {
+		const [ user, scriptName ] = fullScriptName.split(".")
 
-							if (skip)
-								skip.push(user)
-							else
-								skips.set(name, [ user ])
+		if (!user || user == "*") {
+			if (!scriptName || scriptName == "*")
+				pushEverything = true
+			else
+				wildUserScripts.add(scriptName)
+		} else if (!scriptName || scriptName == "*")
+			wildScriptUsers.add(user)
+		else
+			scriptNamesByUser.get(user).add(scriptName)
+	}
 
-							readFile(resolvePath(srcDir, user, file.name), { encoding: "utf-8" }).then(async code => {
-								let error = null
+	const usersByGlobalScriptsToPush = new DynamicMap((user: string) => new Set<string>())
+	const allInfo: Info[] = []
+	const scriptNamesAlreadyPushedByUser = new DynamicMap((user: string) => new Set<string>())
 
-								const { srcLength, script: minCode } = await processScript(code).catch(reason => {
-									error = reason
+	let sourceDirectoryDirents
 
-									return {
-										srcLength: 0,
-										script: ""
-									}
-								})
+	// *.bar
+	if (wildUserScripts.size || pushEverything) {
+		const hackmudDirectoryDirents = await readDirectory(resolvePath(hackmudDirectory), { withFileTypes: true })
 
-								const info: Info = {
-									file: `${user}/${file.name}`,
-									users: [ user ],
-									minLength: 0,
-									error,
-									srcLength
-								}
+		const allUsers = new Set([
+			...(sourceDirectoryDirents = await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true }))
+				.filter(dirent => dirent.isDirectory())
+				.map(dirent => dirent.name),
+			...hackmudDirectoryDirents
+				.filter(dirent => dirent.isDirectory())
+				.map(dirent => dirent.name),
+			...hackmudDirectoryDirents
+				.filter(dirent => dirent.isFile() && getFileExtension(dirent.name) == ".key")
+				.map(dirent => dirent.name.slice(0, -4)),
+			...scriptNamesByUser.keys(),
+			...wildScriptUsers
+		])
 
-								infoAll.push(info)
+		if (pushEverything) {
+			for (const user of allUsers)
+				wildScriptUsers.add(user)
+		} else {
+			for (const user of allUsers) {
+				const scriptNames = scriptNamesByUser.get(user)
 
-								if (!error) {
-									if (minCode) {
-										info.minLength = hackmudLength(minCode)
-										await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode)
-									} else
-										info.error = new Error("processed script was empty")
-								}
-
-								onPush?.(info)
-							})
-						}
-					}
-				}))
+				for (const scriptName of wildUserScripts)
+					scriptNames.add(scriptName)
 			}
 		}
+	}
 
-		if (!users.length) {
-			users = (await readDirectory(hackmudDir, { withFileTypes: true }))
-				.filter(a => a.isFile() && getFileExtension(a.name) == ".key")
-				.map(a => getBaseName(a.name, ".key"))
-		}
+	// foo.*
+	await forEachAsync(wildScriptUsers, async user => {
+		await readDirectory(resolvePath(sourceDirectory, user), { withFileTypes: true }).then(async dirents => {
+			await forEachAsync(dirents, async dirent => {
+				const extension = getFileExtension(dirent.name)
 
-		Promise.all(promises).then(() => {
-			const promises: Promise<any>[] = []
+				if (dirent.isFile() && supportedExtensions.includes(extension)) {
+					const { srcLength, script: minifiedCode } = await processScript(
+						await readFile(resolvePath(sourceDirectory, user, dirent.name), { encoding: "utf-8" })
+					)
 
-			for (const file of files) {
-				if (file.isFile()) {
-					const extension = getFileExtension(file.name)
-
-					if (supportedExtensions.includes(extension)) {
-						const name = getBaseName(file.name, extension)
-
-						if (!scripts.length || scripts.includes(name)) {
-							promises.push(readFile(resolvePath(srcDir, file.name), { encoding: "utf-8" }).then(async code => {
-								let error = null
-
-								const { script: minCode, srcLength } = await processScript(code).catch(reason => {
-									error = reason
-
-									return {
-										script: "",
-										srcLength: 0
-									}
-								})
-
-								const info: Info = {
-									file: file.name,
-									users: [],
-									minLength: 0,
-									error,
-									srcLength
-								}
-
-								infoAll.push(info)
-
-								if (!error) {
-									if (minCode) {
-										info.minLength = hackmudLength(minCode)
-										const skip = skips.get(name) || []
-										const promises: Promise<any>[] = []
-
-										for (const user of users) {
-											if (!skip.includes(user)) {
-												info.users.push(user)
-												promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), minCode))
-											}
-										}
-									} else
-										info.error = new Error("processed script was empty")
-								}
-
-								if (onPush)
-									Promise.all(promises).then(() => onPush(info))
-							}))
-						}
+					const info: Info = {
+						file: `${user}/${dirent.name}`,
+						users: [ user ],
+						minLength: hackmudLength(minifiedCode),
+						error: null,
+						srcLength
 					}
+
+					const scriptName = getBaseName(dirent.name, extension)
+
+					scriptNamesAlreadyPushedByUser.get(user).add(scriptName)
+					allInfo.push(info)
+
+					await writeFilePersist(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
+
+					onPush(info)
 				}
-			}
-
-			Promise.all(promises).then(() => resolve(infoAll))
+			})
+		}, (error: NodeJS.ErrnoException) => {
+			if (error.code != "ENOENT")
+				throw error
 		})
 	})
+
+	// foo.bar
+	await forEachAsync(scriptNamesByUser, async ([ user, scripts ]) => {
+		if (wildScriptUsers.has(user))
+			return
+
+		await forEachAsync(scripts, async scriptName => {
+			let code
+			let fileName
+
+			for (const extension of supportedExtensions) {
+				try {
+					fileName = `${scriptName}${extension}`
+					code = await readFile(resolvePath(sourceDirectory, user, fileName), { encoding: "utf-8" })
+					break
+				} catch {}
+			}
+
+			if (code) {
+				const { srcLength, script: minifiedCode } = await processScript(code)
+
+				const info: Info = {
+					file: `${user}/${fileName}`,
+					users: [ user ],
+					minLength: hackmudLength(minifiedCode),
+					error: null,
+					srcLength
+				}
+
+				allInfo.push(info)
+
+				await writeFilePersist(resolvePath(hackmudDirectory, user, "scripts", `${scriptName}.js`), minifiedCode)
+
+				onPush(info)
+			} else
+				usersByGlobalScriptsToPush.get(scriptName).add(user)
+		})
+	})
+
+	// foo.* (global)
+	if (wildScriptUsers.size) {
+		await forEachAsync(sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true }), async dirent => {
+			const extension = getFileExtension(dirent.name)
+
+			if (!dirent.isFile() || !supportedExtensions.includes(extension))
+				return
+
+			const scriptName = getBaseName(dirent.name, extension)
+			const usersToPushTo = [ ...wildScriptUsers, ...usersByGlobalScriptsToPush.get(scriptName) ].filter(user => !scriptNamesAlreadyPushedByUser.get(user).has(scriptName))
+
+			if (!usersToPushTo.length)
+				return
+
+			const { srcLength, script: minifiedCode } = await processScript(
+				await readFile(resolvePath(sourceDirectory, dirent.name), { encoding: "utf-8" })
+			)
+
+			const info: Info = {
+				file: dirent.name,
+				users: usersToPushTo,
+				minLength: hackmudLength(minifiedCode),
+				error: null,
+				srcLength
+			}
+
+			await forEachAsync(usersToPushTo, user =>
+				writeFilePersist(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
+			)
+
+			allInfo.push(info)
+			onPush(info)
+		})
+	} else {
+		// foo.bar (global)
+		await forEachAsync(usersByGlobalScriptsToPush, async ([ scriptName, users ]) => {
+			let code
+			let fileName!: string
+
+			for (const extension of supportedExtensions) {
+				try {
+					fileName = `${scriptName}${extension}`
+					code = await readFile(resolvePath(sourceDirectory, fileName), { encoding: "utf-8" })
+					break
+				} catch {}
+			}
+
+			if (code) {
+				const { srcLength, script: minifiedCode } = await processScript(code)
+
+				const info: Info = {
+					file: fileName,
+					users: [ ...users ],
+					minLength: hackmudLength(minifiedCode),
+					error: null,
+					srcLength
+				}
+
+				await forEachAsync(users, user =>
+					writeFilePersist(resolvePath(hackmudDirectory, user, "scripts", `${scriptName}.js`), minifiedCode)
+				)
+
+				allInfo.push(info)
+				onPush(info)
+			} else
+				throw new Error(`couldn't find script named "${scriptName}" in ${resolvePath(sourceDirectory, users.values().next().value)} or ${resolvePath(sourceDirectory)}`)
+		})
+	}
+
+	return allInfo
 }
 
 export default push
