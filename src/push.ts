@@ -239,8 +239,7 @@ export async function push(
 
 				allInfo.push(info)
 				onPush(info)
-			} else
-				throw new Error(`couldn't find script named "${scriptName}" in ${resolvePath(sourceDirectory, users.values().next().value)} or ${resolvePath(sourceDirectory)}`)
+			}
 		})
 	}
 
