@@ -32,7 +32,7 @@ export default async ({ w }) => {
 	return {
 		input: Object.fromEntries(
 			(await findFiles(sourceDirectory))
-				.filter(path => path.endsWith(".ts"))
+				.filter(path => path.endsWith(".ts") && !path.endsWith(".d.ts"))
 				.map(path => [path.slice(sourceDirectory.length + 1, -3), path])
 		),
 		output: {
