@@ -590,6 +590,22 @@ export async function compile(code: string, randomString = "0") {
 		}
 	})
 
+	// typescript does not like NodePath#get() and becomes very slow so I have to dance around it
+	const mainFunctionScope = (program.get("body.0" as string) as NodePath<FunctionDeclaration>).scope
+
+	for (const parameter of [ ...mainFunction.params ].reverse()) {
+		if (parameter.type == "Identifier") {
+			const binding = mainFunctionScope.getBinding(parameter.name)!
+
+			if (!binding.referenced) {
+				mainFunction.params.pop()
+				continue
+			}
+		}
+
+		break
+	}
+
 	return file
 }
 
