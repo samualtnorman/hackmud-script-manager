@@ -97,7 +97,7 @@ for (const arg of process.argv.slice(2)) {
 			if (!scripts.length)
 				scripts.push("*.*")
 
-			await push(
+			const infos = await push(
 				srcPath,
 				hackmudPath,
 				{
@@ -106,6 +106,9 @@ for (const arg of process.argv.slice(2)) {
 					minify: !options.get("skip-minify")
 				}
 			)
+
+			if (!infos.length)
+				console.warn("couldn't find any scripts to push")
 
 			updateConfig()
 		} break
