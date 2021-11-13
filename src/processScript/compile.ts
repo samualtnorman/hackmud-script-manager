@@ -91,6 +91,26 @@ export async function compile(code: string, randomString = "0") {
 
 	for (const statement of program.node.body) {
 		if (statement.type == "ExportDefaultDeclaration") {
+			if (mainFunction) {
+				globalBlock.body.push(
+					t.variableDeclaration(
+						"let",
+						[
+							t.variableDeclarator(
+								mainFunction.id!,
+								t.functionExpression(
+									null,
+									mainFunction.params,
+									mainFunction.body,
+									mainFunction.generator,
+									mainFunction.async
+								)
+							)
+						]
+					)
+				)
+			}
+
 			if (statement.declaration.type == "FunctionDeclaration" || statement.declaration.type == "FunctionExpression" || statement.declaration.type == "ArrowFunctionExpression") {
 				mainFunction = t.functionDeclaration(
 					t.identifier(topFunctionName),
@@ -184,23 +204,27 @@ export async function compile(code: string, randomString = "0") {
 				)
 			}
 		} else if (statement.type == "FunctionDeclaration") {
-			globalBlock.body.push(
-				t.variableDeclaration(
-					"let",
-					[
-						t.variableDeclarator(
-							statement.id!,
-							t.functionExpression(
-								null,
-								statement.params,
-								statement.body,
-								statement.generator,
-								statement.async
+			if (mainFunction || statement.async || statement.generator) {
+				globalBlock.body.push(
+					t.variableDeclaration(
+						"let",
+						[
+							t.variableDeclarator(
+								statement.id!,
+								t.functionExpression(
+									null,
+									statement.params,
+									statement.body,
+									statement.generator,
+									statement.async
+								)
 							)
-						)
-					]
+						]
+					)
 				)
-			)
+			} else
+				mainFunction = statement
+
 		} else
 			globalBlock.body.push(statement)
 	}
