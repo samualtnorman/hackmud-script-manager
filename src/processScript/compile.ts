@@ -646,6 +646,9 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 
 	// TODO this should be done in the minify step
 	for (const global in (program.scope as any).globals as Record<string, any>) {
+		if (global == "$FMCL")
+			continue
+
 		const referencePaths = getReferencePathsToGlobal(global, program)
 
 		if (5 + global.length + referencePaths.length >= global.length * referencePaths.length)
