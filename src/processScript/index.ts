@@ -18,21 +18,29 @@ export { preProcess } from "./preProcess"
  *
  * @param code JavaScript or TypeScript code
  */
-export async function processScript(code: string, { minify: shouldMinify = true } = {}): Promise<{
+export async function processScript(
+	code: string,
+	{
+		minify: shouldMinify = true,
+		randomString = Math.floor(Math.random() * (2 ** 52)).toString(36),
+		scriptUser = "UNKNOWN" as string | true,
+		scriptName = "UNKNOWN" as string | true
+	} = {}
+): Promise<{
 	srcLength: number
 	script: string
 	warnings: { message: string, line: number }[]
 	timeTook: number
 }> {
 	const time = performance.now()
-	const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
+	const sourceCode = code
 	let autocomplete
 	let seclevel
 	let semicolons
 
 	({ autocomplete, code, seclevel, semicolons } = preProcess(code))
 
-	code = generate(await compile(code, randomString)!).code
+	code = generate(await compile(code, randomString, sourceCode, scriptUser, scriptName)!).code
 
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the

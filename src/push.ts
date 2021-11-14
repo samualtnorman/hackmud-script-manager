@@ -107,9 +107,15 @@ export async function push(
 				const extension = getFileExtension(dirent.name)
 
 				if (dirent.isFile() && supportedExtensions.includes(extension)) {
+					const scriptName = getBaseName(dirent.name, extension)
+
 					const { srcLength, script: minifiedCode } = await processScript(
 						await readFile(resolvePath(sourceDirectory, user, dirent.name), { encoding: "utf-8" }),
-						{ minify }
+						{
+							minify,
+							scriptUser: user,
+							scriptName
+						}
 					)
 
 					const info: Info = {
@@ -119,8 +125,6 @@ export async function push(
 						error: null,
 						srcLength
 					}
-
-					const scriptName = getBaseName(dirent.name, extension)
 
 					scriptNamesAlreadyPushedByUser.get(user).add(scriptName)
 					allInfo.push(info)
@@ -154,7 +158,14 @@ export async function push(
 			}
 
 			if (code) {
-				const { srcLength, script: minifiedCode } = await processScript(code, { minify })
+				const { srcLength, script: minifiedCode } = await processScript(
+					code,
+					{
+						minify,
+						scriptUser: user,
+						scriptName
+					}
+				)
 
 				const info: Info = {
 					file: `${user}/${fileName}`,
@@ -188,9 +199,16 @@ export async function push(
 			if (!usersToPushTo.length)
 				return
 
+			const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
+
 			const { srcLength, script: minifiedCode } = await processScript(
 				await readFile(resolvePath(sourceDirectory, dirent.name), { encoding: "utf-8" }),
-				{ minify }
+				{
+					minify,
+					scriptUser: true,
+					scriptName,
+					randomString
+				}
 			)
 
 			const info: Info = {
@@ -202,7 +220,16 @@ export async function push(
 			}
 
 			await forEachAsync(usersToPushTo, user =>
-				writeFilePersist(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
+				writeFilePersist(
+					resolvePath(
+						hackmudDirectory,
+						user,
+						`scripts/${scriptName}.js`
+					),
+					minifiedCode
+						.replace(new RegExp(`_SCRIPT_USER_${randomString}_`, "g"), user)
+						.replace(new RegExp(`_FULL_SCRIPT_NAME_${randomString}_`, "g"), `${user}.${scriptName}`)
+				)
 			)
 
 			allInfo.push(info)
@@ -223,7 +250,17 @@ export async function push(
 			}
 
 			if (code) {
-				const { srcLength, script: minifiedCode } = await processScript(code, { minify })
+				const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
+
+				const { srcLength, script: minifiedCode } = await processScript(
+					code,
+					{
+						minify,
+						scriptUser: true,
+						scriptName,
+						randomString
+					}
+				)
 
 				const info: Info = {
 					file: fileName,
@@ -234,7 +271,16 @@ export async function push(
 				}
 
 				await forEachAsync(users, user =>
-					writeFilePersist(resolvePath(hackmudDirectory, user, "scripts", `${scriptName}.js`), minifiedCode)
+					writeFilePersist(
+						resolvePath(
+							hackmudDirectory,
+							user,
+							`scripts/${scriptName}.js`
+						),
+						minifiedCode
+							.replace(new RegExp(`_SCRIPT_USER_${randomString}_`, "g"), user)
+							.replace(new RegExp(`_FULL_SCRIPT_NAME_${randomString}_`, "g"), `${user}.${scriptName}`)
+					)
 				)
 
 				allInfo.push(info)

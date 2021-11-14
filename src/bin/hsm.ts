@@ -282,7 +282,26 @@ for (const arg of process.argv.slice(2)) {
 
 			await readFile(commands[1], { encoding: "utf-8" }).then(
 				async source => {
-					const { script, srcLength, warnings, timeTook } = await processScript(source, { minify: !options.get("skip-minify") })
+					const fileBaseName = getBaseName(commands[1], fileExtension)
+					const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(".src")
+
+					const scriptName = fileBaseNameEndsWithDotSrc
+						? fileBaseName.slice(0, -4)
+						: fileBaseName
+
+					let scriptUser = "UNKNOWN"
+
+					if (getBaseName(resolvePath(commands[1], "..")) == "scripts" && getBaseName(resolvePath(commands[1], "../../..")) == "hackmud")
+						scriptUser = getBaseName(resolvePath(commands[1], "../.."))
+
+					const { script, srcLength, warnings, timeTook } = await processScript(
+						source,
+						{
+							minify: !options.get("skip-minify"),
+							scriptUser,
+							scriptName
+						}
+					)
 
 					for (const { message, line } of warnings)
 						console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
@@ -292,13 +311,11 @@ for (const arg of process.argv.slice(2)) {
 					if (commands[2])
 						outputPath = commands[2]
 					else {
-						const fileBaseName = getBaseName(commands[1], fileExtension)
-
 						outputPath = resolvePath(
 							getPathDirectory(commands[1]),
 
-							fileBaseName.endsWith(".src")
-								? `${fileBaseName.slice(0, -4)}.js` :
+							fileBaseNameEndsWithDotSrc
+								? `${scriptName}.js` :
 							fileExtension == ".js"
 								? `${fileBaseName}.min.js`
 								: `${fileBaseName}.js`

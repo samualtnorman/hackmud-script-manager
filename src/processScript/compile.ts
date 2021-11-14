@@ -25,7 +25,7 @@ import { assert, ensure } from "../lib"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
-export async function compile(code: string, randomString = "0") {
+export async function compile(code: string, randomString = "0", sourceCode = code, scriptUser: string | true = "UNKNOWN", scriptName: string | true = "UNKNOWN") {
 	const file = (await transform(code, {
 		plugins: [
 			[ babelPluginTransformTypescript.default ],
@@ -83,6 +83,43 @@ export async function compile(code: string, randomString = "0") {
 	if (program.scope.hasGlobal("_TIMEOUT")) {
 		for (const referencePath of getReferencePathsToGlobal("_START", program))
 			referencePath.replaceWith(t.identifier("_TO"))
+	}
+
+	if (program.scope.hasGlobal("_SOURCE")) {
+		for (const referencePath of getReferencePathsToGlobal("_SOURCE", program))
+			referencePath.replaceWith(t.stringLiteral(sourceCode))
+	}
+
+	if (program.scope.hasGlobal("_BUILD_TIME")) {
+		for (const referencePath of getReferencePathsToGlobal("_BUILD_TIME", program))
+			referencePath.replaceWith(t.numericLiteral(Date.now()))
+	}
+
+	if (program.scope.hasGlobal("_SCRIPT_USER")) {
+		for (const referencePath of getReferencePathsToGlobal("_SCRIPT_USER", program)) {
+			if (scriptUser == true)
+				referencePath.replaceWith(t.stringLiteral(`_SCRIPT_USER_${randomString}_`))
+			else
+				referencePath.replaceWith(t.stringLiteral(scriptUser))
+		}
+	}
+
+	if (program.scope.hasGlobal("_SCRIPT_NAME")) {
+		for (const referencePath of getReferencePathsToGlobal("_SCRIPT_NAME", program)) {
+			if (scriptName == true)
+				referencePath.replaceWith(t.stringLiteral(`_SCRIPT_NAME_${randomString}_`))
+			else
+				referencePath.replaceWith(t.stringLiteral(scriptName))
+		}
+	}
+
+	if (program.scope.hasGlobal("_FULL_SCRIPT_NAME")) {
+		for (const referencePath of getReferencePathsToGlobal("_FULL_SCRIPT_NAME", program)) {
+			if (scriptUser == true || scriptName == true)
+				referencePath.replaceWith(t.stringLiteral(`_FULL_SCRIPT_NAME_${randomString}_`))
+			else
+				referencePath.replaceWith(t.stringLiteral(`${scriptUser}.${scriptName}`))
+		}
 	}
 
 	const globalBlock: BlockStatement = t.blockStatement([])
