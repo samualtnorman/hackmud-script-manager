@@ -23,6 +23,7 @@ const plugins = [
 ]
 
 const sourceDirectory = "src"
+const findFilesPromise = findFiles(sourceDirectory)
 
 /** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
 export default async ({ w }) => {
@@ -31,9 +32,9 @@ export default async ({ w }) => {
 
 	return {
 		input: Object.fromEntries(
-			(await findFiles(sourceDirectory))
+			(await findFilesPromise)
 				.filter(path => path.endsWith(".ts") && !path.endsWith(".d.ts"))
-				.map(path => [path.slice(sourceDirectory.length + 1, -3), path])
+				.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
 		),
 		output: {
 			dir: "."
