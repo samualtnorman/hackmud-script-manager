@@ -627,6 +627,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 		}
 	})
 
+	// TODO this should probably be done in the minify step
 	// typescript does not like NodePath#get() and becomes very slow so I have to dance around it
 	const mainFunctionScope = (program.get("body.0" as string) as NodePath<FunctionDeclaration>).scope
 
@@ -641,6 +642,29 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 		}
 
 		break
+	}
+
+	// TODO this should be done in the minify step
+	for (const global in (program.scope as any).globals as Record<string, any>) {
+		const referencePaths = getReferencePathsToGlobal(global, program)
+
+		if (5 + global.length + referencePaths.length >= global.length * referencePaths.length)
+			continue
+
+		for (const path of referencePaths)
+			path.replaceWith(t.identifier(`_GLOBAL_${global}_${randomString}_`))
+
+		mainFunction.body.body.unshift(
+			t.variableDeclaration(
+				"let",
+				[
+					t.variableDeclarator(
+						t.identifier(`_GLOBAL_${global}_${randomString}_`),
+						t.identifier(global)
+					)
+				]
+			)
+		)
 	}
 
 	return file
