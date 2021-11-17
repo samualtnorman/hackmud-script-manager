@@ -7,7 +7,7 @@ import { generateTypings, Info, processScript, pull, push, supportedExtensions, 
 import { version as moduleVersion } from "../../package.json"
 import { DynamicMap, hackmudLength, writeFilePersist } from "../lib"
 
-const { readFile: readFile, rmdir: removeDirectory, writeFile: writeFile, mkdir: makeDirectory } = fs.promises
+const { readFile, rmdir: removeDirectory, writeFile, mkdir: makeDirectory } = fs.promises
 
 type ArgValue = boolean | number | string/* | ArgValue[]*/
 
@@ -268,6 +268,8 @@ for (const arg of process.argv.slice(2)) {
 
 		case "golf":
 		case "minify": {
+			// TODO `--watch` option
+
 			if (!commands[1]) {
 				console.log(`Target required\nUsage: ${getBaseName(process.argv[1])} ${commands[0]} <target> [output]`)
 				break

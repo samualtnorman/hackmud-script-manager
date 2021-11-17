@@ -25,7 +25,32 @@ import { assert, ensure } from "../lib"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
-export async function compile(code: string, randomString = "0", sourceCode = code, scriptUser: string | true = "UNKNOWN", scriptName: string | true = "UNKNOWN") {
+export type CompileOptions = {
+	/** 11 a-z 0-9 characters */
+	uniqueID: string
+
+	/** the unprocessed source code (defaults to the given `code` parameter) */
+	sourceCode: string
+
+	/** the user the script will be uploaded to (or set to `true` if it is not yet known) */
+	scriptUser: string | true
+
+	/** the name of this script (or set to `true` if it is not yet known) */
+	scriptName: string | true
+}
+
+/**
+ * @param code the preprocessed code to be compiled into hackmud compatible code
+ * @param options {@link CompileOptions details}
+ */
+export async function compile(code: string, {
+	uniqueID = "00000000000",
+	sourceCode = code,
+	scriptUser = "UNKNOWN",
+	scriptName = "UNKNOWN"
+}: Partial<CompileOptions> = {}) {
+	assert(uniqueID.match(/^\w{11}$/))
+
 	const file = (await transform(code, {
 		plugins: [
 			[ babelPluginTransformTypescript.default ],
@@ -63,7 +88,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 	// 	}
 	// }
 
-	const topFunctionName = `_SCRIPT_${randomString}_`
+	const topFunctionName = `_SCRIPT_${uniqueID}_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
 
@@ -98,7 +123,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 	if (program.scope.hasGlobal("_SCRIPT_USER")) {
 		for (const referencePath of getReferencePathsToGlobal("_SCRIPT_USER", program)) {
 			if (scriptUser == true)
-				referencePath.replaceWith(t.stringLiteral(`_SCRIPT_USER_${randomString}_`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_USER`))
 			else
 				referencePath.replaceWith(t.stringLiteral(scriptUser))
 		}
@@ -107,7 +132,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 	if (program.scope.hasGlobal("_SCRIPT_NAME")) {
 		for (const referencePath of getReferencePathsToGlobal("_SCRIPT_NAME", program)) {
 			if (scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`_SCRIPT_NAME_${randomString}_`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_NAME`))
 			else
 				referencePath.replaceWith(t.stringLiteral(scriptName))
 		}
@@ -116,10 +141,57 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 	if (program.scope.hasGlobal("_FULL_SCRIPT_NAME")) {
 		for (const referencePath of getReferencePathsToGlobal("_FULL_SCRIPT_NAME", program)) {
 			if (scriptUser == true || scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`_FULL_SCRIPT_NAME_${randomString}_`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME`))
 			else
 				referencePath.replaceWith(t.stringLiteral(`${scriptUser}.${scriptName}`))
 		}
+	}
+
+	// TODO warn when script name is invalid
+	// TODO warn when not calling
+	for (const fakeSubscriptObjectName of [ "$fs", "$hs", "$ms", "$ls", "$ns", "$4s", "$3s", "$2s", "$1s", "$0s" ]) {
+		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
+			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
+				assert(referencePath.parent.type == "MemberExpression")
+				assert(referencePath.parent.property.type == "Identifier")
+				assert(referencePath.parentPath.parentPath?.node.type == "MemberExpression")
+				assert(referencePath.parentPath.parentPath?.node.property.type == "Identifier")
+
+				// BUG this is causing typescript to be slow
+				referencePath.parentPath.parentPath.replaceWith(
+					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
+				)
+			}
+		}
+	}
+
+	// TODO warn when db method is invalid
+	// TODO warn when not calling
+	if (program.scope.hasGlobal("$db")) {
+		for (const referencePath of getReferencePathsToGlobal("$db", program)) {
+			assert(referencePath.parentPath.node.type == "MemberExpression")
+			assert(referencePath.parentPath.node.property.type == "Identifier")
+
+			referencePath.parentPath.replaceWith(
+				t.identifier(`$${uniqueID}$DB$${referencePath.parentPath.node.property.name}`)
+			)
+		}
+	}
+
+	// TODO detect not being called and warn
+	if (program.scope.hasGlobal("$D")) {
+		for (const referencePath of getReferencePathsToGlobal("$D", program))
+			referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG`))
+	}
+
+	if (program.scope.hasGlobal("$FMCL")) {
+		for (const referencePath of getReferencePathsToGlobal("$FMCL", program))
+			referencePath.replaceWith(t.identifier(`$${uniqueID}$FMCL`))
+	}
+
+	if (program.scope.hasGlobal("$G")) {
+		for (const referencePath of getReferencePathsToGlobal("$G", program))
+			referencePath.replaceWith(t.identifier(`$${uniqueID}$GLOBAL`))
 	}
 
 	const globalBlock: BlockStatement = t.blockStatement([])
@@ -499,7 +571,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 						methodReferencesThis = true
 						thisIsReferenced = true
 						path.replaceWith(
-							t.identifier(`_THIS_${randomString}_`)
+							t.identifier(`_THIS_${uniqueID}_`)
 						)
 					},
 
@@ -527,7 +599,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 								"let",
 								[
 									t.variableDeclarator(
-										t.identifier(`_THIS_${randomString}_`),
+										t.identifier(`_THIS_${uniqueID}_`),
 										t.callExpression(t.super(), [])
 									)
 								]
@@ -539,7 +611,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 								"let",
 								[
 									t.variableDeclarator(
-										t.identifier(`_THIS_${randomString}_`),
+										t.identifier(`_THIS_${uniqueID}_`),
 										superCalls[0].node
 									)
 								]
@@ -550,7 +622,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 							path.replaceWith(
 								t.assignmentExpression(
 									"=",
-									t.identifier(`_THIS_${randomString}_`),
+									t.identifier(`_THIS_${uniqueID}_`),
 									path.node
 								)
 							)
@@ -561,7 +633,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 								"let",
 								[
 									t.variableDeclarator(
-										t.identifier(`_THIS_${randomString}_`)
+										t.identifier(`_THIS_${uniqueID}_`)
 									)
 								]
 							)
@@ -580,7 +652,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 					"let",
 					[
 						t.variableDeclarator(
-							t.identifier(`_THIS_${randomString}_`),
+							t.identifier(`_THIS_${uniqueID}_`),
 							t.callExpression(
 								t.memberExpression(
 									t.super(),
@@ -603,7 +675,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 		},
 
 		ThisExpression(path) {
-			path.replaceWith(t.identifier(`_UNDEFINED_${randomString}_`))
+			path.replaceWith(t.identifier(`_UNDEFINED_${uniqueID}_`))
 		},
 
 		BigIntLiteral(path) {
@@ -646,7 +718,7 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 
 	// TODO this should be done in the minify step
 	for (const global in (program.scope as any).globals as Record<string, any>) {
-		if (global == "$FMCL")
+		if (global.startsWith(`$${uniqueID}`))
 			continue
 
 		const referencePaths = getReferencePathsToGlobal(global, program)
@@ -655,14 +727,14 @@ export async function compile(code: string, randomString = "0", sourceCode = cod
 			continue
 
 		for (const path of referencePaths)
-			path.replaceWith(t.identifier(`_GLOBAL_${global}_${randomString}_`))
+			path.replaceWith(t.identifier(`_GLOBAL_${global}_${uniqueID}_`))
 
 		mainFunction.body.body.unshift(
 			t.variableDeclaration(
 				"let",
 				[
 					t.variableDeclarator(
-						t.identifier(`_GLOBAL_${global}_${randomString}_`),
+						t.identifier(`_GLOBAL_${global}_${uniqueID}_`),
 						t.identifier(global)
 					)
 				]

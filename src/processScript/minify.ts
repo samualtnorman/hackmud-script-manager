@@ -10,8 +10,16 @@ const { default: generate } = babelGenerator as any as typeof import("@babel/gen
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 // TODO when there are more than 3 references to `$G`, place a `let _GLOBAL_0_ = $G` at the top and replace references with `_GLOBAL_0_`
+// TODO move autocomplete stuff outside this function
 
-export async function minify(code: string, autocomplete: string, randomString = "0") {
+/**
+ * @param code compiled code and/or hackmud compatible code
+ * @param autocomplete the comment inserted after the function signature
+ * @param uniqueID 11 a-z 0-9 characters
+ */
+export async function minify(code: string, autocomplete: string, uniqueID = "00000000000") {
+	assert(uniqueID.match(/^\w{11}$/))
+
 	const jsonValues: any[] = []
 	let undefinedIsReferenced = false
 
@@ -44,10 +52,10 @@ export async function minify(code: string, autocomplete: string, randomString = 
 
 				if (memberExpression.property.name == "prototype") {
 					memberExpression.computed = true
-					memberExpression.property = t.identifier(`_PROTOTYPE_PROPERTY_${randomString}_`)
+					memberExpression.property = t.identifier(`_PROTOTYPE_PROPERTY_${uniqueID}_`)
 				} else if (memberExpression.property.name == "__proto__") {
 					memberExpression.computed = true
-					memberExpression.property = t.identifier(`_PROTO_PROPERTY_${randomString}_`)
+					memberExpression.property = t.identifier(`_PROTO_PROPERTY_${uniqueID}_`)
 				}
 			}
 		})
@@ -68,8 +76,8 @@ export async function minify(code: string, autocomplete: string, randomString = 
 			},
 			format: { semicolons: false }
 		})).code!
-			.replace(new RegExp(`_PROTOTYPE_PROPERTY_${randomString}_`, "g"), `"prototype"`)
-			.replace(new RegExp(`_PROTO_PROPERTY_${randomString}_`, "g"), `"__proto__"`)
+			.replace(new RegExp(`_PROTOTYPE_PROPERTY_${uniqueID}_`, "g"), `"prototype"`)
+			.replace(new RegExp(`_PROTO_PROPERTY_${uniqueID}_`, "g"), `"__proto__"`)
 	}
 
 	let comment: string | null = null
@@ -95,14 +103,14 @@ export async function minify(code: string, autocomplete: string, randomString = 
 						const o: Record<string, unknown> = {}
 
 						if (parseObjectExpression(path.node, o))
-							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
+							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${uniqueID}_`))
 					},
 
 					ArrayExpression(path) {
 						const o: unknown[] = []
 
 						if (parseArrayExpression(path.node, o))
-							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${randomString}_`))
+							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${uniqueID}_`))
 					}
 				})
 
@@ -149,7 +157,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 
 					UnaryExpression(path) {
 						if (path.node.operator == "void" && path.node.argument.type == "NumericLiteral" && !path.node.argument.value) {
-							path.replaceWith(t.identifier(`_UNDEFINED_${randomString}_`))
+							path.replaceWith(t.identifier(`_UNDEFINED_${uniqueID}_`))
 							undefinedIsReferenced = true
 						}
 					},
@@ -160,7 +168,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(null)
 
-						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
 					},
 
 					BooleanLiteral(path) {
@@ -169,7 +177,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(path.node.value)
 
-						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
 					},
 
 					NumericLiteral(path) {
@@ -185,7 +193,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 							if (jsonValueIndex == -1)
 								jsonValueIndex += jsonValues.push(path.node.value)
 
-							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
 						})())
 					},
 
@@ -201,7 +209,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(path.node.value)
 
-						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`))
+						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
 					},
 
 					ObjectProperty({ node }) {
@@ -214,7 +222,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 							jsonValueIndex += jsonValues.push(node.key.name)
 
 						node.computed = true
-						node.key = t.identifier(`_JSON_VALUE_${jsonValueIndex}_${randomString}_`)
+						node.key = t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`)
 					}
 				})
 
@@ -237,16 +245,16 @@ export async function minify(code: string, autocomplete: string, randomString = 
 						"let",
 						[
 							t.variableDeclarator(
-								t.identifier(`_JSON_VALUE_0_${randomString}_`),
+								t.identifier(`_JSON_VALUE_0_${uniqueID}_`),
 								t.memberExpression(
 									t.taggedTemplateExpression(
 										t.memberExpression(
-											t.callExpression(t.identifier(`SC$scripts$quine`), []),
+											t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine`), []),
 											t.identifier("split")
 										),
 										t.templateLiteral([ t.templateElement({ raw: "\t", cooked: "\t" }, true) ], [])
 									),
-									t.identifier(`_SPLIT_INDEX_${randomString}_`),
+									t.identifier(`$${uniqueID}$SPLIT_INDEX`),
 									true
 								)
 							)
@@ -254,7 +262,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 					)
 
 					if (undefinedIsReferenced)
-						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${randomString}_`)))
+						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)))
 
 					functionDeclaration.body.body.unshift(variableDeclaration)
 
@@ -264,7 +272,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 						"let",
 						[
 							t.variableDeclarator(
-								t.identifier(`_JSON_VALUE_0_${randomString}_`),
+								t.identifier(`_JSON_VALUE_0_${uniqueID}_`),
 								t.callExpression(
 									t.memberExpression(
 										t.identifier("JSON"),
@@ -274,12 +282,12 @@ export async function minify(code: string, autocomplete: string, randomString = 
 										t.memberExpression(
 											t.taggedTemplateExpression(
 												t.memberExpression(
-													t.callExpression(t.identifier(`SC$scripts$quine`), []),
+													t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine`), []),
 													t.identifier("split")
 												),
 												t.templateLiteral([ t.templateElement({ raw: "\t", cooked: "\t" }, true) ], [])
 											),
-											t.identifier(`_SPLIT_INDEX_${randomString}_`),
+											t.identifier(`$${uniqueID}$SPLIT_INDEX`),
 											true
 										)
 									]
@@ -289,7 +297,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 					)
 
 					if (undefinedIsReferenced)
-						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${randomString}_`)))
+						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)))
 
 					functionDeclaration.body.body.unshift(variableDeclaration)
 
@@ -300,7 +308,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 					"let",
 					[
 						t.variableDeclarator(
-							t.arrayPattern(jsonValues.map((_, i) => t.identifier(`_JSON_VALUE_${i}_${randomString}_`))),
+							t.arrayPattern(jsonValues.map((_, i) => t.identifier(`_JSON_VALUE_${i}_${uniqueID}_`))),
 							t.callExpression(
 								t.memberExpression(
 									t.identifier("JSON"),
@@ -310,12 +318,12 @@ export async function minify(code: string, autocomplete: string, randomString = 
 									t.memberExpression(
 										t.taggedTemplateExpression(
 											t.memberExpression(
-												t.callExpression(t.identifier(`SC$scripts$quine`), []),
+												t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine`), []),
 												t.identifier("split")
 											),
 											t.templateLiteral([ t.templateElement({ raw: "\t", cooked: "\t" }, true) ], [])
 										),
-										t.identifier(`_SPLIT_INDEX_${randomString}_`),
+										t.identifier(`$${uniqueID}$SPLIT_INDEX`),
 										true
 									)
 								]
@@ -325,7 +333,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 				)
 
 				if (undefinedIsReferenced)
-					variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${randomString}_`)))
+					variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)))
 
 				functionDeclaration.body.body.unshift(variableDeclaration)
 
@@ -335,7 +343,7 @@ export async function minify(code: string, autocomplete: string, randomString = 
 			functionDeclaration.body.body.unshift(
 				t.variableDeclaration(
 					"let",
-					[ t.variableDeclarator(t.identifier(`_UNDEFINED_${randomString}_`)) ]
+					[ t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)) ]
 				)
 			)
 		}
@@ -366,11 +374,10 @@ export async function minify(code: string, autocomplete: string, randomString = 
 		code = stringSplice(code, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${comment}\t\n`, getFunctionBodyStart(code) + 1)
 
 		for (const [ i, part ] of code.split("\t").entries()) {
-			if (part != comment)
-				continue
-
-			code = code.replace(`_SPLIT_INDEX_${randomString}_`, await minifyNumber(i))
-			break
+			if (part == comment) {
+				code = code.replace(`$${uniqueID}$SPLIT_INDEX`, await minifyNumber(i))
+				break
+			}
 		}
 	}
 

@@ -1,4 +1,18 @@
-export function preProcess(code: string) {
+import { parse } from "@babel/parser"
+import { assert, stringSplice } from "../lib"
+
+export type PreprocessOptions = {
+	/** 11 a-z 0-9 characters */
+	uniqueID: string
+}
+
+/**
+ * @param code source code to be preprocessed
+ * @param options {@link PreprocessOptions details}
+ */
+export function preProcess(code: string, { uniqueID = "00000000000" }: Partial<PreprocessOptions> = {}) {
+	assert(uniqueID.match(/^\w{11}$/))
+
 	let preScriptComments: string | undefined
 	let autocomplete: string | undefined
 
@@ -28,6 +42,8 @@ export function preProcess(code: string) {
 		}
 	}
 
+	// TODO move this over to using the new system for finding subscripts
+
 	let detectedSeclevel = 4
 
 	if (code.match(/[#$][n0]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
@@ -44,18 +60,80 @@ export function preProcess(code: string) {
 	if (seclevel == undefined)
 		seclevel = detectedSeclevel
 	else if (detectedSeclevel < seclevel)
+		// TODO replace with a warning and build script anyway
 		throw new Error(`detected seclevel ${seclevelNames[detectedSeclevel]} is lower than stated seclevel ${seclevelNames[seclevel]}`)
 
 	const semicolons = code.match(/;/g)?.length ?? 0
+	const sourceCode = code
 
-	code = code
-		.replace(/#[fhmln43210]s\.scripts\.quine\(\)/g, JSON.stringify(code))
-		.replace(/[#$][fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/g, "SC$$$1$$$2(")
-		.replace(/^function\s*\(/, "export default function (")
-		.replace(/#D\(/g, "$D(")
-		.replace(/#FMCL/g, "$FMCL")
-		.replace(/#G/g, "$G")
-		.replace(/[#$]db\./g, "DB$")
+	code = code.replace(/^function\s*\(/, "export default function (")
+
+	// TODO I'm not actually doing anything with this yet
+	let file
+
+	while (true) {
+		let error
+
+		try {
+			file = parse(code, {
+				plugins: [
+					"typescript",
+					[ "decorators", { decoratorsBeforeExport: true } ],
+					"doExpressions",
+					"functionBind",
+					"functionSent",
+					"partialApplication",
+					[ "pipelineOperator", { proposal: "hack", topicToken: "%" } ],
+					"throwExpressions",
+					[ "recordAndTuple", { syntaxType: "hash" } ],
+					"classProperties",
+					"classPrivateProperties",
+					"classPrivateMethods",
+					"logicalAssignment",
+					"numericSeparator",
+					"nullishCoalescingOperator",
+					"optionalChaining",
+					"optionalCatchBinding",
+					"objectRestSpread"
+				],
+				sourceType: "module"
+			})
+			break
+		} catch (error_) {
+			assert(error_ instanceof SyntaxError)
+
+			error = error_ as SyntaxError & {
+				pos: number
+				code: string
+				reasonCode: String
+			}
+		}
+
+		if (error.code != "BABEL_PARSER_SYNTAX_ERROR" || error.reasonCode != "PrivateInExpectedIn") {
+			console.log(code.slice(error.pos).match(/.+/)?.[0])
+			throw error
+		}
+
+		const codeSlice = code.slice(error.pos)
+
+		let match
+
+		// TODO detect typos and warn e.g. we throw on `#db.ObjectID(` and it makes it look like we don't support it
+		if (match = codeSlice.match(/^#[fhmln43210]s\.scripts\.quine\(\)/))
+			code = stringSplice(code, JSON.stringify(sourceCode), error.pos, error.pos + match[0].length)
+		else if (match = codeSlice.match(/^#[fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
+			code = stringSplice(code, `$${uniqueID}$SUBSCRIPT$${match[1]}$${match[2]}(`, error.pos, error.pos + match[0].length)
+		else if (match = codeSlice.match(/^#D\(/))
+			code = stringSplice(code, `$${uniqueID}$DEBUG(`, error.pos, error.pos + match[0].length)
+		else if (match = codeSlice.match(/^#FMCL/))
+			code = stringSplice(code, `$${uniqueID}$FMCL`, error.pos, error.pos + match[0].length)
+		else if (match = codeSlice.match(/^#G/))
+			code = stringSplice(code, `$${uniqueID}$GLOBAL`, error.pos, error.pos + match[0].length)
+		else if (match = codeSlice.match(/^#db\.(i|r|f|u|u1|us|ObjectId)\(/))
+			code = stringSplice(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, error.pos + match[0].length)
+		else
+			throw error
+	}
 
 	return {
 		semicolons,

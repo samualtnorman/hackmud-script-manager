@@ -199,7 +199,7 @@ export async function push(
 			if (!usersToPushTo.length)
 				return
 
-			const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
+			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0")
 
 			const { srcLength, script: minifiedCode } = await processScript(
 				await readFile(resolvePath(sourceDirectory, dirent.name), { encoding: "utf-8" }),
@@ -207,7 +207,7 @@ export async function push(
 					minify,
 					scriptUser: true,
 					scriptName,
-					randomString
+					uniqueID
 				}
 			)
 
@@ -227,8 +227,8 @@ export async function push(
 						`scripts/${scriptName}.js`
 					),
 					minifiedCode
-						.replace(new RegExp(`_SCRIPT_USER_${randomString}_`, "g"), user)
-						.replace(new RegExp(`_FULL_SCRIPT_NAME_${randomString}_`, "g"), `${user}.${scriptName}`)
+						.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, "g"), user)
+						.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, "g"), `${user}.${scriptName}`)
 				)
 			)
 
@@ -250,7 +250,7 @@ export async function push(
 			}
 
 			if (code) {
-				const randomString = Math.floor(Math.random() * (2 ** 52)).toString(36)
+				const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0")
 
 				const { srcLength, script: minifiedCode } = await processScript(
 					code,
@@ -258,7 +258,7 @@ export async function push(
 						minify,
 						scriptUser: true,
 						scriptName,
-						randomString
+						uniqueID
 					}
 				)
 
@@ -278,8 +278,8 @@ export async function push(
 							`scripts/${scriptName}.js`
 						),
 						minifiedCode
-							.replace(new RegExp(`_SCRIPT_USER_${randomString}_`, "g"), user)
-							.replace(new RegExp(`_FULL_SCRIPT_NAME_${randomString}_`, "g"), `${user}.${scriptName}`)
+							.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, "g"), user)
+							.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, "g"), `${user}.${scriptName}`)
 					)
 				)
 
