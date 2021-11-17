@@ -38,17 +38,17 @@
 		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"scripts": {
-		"build": "rollup -c && tsc -p src",
-		"dev": "rollup -cw",
+		"build": "rollup --config && tsc --project src",
+		"dev": "rollup --config --watch",
 		"prepublishOnly": "npm run build"
 	},
 	"dependencies": {
 		"@babel/core": "^7.16.0",
 		"@babel/generator": "^7.16.0",
-		"@babel/parser": "^7.16.3",
+		"@babel/parser": "^7.16.4",
 		"@babel/plugin-proposal-class-properties": "^7.16.0",
 		"@babel/plugin-proposal-class-static-block": "^7.16.0",
-		"@babel/plugin-proposal-decorators": "^7.16.0",
+		"@babel/plugin-proposal-decorators": "^7.16.4",
 		"@babel/plugin-proposal-do-expressions": "^7.16.0",
 		"@babel/plugin-proposal-function-bind": "^7.16.0",
 		"@babel/plugin-proposal-function-sent": "^7.16.0",
@@ -68,26 +68,26 @@
 		"@babel/plugin-transform-typescript": "^7.16.1",
 		"@babel/traverse": "^7.16.3",
 		"@babel/types": "^7.16.0",
-		"acorn": "8.x",
-		"chalk": "4.x",
-		"chokidar": "3.x",
-		"terser": "5.x"
+		"acorn": "^8.5.0",
+		"chalk": "^4.1.2",
+		"chokidar": "^3.5.2",
+		"terser": "^5.10.0"
 	},
 	"devDependencies": {
-		"@babel/preset-env": "^7.16.0",
+		"@babel/preset-env": "^7.16.4",
 		"@babel/preset-typescript": "^7.16.0",
 		"@rollup/plugin-babel": "^5.3.0",
 		"@rollup/plugin-commonjs": "^21.0.1",
 		"@rollup/plugin-json": "^4.1.0",
 		"@rollup/plugin-node-resolve": "^13.0.6",
 		"@types/babel__core": "^7.1.16",
-		"@types/node": "12.x",
-		"@types/semver": "7.x",
-		"rollup": "^2.56.3",
+		"@types/node": "^12.20.37",
+		"@types/semver": "^7.3.9",
+		"rollup": "^2.60.0",
 		"rollup-plugin-preserve-shebang": "^1.0.1",
 		"rollup-plugin-terser": "^7.0.2",
-		"semver": "7.x",
-		"typescript": "^4.4.4"
+		"semver": "^7.3.5",
+		"typescript": "^4.5.2"
 	},
 	"engines": {
 		"node": "^12.20 || >=14"
@@ -99,6 +99,6 @@
 		"import": "./index.js"
 	},
 	"optionalDependencies": {
-		"deasync": "^0.1.23"
+		"deasync": "^0.1.24"
 	}
 }
