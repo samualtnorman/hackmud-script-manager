@@ -518,6 +518,17 @@ export async function compile(code: string, {
 			}
 		}
 
+		if (program.scope.hasGlobal("_EXPORTS")) {
+			for (const referencePath of getReferencePathsToGlobal("_EXPORTS", program)) {
+				referencePath.replaceWith(
+					t.arrayExpression(
+						[ ...exports.keys(), ...liveExports.keys() ]
+							.map(name => t.stringLiteral(name))
+					)
+				)
+			}
+		}
+
 		if (exports.size || liveExports.size) {
 			globalBlock.body.push(
 				t.expressionStatement(
