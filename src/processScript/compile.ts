@@ -26,6 +26,7 @@ import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import { assert, ensure } from "@samual/lib/assert.js"
+import { resolve as resolvePath } from "path"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from ".."
 
@@ -46,6 +47,7 @@ export type CompileOptions = {
 	scriptName: string | true
 
 	seclevel: number
+	filePath: string
 }
 
 /**
@@ -57,9 +59,14 @@ export async function compile(code: string, {
 	sourceCode = code,
 	scriptUser = "UNKNOWN",
 	scriptName = "UNKNOWN",
-	seclevel = -1
+	seclevel = -1,
+	filePath
 }: Partial<CompileOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
+
+	const filePathResolved = filePath
+		? resolvePath(filePath)
+		: "script"
 
 	const bundle = await rollup({
 		plugins: [
@@ -68,17 +75,11 @@ export async function compile(code: string, {
 				buildStart() {
 					this.emitFile({
 						type: "chunk",
-						id: "script"
+						id: filePathResolved
 					})
 				},
-				resolveId(id) {
-					if (id == "script")
-						return id
-
-					return null
-				},
 				load(id) {
-					if (id == "script")
+					if (id == filePathResolved)
 						return code
 
 					return null
@@ -111,7 +112,8 @@ export async function compile(code: string, {
 					[ babelPluginProposalObjectRestSpread.default ],
 					[ babelPluginTransformExponentiationOperator.default ]
 				],
-				configFile: false
+				configFile: false,
+				extensions
 			})
 		]
 	})

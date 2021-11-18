@@ -1,5 +1,6 @@
 import babelGenerator from "@babel/generator"
 import { assert, getHackmudCharacterCount } from "@samual/lib"
+import { resolve as resolvePath } from "path"
 import { performance } from "perf_hooks"
 import { compile } from "./compile"
 import minify from "./minify"
@@ -25,6 +26,8 @@ export type ProcessOptions = {
 
 	/** the name of this script (or set to `true` if it is not yet known) */
 	scriptName: string | true
+
+	filePath: string
 }
 
 /**
@@ -39,7 +42,8 @@ export async function processScript(
 		minify: shouldMinify = true,
 		uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0"),
 		scriptUser = "UNKNOWN",
-		scriptName = "UNKNOWN"
+		scriptName = "UNKNOWN",
+		filePath
 	}: Partial<ProcessOptions> = {}
 ): Promise<{
 	srcLength: number
@@ -49,6 +53,11 @@ export async function processScript(
 }> {
 	assert(uniqueID.match(/^\w{11}$/))
 
+	if (filePath)
+		filePath = resolvePath(filePath)
+	else
+		filePath = "script"
+
 	const time = performance.now()
 	const sourceCode = code
 	let autocomplete
@@ -57,7 +66,7 @@ export async function processScript(
 
 	({ autocomplete, code, seclevel, semicolons } = preprocess(code, { uniqueID }))
 
-	code = generate(await compile(code, { uniqueID, sourceCode, scriptUser, scriptName, seclevel })!).code
+	code = generate(await compile(code, { uniqueID, sourceCode, scriptUser, scriptName, seclevel, filePath })!).code
 
 	// TODO fix incorrect source length again
 

@@ -108,13 +108,15 @@ export async function push(
 
 				if (dirent.isFile() && supportedExtensions.includes(extension)) {
 					const scriptName = getBaseName(dirent.name, extension)
+					const filePath = resolvePath(sourceDirectory, user, dirent.name)
 
 					const { srcLength, script: minifiedCode } = await processScript(
-						await readFile(resolvePath(sourceDirectory, user, dirent.name), { encoding: "utf-8" }),
+						await readFile(filePath, { encoding: "utf-8" }),
 						{
 							minify,
 							scriptUser: user,
-							scriptName
+							scriptName,
+							filePath
 						}
 					)
 
@@ -149,10 +151,12 @@ export async function push(
 			let code
 			let fileName
 
+			let filePath!: string
+
 			for (const extension of supportedExtensions) {
 				try {
 					fileName = `${scriptName}${extension}`
-					code = await readFile(resolvePath(sourceDirectory, user, fileName), { encoding: "utf-8" })
+					code = await readFile(filePath = resolvePath(sourceDirectory, user, fileName), { encoding: "utf-8" })
 					break
 				} catch {}
 			}
@@ -163,7 +167,8 @@ export async function push(
 					{
 						minify,
 						scriptUser: user,
-						scriptName
+						scriptName,
+						filePath
 					}
 				)
 
@@ -200,14 +205,16 @@ export async function push(
 				return
 
 			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0")
+			const filePath = resolvePath(sourceDirectory, dirent.name)
 
 			const { srcLength, script: minifiedCode } = await processScript(
-				await readFile(resolvePath(sourceDirectory, dirent.name), { encoding: "utf-8" }),
+				await readFile(filePath, { encoding: "utf-8" }),
 				{
 					minify,
 					scriptUser: true,
 					scriptName,
-					uniqueID
+					uniqueID,
+					filePath
 				}
 			)
 
@@ -240,11 +247,12 @@ export async function push(
 		await forEachParallel(usersByGlobalScriptsToPush, async ([ scriptName, users ]) => {
 			let code
 			let fileName!: string
+			let filePath!: string
 
 			for (const extension of supportedExtensions) {
 				try {
 					fileName = `${scriptName}${extension}`
-					code = await readFile(resolvePath(sourceDirectory, fileName), { encoding: "utf-8" })
+					code = await readFile(filePath = resolvePath(sourceDirectory, fileName), { encoding: "utf-8" })
 					break
 				} catch {}
 			}
@@ -258,7 +266,8 @@ export async function push(
 						minify,
 						scriptUser: true,
 						scriptName,
-						uniqueID
+						uniqueID,
+						filePath
 					}
 				)
 

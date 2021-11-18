@@ -301,7 +301,8 @@ for (const arg of process.argv.slice(2)) {
 						{
 							minify: !options.get("skip-minify"),
 							scriptUser,
-							scriptName
+							scriptName,
+							filePath: commands[1]
 						}
 					)
 
