@@ -120,17 +120,17 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 
 		// TODO detect typos and warn e.g. we throw on `#db.ObjectID(` and it makes it look like we don't support it
 		if (match = codeSlice.match(/^#[fhmln43210]s\.scripts\.quine\(\)/))
-			code = spliceString(code, JSON.stringify(sourceCode), error.pos, error.pos + match[0].length)
+			code = spliceString(code, JSON.stringify(sourceCode), error.pos, match[0].length)
 		else if (match = codeSlice.match(/^#[fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
-			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[1]}$${match[2]}(`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[1]}$${match[2]}(`, error.pos, match[0].length)
 		else if (match = codeSlice.match(/^#D\(/))
-			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, match[0].length)
 		else if (match = codeSlice.match(/^#FMCL/))
-			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, match[0].length)
 		else if (match = codeSlice.match(/^#G/))
-			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, match[0].length)
 		else if (match = codeSlice.match(/^#db\.(i|r|f|u|u1|us|ObjectId)\(/))
-			code = spliceString(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, match[0].length)
 		else
 			throw error
 	}

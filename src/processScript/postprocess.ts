@@ -8,23 +8,23 @@ export function postprocess(code: string, seclevel: number, uniqueID: string) {
 
 		switch (type) {
 			case "SUBSCRIPT": {
-				code = spliceString(code, `#${"nlmhf"[seclevel]}s.${args[0]}.${args[1]}`, index, index + match.length)
+				code = spliceString(code, `#${"nlmhf"[seclevel]}s.${args[0]}.${args[1]}`, index, match.length)
 			} break
 
 			case "DEBUG": {
-				code = spliceString(code, `#D`, index, index + match.length)
+				code = spliceString(code, `#D`, index, match.length)
 			} break
 
 			case "FMCL": {
-				code = spliceString(code, `#FMCL`, index, index + match.length)
+				code = spliceString(code, `#FMCL`, index, match.length)
 			} break
 
 			case "GLOBAL": {
-				code = spliceString(code, `#GLOBAL`, index, index + match.length)
+				code = spliceString(code, `#GLOBAL`, index, match.length)
 			} break
 
 			case "DB": {
-				code = spliceString(code, `#db.${args[0]}`, index, index + match.length)
+				code = spliceString(code, `#db.${args[0]}`, index, match.length)
 			} break
 
 			default:
