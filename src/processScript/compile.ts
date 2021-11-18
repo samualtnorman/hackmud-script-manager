@@ -276,19 +276,52 @@ export async function compile(code: string, {
 				for (const specifier of statement.specifiers) {
 					assert(specifier.type == "ExportSpecifier", `${specifier.type} is currently unsupported`)
 
-					if (liveGlobalVariables.includes(specifier.local.name)) {
+					const exportedName = specifier.exported.type == "Identifier"
+						? specifier.exported.name
+						: specifier.exported.value
+
+					if (exportedName == "default") {
+						if (mainFunction) {
+							globalBlock.body.push(
+								t.variableDeclaration(
+									"let",
+									[
+										t.variableDeclarator(
+											mainFunction.id!,
+											t.functionExpression(
+												null,
+												mainFunction.params,
+												mainFunction.body,
+												mainFunction.generator,
+												mainFunction.async
+											)
+										)
+									]
+								)
+							)
+						}
+
+						mainFunction = t.functionDeclaration(
+							t.identifier(topFunctionName),
+							[
+								t.identifier("context"),
+								t.identifier("args")
+							],
+							t.blockStatement([
+								t.returnStatement(
+									t.callExpression(specifier.local, [])
+								)
+							])
+						)
+					} else if (liveGlobalVariables.includes(specifier.local.name)) {
 						liveExports.set(
 							specifier.local.name,
-							specifier.exported.type == "Identifier"
-								? specifier.exported.name
-								: specifier.exported.value
+							exportedName
 						)
 					} else {
 						exports.set(
 							specifier.local.name,
-							specifier.exported.type == "Identifier"
-								? specifier.exported.name
-								: specifier.exported.value
+							exportedName
 						)
 					}
 				}
