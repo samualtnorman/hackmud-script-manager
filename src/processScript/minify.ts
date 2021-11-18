@@ -157,9 +157,30 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 					},
 
 					UnaryExpression(path) {
-						if (path.node.operator == "void" && path.node.argument.type == "NumericLiteral" && !path.node.argument.value) {
-							path.replaceWith(t.identifier(`_UNDEFINED_${uniqueID}_`))
-							undefinedIsReferenced = true
+						if (path.node.operator == "void") {
+							if (path.node.argument.type == "NumericLiteral" && !path.node.argument.value) {
+								path.replaceWith(t.identifier(`_UNDEFINED_${uniqueID}_`))
+								undefinedIsReferenced = true
+							}
+						} else if (path.node.operator == "-" && path.node.argument.type == "NumericLiteral") {
+							const value = -path.node.argument.value
+
+							promises.push((async () => {
+								if ((await minifyNumber(value)).length <= 3)
+									return
+
+								if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
+									path.parent.computed = true
+
+								let jsonValueIndex = jsonValues.indexOf(value)
+
+								if (jsonValueIndex == -1)
+									jsonValueIndex += jsonValues.push(value)
+
+								path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+							})())
+
+							path.skip()
 						}
 					},
 
