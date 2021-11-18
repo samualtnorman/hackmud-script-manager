@@ -1,5 +1,5 @@
 import { parse } from "@babel/parser"
-import { assert, stringSplice } from "../lib"
+import { assert, spliceString } from "@samual/lib"
 
 export type PreprocessOptions = {
 	/** 11 a-z 0-9 characters */
@@ -120,17 +120,17 @@ export function preProcess(code: string, { uniqueID = "00000000000" }: Partial<P
 
 		// TODO detect typos and warn e.g. we throw on `#db.ObjectID(` and it makes it look like we don't support it
 		if (match = codeSlice.match(/^#[fhmln43210]s\.scripts\.quine\(\)/))
-			code = stringSplice(code, JSON.stringify(sourceCode), error.pos, error.pos + match[0].length)
+			code = spliceString(code, JSON.stringify(sourceCode), error.pos, error.pos + match[0].length)
 		else if (match = codeSlice.match(/^#[fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
-			code = stringSplice(code, `$${uniqueID}$SUBSCRIPT$${match[1]}$${match[2]}(`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[1]}$${match[2]}(`, error.pos, error.pos + match[0].length)
 		else if (match = codeSlice.match(/^#D\(/))
-			code = stringSplice(code, `$${uniqueID}$DEBUG(`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, error.pos + match[0].length)
 		else if (match = codeSlice.match(/^#FMCL/))
-			code = stringSplice(code, `$${uniqueID}$FMCL`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, error.pos + match[0].length)
 		else if (match = codeSlice.match(/^#G/))
-			code = stringSplice(code, `$${uniqueID}$GLOBAL`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, error.pos + match[0].length)
 		else if (match = codeSlice.match(/^#db\.(i|r|f|u|u1|us|ObjectId)\(/))
-			code = stringSplice(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, error.pos + match[0].length)
+			code = spliceString(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, error.pos + match[0].length)
 		else
 			throw error
 	}

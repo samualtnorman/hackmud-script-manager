@@ -21,7 +21,7 @@ import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-
 import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
 import babelTraverse, { Hub, NodePath } from "@babel/traverse"
 import t, { BlockStatement, CallExpression, FunctionDeclaration, Identifier, Program } from "@babel/types"
-import { assert, ensure } from "../lib"
+import { assert, ensure } from "@samual/lib/assert.js"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 

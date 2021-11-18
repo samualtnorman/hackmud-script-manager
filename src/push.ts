@@ -1,9 +1,9 @@
-import fs from "fs"
+import { DynamicMap, forEachParallel, getHackmudCharacterCount, writeFilePersistent } from "@samual/lib"
+import { promises as fsPromises } from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { Info, processScript, supportedExtensions } from "."
-import { DynamicMap, forEachAsync, hackmudLength, writeFilePersist } from "./lib"
 
-const { readFile, readdir: readDirectory } = fs.promises
+const { readFile, readdir: readDirectory } = fsPromises
 
 interface PushOptions {
 	/**
@@ -101,9 +101,9 @@ export async function push(
 	}
 
 	// foo.*
-	await forEachAsync(wildScriptUsers, async user => {
+	await forEachParallel(wildScriptUsers, async user => {
 		await readDirectory(resolvePath(sourceDirectory, user), { withFileTypes: true }).then(async dirents => {
-			await forEachAsync(dirents, async dirent => {
+			await forEachParallel(dirents, async dirent => {
 				const extension = getFileExtension(dirent.name)
 
 				if (dirent.isFile() && supportedExtensions.includes(extension)) {
@@ -121,7 +121,7 @@ export async function push(
 					const info: Info = {
 						file: `${user}/${dirent.name}`,
 						users: [ user ],
-						minLength: hackmudLength(minifiedCode),
+						minLength: getHackmudCharacterCount(minifiedCode),
 						error: null,
 						srcLength
 					}
@@ -129,7 +129,7 @@ export async function push(
 					scriptNamesAlreadyPushedByUser.get(user).add(scriptName)
 					allInfo.push(info)
 
-					await writeFilePersist(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
+					await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
 
 					onPush(info)
 				}
@@ -141,11 +141,11 @@ export async function push(
 	})
 
 	// foo.bar
-	await forEachAsync(scriptNamesByUser, async ([ user, scripts ]) => {
+	await forEachParallel(scriptNamesByUser, async ([ user, scripts ]) => {
 		if (wildScriptUsers.has(user))
 			return
 
-		await forEachAsync(scripts, async scriptName => {
+		await forEachParallel(scripts, async scriptName => {
 			let code
 			let fileName
 
@@ -170,14 +170,14 @@ export async function push(
 				const info: Info = {
 					file: `${user}/${fileName}`,
 					users: [ user ],
-					minLength: hackmudLength(minifiedCode),
+					minLength: getHackmudCharacterCount(minifiedCode),
 					error: null,
 					srcLength
 				}
 
 				allInfo.push(info)
 
-				await writeFilePersist(resolvePath(hackmudDirectory, user, "scripts", `${scriptName}.js`), minifiedCode)
+				await writeFilePersistent(resolvePath(hackmudDirectory, user, "scripts", `${scriptName}.js`), minifiedCode)
 
 				onPush(info)
 			} else
@@ -187,7 +187,7 @@ export async function push(
 
 	// foo.* (global)
 	if (wildScriptUsers.size) {
-		await forEachAsync(sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true }), async dirent => {
+		await forEachParallel(sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true }), async dirent => {
 			const extension = getFileExtension(dirent.name)
 
 			if (!dirent.isFile() || !supportedExtensions.includes(extension))
@@ -214,13 +214,13 @@ export async function push(
 			const info: Info = {
 				file: dirent.name,
 				users: usersToPushTo,
-				minLength: hackmudLength(minifiedCode),
+				minLength: getHackmudCharacterCount(minifiedCode),
 				error: null,
 				srcLength
 			}
 
-			await forEachAsync(usersToPushTo, user =>
-				writeFilePersist(
+			await forEachParallel(usersToPushTo, user =>
+				writeFilePersistent(
 					resolvePath(
 						hackmudDirectory,
 						user,
@@ -237,7 +237,7 @@ export async function push(
 		})
 	} else {
 		// foo.bar (global)
-		await forEachAsync(usersByGlobalScriptsToPush, async ([ scriptName, users ]) => {
+		await forEachParallel(usersByGlobalScriptsToPush, async ([ scriptName, users ]) => {
 			let code
 			let fileName!: string
 
@@ -265,13 +265,13 @@ export async function push(
 				const info: Info = {
 					file: fileName,
 					users: [ ...users ],
-					minLength: hackmudLength(minifiedCode),
+					minLength: getHackmudCharacterCount(minifiedCode),
 					error: null,
 					srcLength
 				}
 
-				await forEachAsync(users, user =>
-					writeFilePersist(
+				await forEachParallel(users, user =>
+					writeFilePersistent(
 						resolvePath(
 							hackmudDirectory,
 							user,

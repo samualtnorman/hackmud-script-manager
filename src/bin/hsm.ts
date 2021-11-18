@@ -1,11 +1,11 @@
 #!/usr/bin/env node
+import { DynamicMap, getHackmudCharacterCount, writeFilePersistent } from "@samual/lib"
 import chalk from "chalk"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
 import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, relative as relativePath, resolve as resolvePath } from "path"
 import { generateTypings, Info, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
 import { version as moduleVersion } from "../../package.json"
-import { DynamicMap, hackmudLength, writeFilePersist } from "../lib"
 
 const { readFile, rmdir: removeDirectory, writeFile, mkdir: makeDirectory } = fs.promises
 
@@ -324,16 +324,16 @@ for (const arg of process.argv.slice(2)) {
 						)
 					}
 
-					const scriptLength = hackmudLength(script)
+					const scriptLength = getHackmudCharacterCount(script)
 
-					await writeFilePersist(outputPath, script)
+					await writeFilePersistent(outputPath, script)
 						.catch(async (error: NodeJS.ErrnoException) => {
 							if (!commands[2] || error.code != "EISDIR")
 								throw error
 
 							outputPath = resolvePath(outputPath, `${getBaseName(commands[1], fileExtension)}.js`)
 
-							await writeFilePersist(outputPath, script)
+							await writeFilePersistent(outputPath, script)
 						})
 						.then(
 							() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(relativePath(".", outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),

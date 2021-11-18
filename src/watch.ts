@@ -1,10 +1,10 @@
+import { getHackmudCharacterCount, writeFilePersistent } from "@samual/lib"
 import { watch as watchDirectory } from "chokidar"
-import fs from "fs"
+import { promises as fsPromises } from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { generateTypings, Info, processScript, supportedExtensions } from "."
-import { hackmudLength, writeFilePersist } from "./lib"
 
-const { readFile, readdir: readDirectory } = fs.promises
+const { readFile, readdir: readDirectory } = fsPromises
 
 /**
  * Watches target file or folder for updates and builds and pushes updated file.
@@ -81,7 +81,7 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 						if (script) {
 							const skip = skips.get(name) || []
 
-							info.minLength = hackmudLength(script)
+							info.minLength = getHackmudCharacterCount(script)
 
 							if (!users.length) {
 								users = (await readDirectory(hackmudDir, { withFileTypes: true }))
@@ -94,7 +94,7 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 									continue
 
 								info.users.push(user)
-								promises.push(writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script))
+								promises.push(writeFilePersistent(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script))
 							}
 						} else
 							info.error = new Error("processed script was empty")
@@ -131,8 +131,8 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 					if (!error) {
 						if (script) {
-							info.minLength = hackmudLength(script)
-							await writeFilePersist(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script)
+							info.minLength = getHackmudCharacterCount(script)
+							await writeFilePersistent(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script)
 						} else
 							info.error = new Error("processed script was empty")
 					}

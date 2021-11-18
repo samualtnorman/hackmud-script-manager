@@ -1,7 +1,7 @@
-import fs from "fs"
+import { promises as fsPromises } from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 
-const { readdir: readDirectory, writeFile } = fs.promises
+const { readdir: readDirectory, writeFile } = fsPromises
 
 export async function generateTypings(srcDir: string, target: string, hackmudPath?: string) {
 	const users = new Set<string>()

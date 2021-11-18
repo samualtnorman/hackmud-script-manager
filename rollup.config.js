@@ -5,7 +5,7 @@ import nodeResolve from "@rollup/plugin-node-resolve"
 import { promises as fsPromises } from "fs"
 import preserveShebang from "rollup-plugin-preserve-shebang"
 import { terser } from "rollup-plugin-terser"
-import { dependencies } from "./package.json"
+import packageConfig from "./package.json"
 
 const { readdir: readDirectory } = fsPromises
 
@@ -22,13 +22,24 @@ const plugins = [
 	preserveShebang()
 ]
 
+const external = []
+
+if ("dependencies" in packageConfig)
+	external.push(...Object.keys(packageConfig.dependencies))
+
 const sourceDirectory = "src"
 const findFilesPromise = findFiles(sourceDirectory)
 
 /** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
 export default async ({ w }) => {
-	if (!w)
-		plugins.push(terser())
+	if (!w) {
+		plugins.push(terser({
+			ecma: 2019,
+			keep_classnames: true,
+			keep_fnames: true
+		}))
+	} else if ("devDependencies" in packageConfig)
+		external.push(...Object.keys(packageConfig.devDependencies))
 
 	return {
 		input: Object.fromEntries(
@@ -40,12 +51,8 @@ export default async ({ w }) => {
 			dir: "."
 		},
 		plugins,
-		external: [
-			...Object.keys(dependencies),
-			"fs",
-			"path",
-			"os"
-		]
+		external,
+		preserveEntrySignatures: "allow-extension"
 	}
 }
 

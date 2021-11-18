@@ -1,5 +1,5 @@
+import { copyFilePersistent } from "@samual/lib"
 import { resolve as resolvePath } from "path"
-import { copyFilePersist } from "./lib"
 
 /**
  * Copies script from hackmud to local source folder.
@@ -10,7 +10,7 @@ import { copyFilePersist } from "./lib"
  */
 export async function pull(sourceFolderPath: string, hackmudPath: string, script: string) {
 	const [ user, name ] = script.split(".")
-	await copyFilePersist(resolvePath(hackmudPath, user, "scripts", `${name}.js`), resolvePath(sourceFolderPath, user, `${name}.js`))
+	await copyFilePersistent(resolvePath(hackmudPath, user, "scripts", `${name}.js`), resolvePath(sourceFolderPath, user, `${name}.js`))
 }
 
 export default pull

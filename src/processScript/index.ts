@@ -1,6 +1,6 @@
 import babelGenerator from "@babel/generator"
+import { assert, getHackmudCharacterCount } from "@samual/lib"
 import { performance } from "perf_hooks"
-import { assert, hackmudLength } from "../lib"
 import { compile } from "./compile"
 import minify from "./minify"
 import postProcess from "./postProcess"
@@ -64,7 +64,7 @@ export async function processScript(
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
 	// source to make things fair
-	let srcLength = hackmudLength(code.replace(/^function\s*\w+\(/, "function("))
+	let srcLength = getHackmudCharacterCount(code.replace(/^function\s*\w+\(/, "function("))
 		- (code.match(/;/g)?.length || 0)
 		+ semicolons
 		// + (code.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)

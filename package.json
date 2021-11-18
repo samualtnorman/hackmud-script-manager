@@ -80,6 +80,7 @@
 		"@rollup/plugin-commonjs": "^21.0.1",
 		"@rollup/plugin-json": "^4.1.0",
 		"@rollup/plugin-node-resolve": "^13.0.6",
+		"@samual/lib": "^0.2.0-e6a06ca",
 		"@types/babel__core": "^7.1.16",
 		"@types/node": "^12.20.37",
 		"@types/semver": "^7.3.9",

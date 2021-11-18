@@ -2,15 +2,16 @@ import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelTraverse from "@babel/traverse"
 import t, { Expression } from "@babel/types"
+import { assert, getHackmudCharacterCount, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
-import { assert, hackmudLength, stringSplice } from "../lib"
 
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 // TODO when there are more than 3 references to `$G`, place a `let _GLOBAL_0_ = $G` at the top and replace references with `_GLOBAL_0_`
 // TODO move autocomplete stuff outside this function
+// TODO allow not mangling class and function names
 
 /**
  * @param code compiled code and/or hackmud compatible code
@@ -371,7 +372,7 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 
 	// this step affects the character count and can't be done after the count comparison
 	if (comment != null) {
-		code = stringSplice(code, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${comment}\t\n`, getFunctionBodyStart(code) + 1)
+		code = spliceString(code, `${autocomplete ? `//${autocomplete}\n` : ""}\n//\t${comment}\t\n`, getFunctionBodyStart(code) + 1)
 
 		for (const [ i, part ] of code.split("\t").entries()) {
 			if (part == comment) {
@@ -384,11 +385,11 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 	// if the script has a comment, it's gonna contain `SC$scripts$quine()`
 	// which is gonna eventually compile to `#fs.scripts.quine()` which contains
 	// an extra character so we have to account for that
-	if (hackmudLength(scriptBeforeJSONValueReplacement) <= (hackmudLength(code) + Number(hasComment))) {
+	if (getHackmudCharacterCount(scriptBeforeJSONValueReplacement) <= (getHackmudCharacterCount(code) + Number(hasComment))) {
 		code = scriptBeforeJSONValueReplacement
 
 		if (autocomplete)
-			code = stringSplice(code, `//${autocomplete}\n`, getFunctionBodyStart(code) + 1)
+			code = spliceString(code, `//${autocomplete}\n`, getFunctionBodyStart(code) + 1)
 	}
 
 	return code
