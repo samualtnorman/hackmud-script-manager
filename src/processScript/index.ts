@@ -3,15 +3,15 @@ import { assert, getHackmudCharacterCount } from "@samual/lib"
 import { performance } from "perf_hooks"
 import { compile } from "./compile"
 import minify from "./minify"
-import postProcess from "./postProcess"
-import preProcess from "./preProcess"
+import postprocess from "./postprocess"
+import preprocess from "./preprocess"
 
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
 export { compile } from "./compile"
 export { minify } from "./minify"
-export { postProcess } from "./postProcess"
-export { preProcess } from "./preProcess"
+export { postprocess } from "./postprocess"
+export { preprocess } from "./preprocess"
 
 export type ProcessOptions = {
 	/** whether to minify the given code */
@@ -55,7 +55,7 @@ export async function processScript(
 	let seclevel
 	let semicolons
 
-	({ autocomplete, code, seclevel, semicolons } = preProcess(code, { uniqueID }))
+	({ autocomplete, code, seclevel, semicolons } = preprocess(code, { uniqueID }))
 
 	code = generate(await compile(code, { uniqueID, sourceCode, scriptUser, scriptName })!).code
 
@@ -73,7 +73,7 @@ export async function processScript(
 	if (shouldMinify)
 		code = await minify(code, autocomplete, uniqueID)
 
-	code = postProcess(code, seclevel, uniqueID)
+	code = postprocess(code, seclevel, uniqueID)
 
 	return {
 		srcLength,

@@ -10,7 +10,7 @@ export type PreprocessOptions = {
  * @param code source code to be preprocessed
  * @param options {@link PreprocessOptions details}
  */
-export function preProcess(code: string, { uniqueID = "00000000000" }: Partial<PreprocessOptions> = {}) {
+export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<PreprocessOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
 
 	let preScriptComments: string | undefined
@@ -143,4 +143,4 @@ export function preProcess(code: string, { uniqueID = "00000000000" }: Partial<P
 	}
 }
 
-export default preProcess
+export default preprocess

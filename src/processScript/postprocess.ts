@@ -1,6 +1,6 @@
 import { findMatches, spliceString } from "@samual/lib"
 
-export function postProcess(code: string, seclevel: number, uniqueID: string) {
+export function postprocess(code: string, seclevel: number, uniqueID: string) {
 	code = code.replace(/^function\s*\w+\(/, "function(")
 
 	for (const { index, match } of [ ...findMatches(new RegExp(`\\$${uniqueID}\\$[\\w$]+`, "g"), code) ].reverse()) {
@@ -35,4 +35,4 @@ export function postProcess(code: string, seclevel: number, uniqueID: string) {
 	return code
 }
 
-export default postProcess
+export default postprocess
