@@ -1,4 +1,4 @@
-import { transformAsync as transform } from "@babel/core"
+import { parse } from "@babel/parser"
 import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
 import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
@@ -19,11 +19,18 @@ import babelPluginProposalRecordAndTuple from "@babel/plugin-proposal-record-and
 import babelPluginProposalThrowExpressions from "@babel/plugin-proposal-throw-expressions"
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
 import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
-import babelTraverse, { Hub, NodePath } from "@babel/traverse"
+import babelTraverse, { NodePath } from "@babel/traverse"
 import t, { BlockStatement, CallExpression, FunctionDeclaration, Identifier, Program } from "@babel/types"
+import rollupPluginBabel_ from "@rollup/plugin-babel"
+import rollupPluginCommonJS from "@rollup/plugin-commonjs"
+import rollupPluginJSON from "@rollup/plugin-json"
+import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import { assert, ensure } from "@samual/lib/assert.js"
+import { rollup } from "rollup"
+import { supportedExtensions as extensions } from ".."
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
+const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
 
 export type CompileOptions = {
 	/** 11 a-z 0-9 characters */
@@ -54,53 +61,75 @@ export async function compile(code: string, {
 }: Partial<CompileOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
 
-	const file = (await transform(code, {
+	const bundle = await rollup({
 		plugins: [
-			[ babelPluginTransformTypescript.default ],
-			[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
-			[ babelPluginProposalDoExpressions.default ],
-			[ babelPluginProposalFunctionBind.default ],
-			[ babelPluginProposalFunctionSent.default ],
-			[ babelPluginProposalPartialApplication.default ],
-			[ babelPluginProposalPipelineOperator.default, { proposal: "hack", topicToken: "%" } ],
-			[ babelPluginProposalThrowExpressions.default ],
-			[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash" } ],
-			[ babelPluginProposalClassProperties.default ],
-			[ babelPluginProposalClassStaticBlock.default ],
-			[ babelPluginProposalPrivatePropertyInObject.default ],
-			[ babelPluginProposalLogicalAssignmentOperators.default ],
-			[ babelPluginProposalNumericSeparator.default ],
-			[ babelPluginProposalNullishCoalescingOperator.default ],
-			[ babelPluginProposalOptionalChaining.default ],
-			[ babelPluginProposalOptionalCatchBinding.default ],
-			[ babelPluginProposalJSONStrings.default ],
-			[ babelPluginProposalObjectRestSpread.default ],
-			[ babelPluginTransformExponentiationOperator.default ]
-		],
-		code: false,
-		ast: true,
-		configFile: false
-	}))!.ast!
+			{
+				name: "emit script",
+				buildStart() {
+					this.emitFile({
+						type: "chunk",
+						id: "script"
+					})
+				},
+				resolveId(id) {
+					if (id == "script")
+						return id
 
-	// if (!file.program.body.length) {
-	// 	return {
-	// 		srcLength: 12,
-	// 		script: "function(){}",
-	// 		warnings: [ { message: "script is empty", line: 0 } ],
-	// 		timeTook: performance.now() - time
-	// 	}
-	// }
+					return null
+				},
+				load(id) {
+					if (id == "script")
+						return code
 
+					return null
+				}
+			},
+			rollupPluginCommonJS(),
+			rollupPluginNodeResolve({ extensions }),
+			rollupPluginJSON(),
+			rollupPluginBabel({
+				babelHelpers: "bundled",
+				plugins: [
+					[ babelPluginTransformTypescript.default ],
+					[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
+					[ babelPluginProposalDoExpressions.default ],
+					[ babelPluginProposalFunctionBind.default ],
+					[ babelPluginProposalFunctionSent.default ],
+					[ babelPluginProposalPartialApplication.default ],
+					[ babelPluginProposalPipelineOperator.default, { proposal: "hack", topicToken: "%" } ],
+					[ babelPluginProposalThrowExpressions.default ],
+					[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash" } ],
+					[ babelPluginProposalClassProperties.default ],
+					[ babelPluginProposalClassStaticBlock.default ],
+					[ babelPluginProposalPrivatePropertyInObject.default ],
+					[ babelPluginProposalLogicalAssignmentOperators.default ],
+					[ babelPluginProposalNumericSeparator.default ],
+					[ babelPluginProposalNullishCoalescingOperator.default ],
+					[ babelPluginProposalOptionalChaining.default ],
+					[ babelPluginProposalOptionalCatchBinding.default ],
+					[ babelPluginProposalJSONStrings.default ],
+					[ babelPluginProposalObjectRestSpread.default ],
+					[ babelPluginTransformExponentiationOperator.default ]
+				],
+				configFile: false
+			})
+		]
+	})
+
+	code = (await bundle.generate({})).output[0].code
+
+	const file = parse(code, { sourceType: "module" })
 	const topFunctionName = `_SCRIPT_${uniqueID}_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
 
-	const program = NodePath.get({
-		container: file,
-		hub: new Hub,
-		key: "program",
-		parent: file,
-		parentPath: null
+	let program!: NodePath<t.Program>
+
+	traverse(file, {
+		Program(path) {
+			program = path
+			path.skip()
+		}
 	})
 
 	if (program.scope.hasGlobal("_START")) {
