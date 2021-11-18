@@ -96,8 +96,11 @@
 	"types": "index.d.ts",
 	"type": "module",
 	"exports": {
-		"require": "./index.cjs",
-		"import": "./index.js"
+		".": {
+			"import": "./index.js",
+			"require": "./index.cjs"
+		},
+		"./*": "./*"
 	},
 	"optionalDependencies": {
 		"deasync": "^0.1.24"
