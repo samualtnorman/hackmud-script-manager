@@ -115,8 +115,8 @@ export async function compile(code: string, {
 			referencePath.replaceWith(t.stringLiteral(sourceCode))
 	}
 
-	if (program.scope.hasGlobal("_BUILD_TIME")) {
-		for (const referencePath of getReferencePathsToGlobal("_BUILD_TIME", program))
+	if (program.scope.hasGlobal("_BUILD_DATE")) {
+		for (const referencePath of getReferencePathsToGlobal("_BUILD_DATE", program))
 			referencePath.replaceWith(t.numericLiteral(Date.now()))
 	}
 
