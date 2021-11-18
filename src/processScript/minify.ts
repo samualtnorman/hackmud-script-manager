@@ -199,7 +199,7 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 					},
 
 					StringLiteral(path) {
-						if (path.node.value.includes("\u0000") || path.node.value.length < 2)
+						if (path.node.value.includes("\u0000") || path.toString().length < 4)
 							return
 
 						if (path.parentKey == "key" && path.parent.type == "ObjectProperty")
