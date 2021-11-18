@@ -201,11 +201,11 @@ export async function compile(code: string, {
 		for (const referencePath of getReferencePathsToGlobal("_SECLEVEL", program)) {
 			referencePath.replaceWith(
 				seclevel < 0
-					? t.numericLiteral(seclevel)
-					: t.unaryExpression(
+					? t.unaryExpression(
 						"-",
 						t.numericLiteral(-seclevel)
 					)
+					: t.numericLiteral(seclevel)
 			)
 		}
 	}
