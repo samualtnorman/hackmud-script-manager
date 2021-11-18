@@ -37,6 +37,8 @@ export type CompileOptions = {
 
 	/** the name of this script (or set to `true` if it is not yet known) */
 	scriptName: string | true
+
+	seclevel: number
 }
 
 /**
@@ -47,7 +49,8 @@ export async function compile(code: string, {
 	uniqueID = "00000000000",
 	sourceCode = code,
 	scriptUser = "UNKNOWN",
-	scriptName = "UNKNOWN"
+	scriptName = "UNKNOWN",
+	seclevel = -1
 }: Partial<CompileOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
 
@@ -192,6 +195,19 @@ export async function compile(code: string, {
 	if (program.scope.hasGlobal("$G")) {
 		for (const referencePath of getReferencePathsToGlobal("$G", program))
 			referencePath.replaceWith(t.identifier(`$${uniqueID}$GLOBAL`))
+	}
+
+	if (program.scope.hasGlobal("_SECLEVEL")) {
+		for (const referencePath of getReferencePathsToGlobal("_SECLEVEL", program)) {
+			referencePath.replaceWith(
+				seclevel < 0
+					? t.numericLiteral(seclevel)
+					: t.unaryExpression(
+						"-",
+						t.numericLiteral(-seclevel)
+					)
+			)
+		}
 	}
 
 	const globalBlock: BlockStatement = t.blockStatement([])

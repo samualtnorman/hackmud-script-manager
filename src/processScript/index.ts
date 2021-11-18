@@ -57,7 +57,7 @@ export async function processScript(
 
 	({ autocomplete, code, seclevel, semicolons } = preprocess(code, { uniqueID }))
 
-	code = generate(await compile(code, { uniqueID, sourceCode, scriptUser, scriptName })!).code
+	code = generate(await compile(code, { uniqueID, sourceCode, scriptUser, scriptName, seclevel })!).code
 
 	// TODO fix incorrect source length again
 
