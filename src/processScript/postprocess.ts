@@ -20,7 +20,7 @@ export function postprocess(code: string, seclevel: number, uniqueID: string) {
 			} break
 
 			case "GLOBAL": {
-				code = spliceString(code, `#GLOBAL`, index, match.length)
+				code = spliceString(code, `#G`, index, match.length)
 			} break
 
 			case "DB": {

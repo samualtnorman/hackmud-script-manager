@@ -384,7 +384,7 @@ export async function compile(code: string, {
 
 						referencePath.replaceWith(
 							t.memberExpression(
-								t.identifier("$G"),
+								t.identifier(`$${uniqueID}$GLOBAL`),
 								t.identifier(referencePath.node.name)
 							)
 						)
@@ -401,7 +401,7 @@ export async function compile(code: string, {
 								t.assignmentExpression(
 									"=",
 									t.memberExpression(
-										t.identifier("$G"),
+										t.identifier(`$${uniqueID}$GLOBAL`),
 										t.identifier(declarator.id.name)
 									),
 									declarator.init
@@ -437,7 +437,7 @@ export async function compile(code: string, {
 
 						referencePath.replaceWith(
 							t.memberExpression(
-								t.identifier("$G"),
+								t.identifier(`$${uniqueID}$GLOBAL`),
 								t.identifier(referencePath.node.name)
 							)
 						)
@@ -453,7 +453,7 @@ export async function compile(code: string, {
 							t.assignmentExpression(
 								"=",
 								t.memberExpression(
-									t.identifier("$G"),
+									t.identifier(`$${uniqueID}$GLOBAL`),
 									t.identifier(globalBlockStatement.id.name)
 								),
 								t.classExpression(
@@ -475,7 +475,7 @@ export async function compile(code: string, {
 					t.assignmentExpression(
 						"=",
 						t.memberExpression(
-							t.identifier("$G"),
+							t.identifier(`$${uniqueID}$GLOBAL`),
 							t.identifier("_")
 						),
 						t.callExpression(
@@ -511,7 +511,7 @@ export async function compile(code: string, {
 			mainFunction.body.body.push(
 				t.returnStatement(
 					t.memberExpression(
-						t.identifier("$G"),
+						t.identifier(`$${uniqueID}$GLOBAL`),
 						t.identifier("_")
 					)
 				)
@@ -522,7 +522,7 @@ export async function compile(code: string, {
 			t.ifStatement(
 				t.unaryExpression(
 					"!",
-					t.identifier("$FMCL")
+					t.identifier(`$${uniqueID}$FMCL`)
 				),
 				globalBlock
 			)
