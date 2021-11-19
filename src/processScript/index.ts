@@ -28,6 +28,9 @@ export type ProcessOptions = {
 	scriptName: string | true
 
 	filePath: string
+
+	/** whether to mangle function and class names (defaults to `false`) */
+	mangleNames: boolean
 }
 
 /**
@@ -43,7 +46,8 @@ export async function processScript(
 		uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0"),
 		scriptUser = "UNKNOWN",
 		scriptName = "UNKNOWN",
-		filePath
+		filePath,
+		mangleNames = false
 	}: Partial<ProcessOptions> = {}
 ): Promise<{
 	srcLength: number
@@ -80,7 +84,7 @@ export async function processScript(
 		// + (code.match(/DB\$/g)?.length ?? 0)
 
 	if (shouldMinify)
-		code = await minify(code, autocomplete, uniqueID)
+		code = await minify(code, autocomplete, { uniqueID, mangleNames })
 
 	code = postprocess(code, seclevel, uniqueID)
 

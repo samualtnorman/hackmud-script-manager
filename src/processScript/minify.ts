@@ -9,6 +9,14 @@ import * as terser from "terser"
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
+type MinifyOptions = {
+	/** 11 a-z 0-9 characters */
+	uniqueID: string
+
+	/** whether to mangle function and class names (defaults to `false`) */
+	mangleNames: boolean
+}
+
 // TODO when there are more than 3 references to `$G`, place a `let _GLOBAL_0_ = $G` at the top and replace references with `_GLOBAL_0_`
 // TODO move autocomplete stuff outside this function
 // TODO allow not mangling class and function names
@@ -16,9 +24,12 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 /**
  * @param code compiled code and/or hackmud compatible code
  * @param autocomplete the comment inserted after the function signature
- * @param uniqueID 11 a-z 0-9 characters
+ * @param options {@link MinifyOptions details}
  */
-export async function minify(code: string, autocomplete: string, uniqueID = "00000000000") {
+export async function minify(code: string, autocomplete: string, {
+	uniqueID = "00000000000",
+	mangleNames = false
+}: Partial<MinifyOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
 
 	const jsonValues: any[] = []
@@ -34,7 +45,9 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 			unsafe: true,
 			booleans: false,
 			sequences: false
-		}
+		},
+		keep_classnames: !mangleNames,
+		keep_fnames: !mangleNames
 	})).code || ""
 
 	let scriptBeforeJSONValueReplacement
@@ -75,7 +88,9 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 				unsafe_undefined: true,
 				sequences: false
 			},
-			format: { semicolons: false }
+			format: { semicolons: false },
+			keep_classnames: !mangleNames,
+			keep_fnames: !mangleNames
 		})).code!
 			.replace(new RegExp(`_PROTOTYPE_PROPERTY_${uniqueID}_`, "g"), `"prototype"`)
 			.replace(new RegExp(`_PROTO_PROPERTY_${uniqueID}_`, "g"), `"__proto__"`)
@@ -387,7 +402,9 @@ export async function minify(code: string, autocomplete: string, uniqueID = "000
 			unsafe_undefined: true,
 			sequences: false
 		},
-		format: { semicolons: false }
+		format: { semicolons: false },
+		keep_classnames: !mangleNames,
+		keep_fnames: !mangleNames
 	})).code || ""
 
 

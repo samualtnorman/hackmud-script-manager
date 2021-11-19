@@ -20,6 +20,9 @@ interface PushOptions {
 
 	/** whether to do the minify step (defaults to `true`) */
 	minify: boolean
+
+	/** whether to mangle function and class names (defaults to `false`) */
+	mangleNames: boolean
 }
 
 /**
@@ -37,7 +40,8 @@ export async function push(
 	{
 		scripts = "*.*",
 		onPush = (info: Info) => {},
-		minify = true
+		minify = true,
+		mangleNames = false
 	}: Partial<PushOptions> = {}
 ) {
 	if (typeof scripts == "string")
@@ -116,7 +120,8 @@ export async function push(
 							minify,
 							scriptUser: user,
 							scriptName,
-							filePath
+							filePath,
+							mangleNames
 						}
 					)
 
@@ -168,7 +173,8 @@ export async function push(
 						minify,
 						scriptUser: user,
 						scriptName,
-						filePath
+						filePath,
+						mangleNames
 					}
 				)
 
@@ -214,7 +220,8 @@ export async function push(
 					scriptUser: true,
 					scriptName,
 					uniqueID,
-					filePath
+					filePath,
+					mangleNames
 				}
 			)
 
@@ -267,7 +274,8 @@ export async function push(
 						scriptUser: true,
 						scriptName,
 						uniqueID,
-						filePath
+						filePath,
+						mangleNames
 					}
 				)
 

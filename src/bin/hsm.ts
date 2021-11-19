@@ -296,13 +296,20 @@ for (const arg of process.argv.slice(2)) {
 					if (getBaseName(resolvePath(commands[1], "..")) == "scripts" && getBaseName(resolvePath(commands[1], "../../..")) == "hackmud")
 						scriptUser = getBaseName(resolvePath(commands[1], "../.."))
 
+					const minify = !options.get("skip-minify")
+					const mangleNames = Boolean(options.get("mangle-names"))
+
+					if (!minify && mangleNames)
+						console.warn("warning: `--mangle-names` has no effect while `--skip-minify` is active")
+
 					const { script, srcLength, warnings, timeTook } = await processScript(
 						source,
 						{
-							minify: !options.get("skip-minify"),
+							minify,
 							scriptUser,
 							scriptName,
-							filePath: commands[1]
+							filePath: commands[1],
+							mangleNames
 						}
 					)
 
