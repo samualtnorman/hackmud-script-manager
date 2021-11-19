@@ -28,6 +28,7 @@ import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import { assert, ensure } from "@samual/lib/assert.js"
 import { resolve as resolvePath } from "path"
 import { rollup } from "rollup"
+import { preprocess } from "."
 import { supportedExtensions as extensions } from ".."
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -83,6 +84,9 @@ export async function compile(code: string, {
 						return code
 
 					return null
+				},
+				transform(code) {
+					return preprocess(code, { uniqueID }).code
 				}
 			},
 			rollupPluginBabel({
