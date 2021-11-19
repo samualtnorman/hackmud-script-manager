@@ -390,6 +390,31 @@ export async function compile(code: string, {
 	program.node.body = [ mainFunction ]
 
 	if (globalBlock.body.length) {
+		if (exports.size || liveExports.size) {
+			mainFunction.body.body.push(
+				t.returnStatement(
+					t.objectExpression([
+						...[ ...exports ].map(
+							([ local, exported ]) =>
+								t.objectProperty(t.identifier(exported), t.identifier(local))
+						),
+						...[ ...liveExports ].map(
+							([ local, exported ]) => t.objectMethod(
+								"get",
+								t.identifier(exported),
+								[],
+								t.blockStatement([
+									t.returnStatement(
+										t.identifier(local)
+									)
+								])
+							)
+						)
+					])
+				)
+			)
+		}
+
 		program.scope.crawl()
 
 		for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
@@ -518,55 +543,6 @@ export async function compile(code: string, {
 					)
 				)
 			}
-		}
-
-		if (exports.size || liveExports.size) {
-			globalBlock.body.push(
-				t.expressionStatement(
-					t.assignmentExpression(
-						"=",
-						t.memberExpression(
-							t.identifier(`$${uniqueID}$GLOBAL`),
-							t.identifier("_")
-						),
-						t.callExpression(
-							t.memberExpression(
-								t.identifier("Object"),
-								t.identifier("freeze")
-							),
-							[
-								t.objectExpression([
-									...[ ...exports ].map(
-										([ local, exported ]) =>
-											t.objectProperty(t.identifier(exported), t.identifier(local))
-									),
-									...[ ...liveExports ].map(
-										([ local, exported ]) => t.objectMethod(
-											"get",
-											t.identifier(exported),
-											[],
-											t.blockStatement([
-												t.returnStatement(
-													t.identifier(local)
-												)
-											])
-										)
-									)
-								])
-							]
-						)
-					)
-				)
-			)
-
-			mainFunction.body.body.push(
-				t.returnStatement(
-					t.memberExpression(
-						t.identifier(`$${uniqueID}$GLOBAL`),
-						t.identifier("_")
-					)
-				)
-			)
 		}
 
 		mainFunction.body.body.unshift(
