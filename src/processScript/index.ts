@@ -2,11 +2,13 @@ import babelGenerator from "@babel/generator"
 import { assert, getHackmudCharacterCount } from "@samual/lib"
 import { resolve as resolvePath } from "path"
 import { performance } from "perf_hooks"
+import prettier from "prettier"
 import { compile } from "./compile"
 import minify from "./minify"
 import postprocess from "./postprocess"
 import preprocess from "./preprocess"
 
+const { format } = prettier
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
 export { compile } from "./compile"
@@ -85,6 +87,13 @@ export async function processScript(
 
 	if (shouldMinify)
 		code = await minify(code, autocomplete, { uniqueID, mangleNames })
+	else {
+		code = format(code, {
+			parser: "babel",
+			arrowParens: "avoid",
+			semi: false
+		})
+	}
 
 	code = postprocess(code, seclevel, uniqueID)
 
