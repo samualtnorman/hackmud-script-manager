@@ -809,7 +809,7 @@ export async function compile(code: string, {
 
 	// TODO this should be done in the minify step
 	for (const global in (program.scope as any).globals as Record<string, any>) {
-		if (global.startsWith(`$${uniqueID}`))
+		if (global == "arguments" || global.startsWith(`$${uniqueID}`))
 			continue
 
 		const referencePaths = getReferencePathsToGlobal(global, program)
