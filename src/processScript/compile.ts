@@ -1,3 +1,4 @@
+import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
 import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
@@ -31,6 +32,7 @@ import { rollup } from "rollup"
 import { preprocess } from "."
 import { supportedExtensions as extensions } from ".."
 
+const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
 
@@ -417,6 +419,9 @@ export async function compile(code: string, {
 
 		program.scope.crawl()
 
+		const globalBlockVariables = new Set<string>()
+		let hoistedGlobalBlockFunctions = 0
+
 		for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
 			if (globalBlockStatement.type == "VariableDeclaration") {
 				const declarator = globalBlockStatement.declarations[0]
@@ -440,41 +445,53 @@ export async function compile(code: string, {
 
 					program.scope.crawl()
 
-					const binding = program.scope.getBinding(declarator.id.name)
+					if (!declarator.init || (declarator.init.type != "FunctionExpression" && declarator.init.type != "ArrowFunctionExpression") || Object.keys((program.scope as any).globals).find(global => globalBlockVariables.has(global))) {
+						const binding = program.scope.getBinding(declarator.id.name)
 
-					assert(binding)
+						assert(binding)
 
-					for (const referencePath of binding.referencePaths) {
-						assert(referencePath.node.type == "Identifier")
+						for (const referencePath of binding.referencePaths) {
+							assert(referencePath.node.type == "Identifier")
 
-						referencePath.replaceWith(
-							t.memberExpression(
-								t.identifier(`$${uniqueID}$GLOBAL`),
-								t.identifier(referencePath.node.name)
-							)
-						)
-					}
-
-					globalBlockPath.remove()
-					globalBlockStatementPath.remove()
-
-					if (declarator.init) {
-						globalBlock.body.splice(
-							globalBlockIndex,
-							0,
-							t.expressionStatement(
-								t.assignmentExpression(
-									"=",
-									t.memberExpression(
-										t.identifier(`$${uniqueID}$GLOBAL`),
-										t.identifier(declarator.id.name)
-									),
-									declarator.init
+							referencePath.replaceWith(
+								t.memberExpression(
+									t.identifier(`$${uniqueID}$GLOBAL`),
+									t.identifier(referencePath.node.name)
 								)
 							)
+						}
+
+						globalBlockPath.remove()
+						globalBlockStatementPath.remove()
+
+						if (declarator.init) {
+							globalBlock.body.splice(
+								globalBlockIndex,
+								0,
+								t.expressionStatement(
+									t.assignmentExpression(
+										"=",
+										t.memberExpression(
+											t.identifier(`$${uniqueID}$GLOBAL`),
+											t.identifier(declarator.id.name)
+										),
+										declarator.init
+									)
+								)
+							)
+						}
+					} else {
+						globalBlockPath.remove()
+						globalBlockStatementPath.remove()
+
+						mainFunction.body.body.unshift(
+							globalBlockStatement
 						)
+
+						hoistedGlobalBlockFunctions++
 					}
-				}
+				} else
+					globalBlockVariables.add(declarator.id.name)
 			} else if (globalBlockStatement.type == "ClassDeclaration") {
 				program.scope.crawl()
 
@@ -545,15 +562,19 @@ export async function compile(code: string, {
 			}
 		}
 
-		mainFunction.body.body.unshift(
-			t.ifStatement(
-				t.unaryExpression(
-					"!",
-					t.identifier(`$${uniqueID}$FMCL`)
-				),
-				globalBlock
+		if (globalBlock.body.length) {
+			mainFunction.body.body.splice(
+				hoistedGlobalBlockFunctions,
+				0,
+				t.ifStatement(
+					t.unaryExpression(
+						"!",
+						t.identifier(`$${uniqueID}$FMCL`)
+					),
+					globalBlock
+				)
 			)
-		)
+		}
 	}
 
 	traverse(file, {
