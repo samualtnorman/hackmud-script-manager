@@ -85,9 +85,6 @@ export async function compile(code: string, {
 					return null
 				}
 			},
-			rollupPluginCommonJS(),
-			rollupPluginNodeResolve({ extensions }),
-			rollupPluginJSON(),
 			rollupPluginBabel({
 				babelHelpers: "bundled",
 				plugins: [
@@ -99,7 +96,7 @@ export async function compile(code: string, {
 					[ babelPluginProposalPartialApplication.default ],
 					[ babelPluginProposalPipelineOperator.default, { proposal: "hack", topicToken: "%" } ],
 					[ babelPluginProposalThrowExpressions.default ],
-					[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash" } ],
+					[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash", importPolyfill: true } ],
 					[ babelPluginProposalClassProperties.default ],
 					[ babelPluginProposalClassStaticBlock.default ],
 					[ babelPluginProposalPrivatePropertyInObject.default ],
@@ -114,7 +111,10 @@ export async function compile(code: string, {
 				],
 				configFile: false,
 				extensions
-			})
+			}),
+			rollupPluginCommonJS(),
+			rollupPluginNodeResolve({ extensions }),
+			rollupPluginJSON()
 		]
 	})
 
