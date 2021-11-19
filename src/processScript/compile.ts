@@ -422,7 +422,7 @@ export async function compile(code: string, {
 		const globalBlockVariables = new Set<string>()
 		let hoistedGlobalBlockFunctions = 0
 
-		for (const [ globalBlockIndex, globalBlockStatement ] of globalBlock.body.entries()) {
+		for (const [ globalBlockIndex, globalBlockStatement ] of [ ...globalBlock.body.entries() ]) {
 			if (globalBlockStatement.type == "VariableDeclaration") {
 				const declarator = globalBlockStatement.declarations[0]
 
