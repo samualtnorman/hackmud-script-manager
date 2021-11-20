@@ -18,6 +18,23 @@ export type TransformOptions = {
 	seclevel: number
 }
 
+const globalFunctionsUnder7Characters = [
+	"Map",
+	"Set",
+	"Date",
+	"JSON",
+	"Math",
+	"Array",
+	"Error",
+	"isNaN",
+	"Number",
+	"Object",
+	"RegExp",
+	"String",
+	"Symbol",
+	"BigInt"
+]
+
 /**
  * transform a given babel `File` to be hackmud compatible
  *
@@ -88,6 +105,36 @@ export async function transform(file: File, sourceCode: string, {
 				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME`))
 			else
 				referencePath.replaceWith(t.stringLiteral(`${scriptUser}.${scriptName}`))
+		}
+	}
+
+	let functionDotPrototypeIsReferencedMultipleTimes = false
+
+	if (program.scope.hasGlobal("Function")) {
+		const FunctionReferencePaths = getReferencePathsToGlobal("Function", program)
+
+		if (FunctionReferencePaths.length == 1) {
+			const [ referencePath ] = FunctionReferencePaths
+
+			assert(referencePath.parent.type == "MemberExpression", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
+			assert(referencePath.parent.property.type == "Identifier", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
+			assert(referencePath.parent.property.name == "prototype", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
+
+			referencePath.parentPath.replaceWith(createGetFunctionPrototypeNode())
+		} else {
+			for (const referencePath of FunctionReferencePaths) {
+				assert(referencePath.parent.type == "MemberExpression", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
+				assert(referencePath.parent.property.type == "Identifier", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
+				assert(referencePath.parent.property.name == "prototype", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
+
+				functionDotPrototypeIsReferencedMultipleTimes = true
+
+				referencePath.parentPath.replaceWith(
+					t.identifier(`$${uniqueID}$FUNCTION_DOT_PROTOTYPE`)
+				)
+			}
+
+			functionDotPrototypeIsReferencedMultipleTimes = true
 		}
 	}
 
@@ -523,6 +570,15 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
+	if (functionDotPrototypeIsReferencedMultipleTimes) {
+		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+			t.variableDeclarator(
+				t.identifier(`$${uniqueID}$FUNCTION_DOT_PROTOTYPE`),
+				createGetFunctionPrototypeNode()
+			)
+		]))
+	}
+
 	traverse(file, {
 		BlockStatement({ node: blockStatement }) {
 			for (const [ i, functionDeclaration ] of blockStatement.body.entries()) {
@@ -737,6 +793,32 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	return file
+
+	function createGetFunctionPrototypeNode() {
+		for (const globalFunction of globalFunctionsUnder7Characters) {
+			if (program.scope.hasOwnBinding(globalFunction))
+				continue
+
+			return t.memberExpression(
+				t.memberExpression(
+					t.identifier(globalFunction),
+					t.identifier("constructor")
+				),
+				t.identifier("prototype")
+			)
+		}
+
+		return t.memberExpression(
+			t.memberExpression(
+				t.arrowFunctionExpression(
+					[ t.identifier("_") ],
+					t.identifier("_")
+				),
+				t.identifier("constructor")
+			),
+			t.identifier("prototype")
+		)
+	}
 }
 
 export default transform

@@ -26,9 +26,6 @@ export function postprocess(code: string, seclevel: number, uniqueID: string) {
 			case "DB": {
 				code = spliceString(code, `#db.${args[0]}`, index, match.length)
 			} break
-
-			default:
-				throw new Error(`unknown preprocessor directive type "${type}"`)
 		}
 	}
 
