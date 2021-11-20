@@ -39,7 +39,7 @@ export default async ({ w }) => {
 			keep_fnames: true
 		}))
 	} else if ("devDependencies" in packageConfig)
-		external.push(...Object.keys(packageConfig.devDependencies))
+		external.push(...Object.keys(packageConfig.devDependencies).map(name => new RegExp(`^${name}(?:/|$)`)))
 
 	return {
 		input: Object.fromEntries(
