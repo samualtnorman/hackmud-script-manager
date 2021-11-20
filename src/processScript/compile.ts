@@ -26,6 +26,7 @@ import rollupPluginBabel_ from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
+import { clearObject } from "@samual/lib"
 import { assert, ensure } from "@samual/lib/assert"
 import { resolve as resolvePath } from "path"
 import { rollup } from "rollup"
@@ -281,19 +282,31 @@ export async function compile(code: string, {
 			if (statement.declaration) {
 				if (statement.declaration.type == "VariableDeclaration") {
 					for (const declarator of statement.declaration.declarations) {
-						assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+						for (const identifierName in t.getBindingIdentifiers(declarator.id)) {
+							if (statement.declaration.kind == "const")
+								exports.set(identifierName, identifierName)
+							else
+								liveExports.set(identifierName, identifierName)
 
-						if (statement.declaration.kind == "const")
-							exports.set(declarator.id.name, declarator.id.name)
-						else
-							liveExports.set(declarator.id.name, declarator.id.name)
-
-						globalBlock.body.push(
-							t.variableDeclaration(
-								"let",
-								[ t.variableDeclarator(declarator.id, declarator.init) ]
+							globalBlock.body.push(
+								t.variableDeclaration(
+									"let",
+									[ t.variableDeclarator(t.identifier(identifierName)) ]
+								)
 							)
-						)
+						}
+
+						if (declarator.init) {
+							globalBlock.body.push(
+								t.expressionStatement(
+									t.assignmentExpression(
+										"=",
+										declarator.id,
+										declarator.init
+									)
+								)
+							)
+						}
 					}
 				} else {
 					assert("id" in statement.declaration && statement.declaration.id, `unsupported export type "${statement.declaration.type}"`)
@@ -341,22 +354,34 @@ export async function compile(code: string, {
 			}
 		} else if (statement.type == "VariableDeclaration") {
 			for (const declarator of statement.declarations) {
-				assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+				for (const identifierName in t.getBindingIdentifiers(declarator.id)) {
+					if (statement.kind != "const") {
+						if (exports.has(identifierName)) {
+							liveExports.set(identifierName, exports.get(identifierName)!)
+							exports.delete(identifierName)
+						} else
+							liveGlobalVariables.push(identifierName)
+					}
 
-				if (statement.kind != "const") {
-					if (exports.has(declarator.id.name)) {
-						liveExports.set(declarator.id.name, exports.get(declarator.id.name)!)
-						exports.delete(declarator.id.name)
-					} else
-						liveGlobalVariables.push(declarator.id.name)
+					globalBlock.body.push(
+						t.variableDeclaration(
+							"let",
+							[ t.variableDeclarator(t.identifier(identifierName)) ]
+						)
+					)
 				}
 
-				globalBlock.body.push(
-					t.variableDeclaration(
-						"let",
-						[ t.variableDeclarator(declarator.id, declarator.init) ]
+				if (declarator.init) {
+					globalBlock.body.push(
+						t.expressionStatement(
+							t.assignmentExpression(
+								"=",
+								declarator.id,
+								declarator.init
+							)
+						)
 					)
-				)
+				}
 			}
 		} else if (statement.type == "FunctionDeclaration") {
 			globalBlock.body.push(
@@ -422,11 +447,13 @@ export async function compile(code: string, {
 		const globalBlockVariables = new Set<string>()
 		let hoistedGlobalBlockFunctions = 0
 
-		for (const [ globalBlockIndex, globalBlockStatement ] of [ ...globalBlock.body.entries() ]) {
+		for (const [ globalBlockIndex, globalBlockStatement ] of [ ...globalBlock.body.entries() ].reverse()) {
 			if (globalBlockStatement.type == "VariableDeclaration") {
+				assert(globalBlockStatement.declarations.length == 1)
+
 				const declarator = globalBlockStatement.declarations[0]
 
-				assert(declarator.id.type == "Identifier", `global variable declarations using destructure syntax is currently unsupported`)
+				assert(declarator.id.type == "Identifier", `declarator.id.type was "${declarator.id.type}"`)
 
 				program.scope.crawl()
 
@@ -459,6 +486,22 @@ export async function compile(code: string, {
 									t.identifier(referencePath.node.name)
 								)
 							)
+						}
+
+						for (const referencePath of binding.constantViolations) {
+							assert(referencePath.node.type == "AssignmentExpression")
+
+							for (const [ name, node ] of Object.entries(t.getBindingIdentifiers(referencePath.node))) {
+								if (name == declarator.id.name) {
+									Object.assign(
+										clearObject(node),
+										t.memberExpression(
+											t.identifier(`$${uniqueID}$GLOBAL`),
+											t.identifier(name)
+										)
+									)
+								}
+							}
 						}
 
 						globalBlockPath.remove()
