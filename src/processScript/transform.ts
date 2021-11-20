@@ -1,46 +1,13 @@
-import { parse } from "@babel/parser"
-import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
-import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
-import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
-import babelPluginProposalDoExpressions from "@babel/plugin-proposal-do-expressions"
-import babelPluginProposalFunctionBind from "@babel/plugin-proposal-function-bind"
-import babelPluginProposalFunctionSent from "@babel/plugin-proposal-function-sent"
-import babelPluginProposalJSONStrings from "@babel/plugin-proposal-json-strings"
-import babelPluginProposalLogicalAssignmentOperators from "@babel/plugin-proposal-logical-assignment-operators"
-import babelPluginProposalNullishCoalescingOperator from "@babel/plugin-proposal-nullish-coalescing-operator"
-import babelPluginProposalNumericSeparator from "@babel/plugin-proposal-numeric-separator"
-import babelPluginProposalObjectRestSpread from "@babel/plugin-proposal-object-rest-spread"
-import babelPluginProposalOptionalCatchBinding from "@babel/plugin-proposal-optional-catch-binding"
-import babelPluginProposalOptionalChaining from "@babel/plugin-proposal-optional-chaining"
-import babelPluginProposalPartialApplication from "@babel/plugin-proposal-partial-application"
-import babelPluginProposalPipelineOperator from "@babel/plugin-proposal-pipeline-operator"
-import babelPluginProposalPrivatePropertyInObject from "@babel/plugin-proposal-private-property-in-object"
-import babelPluginProposalRecordAndTuple from "@babel/plugin-proposal-record-and-tuple"
-import babelPluginProposalThrowExpressions from "@babel/plugin-proposal-throw-expressions"
-import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
-import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
 import babelTraverse, { NodePath } from "@babel/traverse"
-import t, { BlockStatement, CallExpression, FunctionDeclaration, Identifier, Program } from "@babel/types"
-import rollupPluginBabel_ from "@rollup/plugin-babel"
-import rollupPluginCommonJS from "@rollup/plugin-commonjs"
-import rollupPluginJSON from "@rollup/plugin-json"
-import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
+import t, { BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, Program } from "@babel/types"
 import { clearObject } from "@samual/lib"
 import { assert, ensure } from "@samual/lib/assert"
-import { resolve as resolvePath } from "path"
-import { rollup } from "rollup"
-import { supportedExtensions as extensions } from "../constants.json"
-import preprocess from "./preprocess"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
-const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
 
-export type CompileOptions = {
+export type TransformOptions = {
 	/** 11 a-z 0-9 characters */
 	uniqueID: string
-
-	/** the unprocessed source code (defaults to the given `code` parameter) */
-	sourceCode: string
 
 	/** the user the script will be uploaded to (or set to `true` if it is not yet known) */
 	scriptUser: string | true
@@ -49,83 +16,21 @@ export type CompileOptions = {
 	scriptName: string | true
 
 	seclevel: number
-	filePath: string
 }
 
 /**
- * @param code the preprocessed code to be compiled into hackmud compatible code
- * @param options {@link CompileOptions details}
+ * transform a given babel `File` to be hackmud compatible
+ *
+ * (returned File will need `postprocess()`ing)
+ *
+ * @param options {@link TransformOptions details}
  */
-export async function compile(code: string, {
+export async function transform(file: File, sourceCode: string, {
 	uniqueID = "00000000000",
-	sourceCode = code,
 	scriptUser = "UNKNOWN",
 	scriptName = "UNKNOWN",
-	seclevel = -1,
-	filePath
-}: Partial<CompileOptions> = {}) {
-	assert(uniqueID.match(/^\w{11}$/))
-
-	const filePathResolved = filePath
-		? resolvePath(filePath)
-		: "script"
-
-	const bundle = await rollup({
-		plugins: [
-			{
-				name: "emit script",
-				buildStart() {
-					this.emitFile({
-						type: "chunk",
-						id: filePathResolved
-					})
-				},
-				load(id) {
-					if (id == filePathResolved)
-						return code
-
-					return null
-				},
-				transform(code) {
-					return preprocess(code, { uniqueID }).code
-				}
-			},
-			rollupPluginBabel({
-				babelHelpers: "bundled",
-				plugins: [
-					[ babelPluginTransformTypescript.default ],
-					[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
-					[ babelPluginProposalDoExpressions.default ],
-					[ babelPluginProposalFunctionBind.default ],
-					[ babelPluginProposalFunctionSent.default ],
-					[ babelPluginProposalPartialApplication.default ],
-					[ babelPluginProposalPipelineOperator.default, { proposal: "hack", topicToken: "%" } ],
-					[ babelPluginProposalThrowExpressions.default ],
-					[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash", importPolyfill: true } ],
-					[ babelPluginProposalClassProperties.default ],
-					[ babelPluginProposalClassStaticBlock.default ],
-					[ babelPluginProposalPrivatePropertyInObject.default ],
-					[ babelPluginProposalLogicalAssignmentOperators.default ],
-					[ babelPluginProposalNumericSeparator.default ],
-					[ babelPluginProposalNullishCoalescingOperator.default ],
-					[ babelPluginProposalOptionalChaining.default ],
-					[ babelPluginProposalOptionalCatchBinding.default ],
-					[ babelPluginProposalJSONStrings.default ],
-					[ babelPluginProposalObjectRestSpread.default ],
-					[ babelPluginTransformExponentiationOperator.default ]
-				],
-				configFile: false,
-				extensions
-			}),
-			rollupPluginCommonJS(),
-			rollupPluginNodeResolve({ extensions }),
-			rollupPluginJSON()
-		]
-	})
-
-	code = (await bundle.generate({})).output[0].code
-
-	const file = parse(code, { sourceType: "module" })
+	seclevel = -1
+}: Partial<TransformOptions> = {}) {
 	const topFunctionName = `_SCRIPT_${uniqueID}_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
@@ -834,6 +739,8 @@ export async function compile(code: string, {
 	return file
 }
 
+export default transform
+
 function getReferencePathsToGlobal(name: string, program: NodePath<Program>) {
 	const [ variableDeclaration ] = program.unshiftContainer(
 		"body",
@@ -851,5 +758,3 @@ function getReferencePathsToGlobal(name: string, program: NodePath<Program>) {
 
 	return binding.referencePaths as NodePath<Identifier>[]
 }
-
-export default compile
