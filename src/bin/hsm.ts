@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { DynamicMap, getHackmudCharacterCount, writeFilePersistent } from "@samual/lib"
+import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
 import chalk from "chalk"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
@@ -332,7 +332,7 @@ for (const arg of process.argv.slice(2)) {
 						)
 					}
 
-					const scriptLength = getHackmudCharacterCount(script)
+					const scriptLength = countHackmudCharacters(script)
 
 					await writeFilePersistent(outputPath, script)
 						.catch(async (error: NodeJS.ErrnoException) => {

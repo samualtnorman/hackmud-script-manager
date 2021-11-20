@@ -2,7 +2,7 @@ import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelTraverse from "@babel/traverse"
 import t, { Expression } from "@babel/types"
-import { assert, getHackmudCharacterCount, spliceString } from "@samual/lib"
+import { assert, countHackmudCharacters, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
 
@@ -423,7 +423,7 @@ export async function minify(code: string, autocomplete: string, {
 	// if the script has a comment, it's gonna contain `SC$scripts$quine()`
 	// which is gonna eventually compile to `#fs.scripts.quine()` which contains
 	// an extra character so we have to account for that
-	if (getHackmudCharacterCount(scriptBeforeJSONValueReplacement) <= (getHackmudCharacterCount(code) + Number(hasComment))) {
+	if (countHackmudCharacters(scriptBeforeJSONValueReplacement) <= (countHackmudCharacters(code) + Number(hasComment))) {
 		code = scriptBeforeJSONValueReplacement
 
 		if (autocomplete)

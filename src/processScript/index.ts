@@ -1,5 +1,5 @@
 import babelGenerator from "@babel/generator"
-import { assert, getHackmudCharacterCount } from "@samual/lib"
+import { assert, countHackmudCharacters } from "@samual/lib"
 import { resolve as resolvePath } from "path"
 import { performance } from "perf_hooks"
 import prettier from "prettier"
@@ -79,7 +79,7 @@ export async function processScript(
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
 	// source to make things fair
-	let srcLength = getHackmudCharacterCount(code.replace(/^function\s*\w+\(/, "function("))
+	let srcLength = countHackmudCharacters(code.replace(/^function\s*\w+\(/, "function("))
 		- (code.match(/;/g)?.length || 0)
 		+ semicolons
 		// + (code.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)

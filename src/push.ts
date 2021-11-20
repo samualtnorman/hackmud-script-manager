@@ -1,4 +1,4 @@
-import { DynamicMap, forEachParallel, getHackmudCharacterCount, writeFilePersistent } from "@samual/lib"
+import { countHackmudCharacters, DynamicMap, forEachParallel, writeFilePersistent } from "@samual/lib"
 import { promises as fsPromises } from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { Info, processScript, supportedExtensions } from "."
@@ -128,7 +128,7 @@ export async function push(
 					const info: Info = {
 						file: `${user}/${dirent.name}`,
 						users: [ user ],
-						minLength: getHackmudCharacterCount(minifiedCode),
+						minLength: countHackmudCharacters(minifiedCode),
 						error: null,
 						srcLength
 					}
@@ -181,7 +181,7 @@ export async function push(
 				const info: Info = {
 					file: `${user}/${fileName}`,
 					users: [ user ],
-					minLength: getHackmudCharacterCount(minifiedCode),
+					minLength: countHackmudCharacters(minifiedCode),
 					error: null,
 					srcLength
 				}
@@ -228,7 +228,7 @@ export async function push(
 			const info: Info = {
 				file: dirent.name,
 				users: usersToPushTo,
-				minLength: getHackmudCharacterCount(minifiedCode),
+				minLength: countHackmudCharacters(minifiedCode),
 				error: null,
 				srcLength
 			}
@@ -282,7 +282,7 @@ export async function push(
 				const info: Info = {
 					file: fileName,
 					users: [ ...users ],
-					minLength: getHackmudCharacterCount(minifiedCode),
+					minLength: countHackmudCharacters(minifiedCode),
 					error: null,
 					srcLength
 				}
