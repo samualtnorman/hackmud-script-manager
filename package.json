@@ -21,26 +21,14 @@
 	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"license": "GPL-3.0-or-later",
 	"author": "Samual Norman",
-	"files": [
-		"*.d.ts",
-		"*.js",
-		"!*.config.js",
-		"index.cjs",
-		"bin",
-		"processScript"
-	],
 	"main": "index.js",
-	"bin": {
-		"hsm": "bin/hsm.js"
-	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"scripts": {
-		"build": "rollup --config && tsc --project src",
-		"dev": "rollup --config --watch",
-		"prepublishOnly": "npm run build"
+		"build": "rm -rf dist && rollup --config && tsc --project src && node scripts/build-package-json && cp LICENSE index.cjs package-lock.json README.md dist",
+		"dev": "rollup --config --watch"
 	},
 	"dependencies": {
 		"@babel/core": "^7.16.0",

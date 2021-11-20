@@ -4,7 +4,8 @@
 		"outDir": ".",
 		"resolveJsonModule": true,
 		"composite": true,
-		"emitDeclarationOnly": true
+		"emitDeclarationOnly": true,
+		"skipLibCheck": true
 	},
 	"files": [ "package.json" ],
 	"exclude": [ "src" ]

@@ -1,15 +1,4 @@
 {
-	"files.exclude": {
-		"**/.*": true,
-		"node_modules": true,
-		"package-lock.json": true,
-		"LICENSE": true,
-		"tsconfig.tsbuildinfo": true,
-		"**/*.js": {
-			"when": "$(basename).d.ts"
-		},
-		"**/*.d.ts": true
-	},
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"editor.codeActionsOnSave": {
 		"source.organizeImports": true
