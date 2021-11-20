@@ -1,10 +1,13 @@
 import { countHackmudCharacters, writeFilePersistent } from "@samual/lib"
 import { watch as watchDirectory } from "chokidar"
-import { promises as fsPromises } from "fs"
+import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import { generateTypings, Info, processScript, supportedExtensions } from "."
+import type { Info } from "."
+import { supportedExtensions } from "./constants.json"
+import generateTypings from "./generateTypings"
+import processScript from "./processScript"
 
-const { readFile, readdir: readDirectory } = fsPromises
+const { readFile, readdir: readDirectory } = fs.promises
 
 /**
  * Watches target file or folder for updates and builds and pushes updated file.

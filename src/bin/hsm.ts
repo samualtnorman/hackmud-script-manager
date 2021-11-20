@@ -4,8 +4,9 @@ import chalk from "chalk"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
 import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, relative as relativePath, resolve as resolvePath } from "path"
-import { generateTypings, Info, processScript, pull, push, supportedExtensions, syncMacros, test, watch } from ".."
+import { generateTypings, Info, processScript, pull, push, syncMacros, test, watch } from ".."
 import { version as moduleVersion } from "../../package.json"
+import { supportedExtensions } from "../constants.json"
 
 const { readFile, rmdir: removeDirectory, writeFile, mkdir: makeDirectory } = fs.promises
 

@@ -2,12 +2,12 @@ import babel from "@rollup/plugin-babel"
 import commonJS from "@rollup/plugin-commonjs"
 import json from "@rollup/plugin-json"
 import nodeResolve from "@rollup/plugin-node-resolve"
-import { promises as fsPromises } from "fs"
+import fs from "fs"
 import preserveShebang from "rollup-plugin-preserve-shebang"
 import { terser } from "rollup-plugin-terser"
 import packageConfig from "./package.json"
 
-const { readdir: readDirectory } = fsPromises
+const { readdir: readDirectory } = fs.promises
 
 /** @typedef {import("rollup").RollupOptions} RollupOptions */
 
@@ -48,11 +48,15 @@ export default async ({ w }) => {
 				.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
 		),
 		output: {
-			dir: "dist"
+			dir: "dist",
+			interop: "auto"
 		},
 		plugins,
 		external,
-		preserveEntrySignatures: "allow-extension"
+		preserveEntrySignatures: "allow-extension",
+		treeshake: {
+			moduleSideEffects: "no-external"
+		}
 	}
 }
 

@@ -1,9 +1,11 @@
 import { countHackmudCharacters, DynamicMap, forEachParallel, writeFilePersistent } from "@samual/lib"
-import { promises as fsPromises } from "fs"
+import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import { Info, processScript, supportedExtensions } from "."
+import type { Info } from "."
+import { supportedExtensions } from "./constants.json"
+import processScript from "./processScript"
 
-const { readFile, readdir: readDirectory } = fsPromises
+const { readFile, readdir: readDirectory } = fs.promises
 
 interface PushOptions {
 	/**

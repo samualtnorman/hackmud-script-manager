@@ -1,7 +1,7 @@
-import { promises as fsPromises } from "fs"
+import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 
-const { readFile, readdir: readDirectory, stat: getFileStatus, writeFile } = fsPromises
+const { readFile, readdir: readDirectory, stat: getFileStatus, writeFile } = fs.promises
 
 export async function syncMacros(hackmudPath: string) {
 	const files = await readDirectory(hackmudPath, { withFileTypes: true })

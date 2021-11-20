@@ -1,4 +1,3 @@
-import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
 import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
@@ -30,10 +29,9 @@ import { clearObject } from "@samual/lib"
 import { assert, ensure } from "@samual/lib/assert"
 import { resolve as resolvePath } from "path"
 import { rollup } from "rollup"
-import { preprocess } from "."
-import { supportedExtensions as extensions } from ".."
+import { supportedExtensions as extensions } from "../constants.json"
+import preprocess from "./preprocess"
 
-const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
 

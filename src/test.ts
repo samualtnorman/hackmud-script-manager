@@ -1,6 +1,7 @@
 import fs from "fs"
 import { extname as getFileExtension, resolve as resolvePath } from "path"
-import { processScript, supportedExtensions } from "."
+import { supportedExtensions } from "./constants.json"
+import processScript from "./processScript"
 
 const { readFile, readdir: readDirectory } = fs.promises
 
