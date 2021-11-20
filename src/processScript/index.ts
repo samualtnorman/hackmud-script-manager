@@ -20,6 +20,8 @@ import babelPluginProposalRecordAndTuple from "@babel/plugin-proposal-record-and
 import babelPluginProposalThrowExpressions from "@babel/plugin-proposal-throw-expressions"
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
 import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
+import babelTraverse from "@babel/traverse"
+import t from "@babel/types"
 import rollupPluginBabel_ from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
@@ -38,6 +40,7 @@ import transform from "./transform"
 const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
 const { format } = prettier
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
+const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export { minify } from "./minify"
 export { postprocess } from "./postprocess"
@@ -160,9 +163,9 @@ export async function processScript(
 
 	code = (await bundle.generate({})).output[0].code
 
-	const file = parse(code, { sourceType: "module" })
+	const file = await transform(parse(code, { sourceType: "module" }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel })
 
-	code = generate(await transform(file, sourceCode, { uniqueID, scriptUser, scriptName, seclevel })!).code
+	code = generate(file).code
 
 	// TODO fix incorrect source length again
 
@@ -178,7 +181,24 @@ export async function processScript(
 	if (shouldMinify)
 		code = await minify(code, autocomplete, { uniqueID, mangleNames })
 	else {
-		code = format(code, {
+		traverse(file, {
+			MemberExpression({ node: memberExpression }) {
+				if (memberExpression.computed)
+					return
+
+				assert(memberExpression.property.type == "Identifier")
+
+				if (memberExpression.property.name == "prototype") {
+					memberExpression.computed = true
+					memberExpression.property = t.stringLiteral("prototype")
+				} else if (memberExpression.property.name == "__proto__") {
+					memberExpression.computed = true
+					memberExpression.property = t.stringLiteral("__proto__")
+				}
+			}
+		})
+
+		code = format(generate(file).code, {
 			parser: "babel",
 			arrowParens: "avoid",
 			semi: false
