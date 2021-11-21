@@ -198,6 +198,26 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
+	let needGetPrototypeOf = false
+	let needSetPrototypeOf = false
+
+	if (program.scope.hasGlobal("Object")) {
+		for (const referencePath of getReferencePathsToGlobal("Object", program)) {
+			if (referencePath.parent.type != "MemberExpression" || referencePath.parent.computed)
+				continue
+
+			assert(referencePath.parent.property.type == "Identifier")
+
+			if (referencePath.parent.property.name == "getPrototypeOf") {
+				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$GET_PROTOTYPE_OF`))
+				needGetPrototypeOf = true
+			} else if (referencePath.parent.property.name == "setPrototypeOf") {
+				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$SET_PROTOTYPE_OF`))
+				needSetPrototypeOf = true
+			}
+		}
+	}
+
 	const globalBlock: BlockStatement = t.blockStatement([])
 	let mainFunction: FunctionDeclaration | undefined
 	const liveGlobalVariables: string[] = []
@@ -575,6 +595,87 @@ export async function transform(file: File, sourceCode: string, {
 			t.variableDeclarator(
 				t.identifier(`$${uniqueID}$FUNCTION_DOT_PROTOTYPE`),
 				createGetFunctionPrototypeNode()
+			)
+		]))
+	}
+
+	if (needSetPrototypeOf) {
+		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+			t.variableDeclarator(
+				t.identifier(`$${uniqueID}$SET_PROTOTYPE_OF`),
+				t.callExpression(
+					t.memberExpression(
+						t.memberExpression(
+							t.identifier("Object"),
+							t.identifier("call")
+						),
+						t.identifier("bind")
+					),
+					[ t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`) ]
+				)
+			)
+		]))
+	}
+
+	if (needGetPrototypeOf) {
+		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+			t.variableDeclarator(
+				t.identifier(`$${uniqueID}$GET_PROTOTYPE_OF`),
+				t.callExpression(
+					t.memberExpression(
+						t.memberExpression(
+							t.identifier("Object"),
+							t.identifier("call")
+						),
+						t.identifier("bind")
+					),
+					[ t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`) ]
+				)
+			)
+		]))
+	}
+
+	if (needGetPrototypeOf || needSetPrototypeOf) {
+		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+			t.variableDeclarator(
+				t.objectPattern(needGetPrototypeOf
+					? needSetPrototypeOf
+						? [
+							t.objectProperty(
+								t.identifier("get"),
+								t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`)
+							),
+							t.objectProperty(
+								t.identifier("set"),
+								t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`)
+							)
+						]
+						: [
+							t.objectProperty(
+								t.identifier("get"),
+								t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`)
+							)
+						]
+					: [
+						t.objectProperty(
+							t.identifier("set"),
+							t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`)
+						)
+					]
+				),
+				t.callExpression(
+					t.memberExpression(
+						t.identifier("Object"),
+						t.identifier("getOwnPropertyDescriptor")
+					),
+					[
+						t.memberExpression(
+							t.identifier("Object"),
+							t.identifier("prototype")
+						),
+						t.stringLiteral("__proto__")
+					]
+				)
 			)
 		]))
 	}
