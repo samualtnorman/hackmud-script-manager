@@ -1,5 +1,11 @@
+import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
+import babelTraverse, { NodePath } from "@babel/traverse"
+import t, { Program } from "@babel/types"
 import { assert, spliceString } from "@samual/lib"
+
+const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
+const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
 export type PreprocessOptions = {
 	/** 11 a-z 0-9 characters */
@@ -135,11 +141,37 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 			throw error
 	}
 
+	let program!: NodePath<Program>
+
+	traverse(file, {
+		Program(path) {
+			program = path
+			path.skip()
+		}
+	})
+
+	const needRecord = program.scope.hasGlobal("Record")
+	const needTuple = program.scope.hasGlobal("Tuple")
+
+	if (needRecord || needTuple) {
+		file.program.body.unshift(t.importDeclaration(
+			needRecord
+				? needTuple
+					? [
+						t.importSpecifier(t.identifier("Record"), t.identifier("Record")),
+						t.importSpecifier(t.identifier("Tuple"), t.identifier("Tuple"))
+					]
+					: [ t.importSpecifier(t.identifier("Record"), t.identifier("Record")) ]
+				: [ t.importSpecifier(t.identifier("Tuple"), t.identifier("Tuple")) ],
+			t.stringLiteral("@bloomberg/record-tuple-polyfill")
+		))
+	}
+
 	return {
 		semicolons,
 		autocomplete,
 		seclevel,
-		code
+		code: generate(file).code
 	}
 }
 
