@@ -1,7 +1,6 @@
 import babelGenerator from "@babel/generator"
-import { parse } from "@babel/parser"
 import babelTraverse from "@babel/traverse"
-import t, { Expression } from "@babel/types"
+import t, { Expression, File } from "@babel/types"
 import { assert, countHackmudCharacters, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
@@ -26,7 +25,7 @@ type MinifyOptions = {
  * @param autocomplete the comment inserted after the function signature
  * @param options {@link MinifyOptions details}
  */
-export async function minify(code: string, autocomplete?: string, {
+export async function minify(file: File, autocomplete?: string, {
 	uniqueID = "00000000000",
 	mangleNames = false
 }: Partial<MinifyOptions> = {}) {
@@ -34,73 +33,52 @@ export async function minify(code: string, autocomplete?: string, {
 
 	const jsonValues: any[] = []
 	let undefinedIsReferenced = false
+	let scriptBeforeJSONValueReplacement
 
-	// remove dead code (so we don't waste chracters quine cheating strings
-	// that aren't even used)
-	code = (await terser.minify(code, {
+	traverse(file, {
+		MemberExpression({ node: memberExpression }) {
+			if (memberExpression.computed)
+				return
+
+			assert(memberExpression.property.type == "Identifier")
+
+			if (memberExpression.property.name == "prototype") {
+				memberExpression.computed = true
+				memberExpression.property = t.identifier(`_PROTOTYPE_PROPERTY_${uniqueID}_`)
+			} else if (memberExpression.property.name == "__proto__") {
+				memberExpression.computed = true
+				memberExpression.property = t.identifier(`_PROTO_PROPERTY_${uniqueID}_`)
+			}
+		}
+	})
+
+	// BUG when this script is used, the source char count is off
+	scriptBeforeJSONValueReplacement = (await terser.minify(generate(file!).code, {
 		ecma: 2015,
-		parse: { bare_returns: true },
 		compress: {
 			passes: Infinity,
 			unsafe: true,
-			booleans: false,
+			unsafe_arrows: true,
+			unsafe_comps: true,
+			unsafe_symbols: true,
+			unsafe_methods: true,
+			unsafe_proto: true,
+			unsafe_regexp: true,
+			unsafe_undefined: true,
 			sequences: false
 		},
+		format: { semicolons: false },
 		keep_classnames: !mangleNames,
 		keep_fnames: !mangleNames
-	})).code || ""
-
-	let scriptBeforeJSONValueReplacement
-
-	{
-		// BUG when this script is used, the source char count is off
-
-		const file = await parse(code)
-
-		traverse(file, {
-			MemberExpression({ node: memberExpression }) {
-				if (memberExpression.computed)
-					return
-
-				assert(memberExpression.property.type == "Identifier")
-
-				if (memberExpression.property.name == "prototype") {
-					memberExpression.computed = true
-					memberExpression.property = t.identifier(`_PROTOTYPE_PROPERTY_${uniqueID}_`)
-				} else if (memberExpression.property.name == "__proto__") {
-					memberExpression.computed = true
-					memberExpression.property = t.identifier(`_PROTO_PROPERTY_${uniqueID}_`)
-				}
-			}
-		})
-
-		scriptBeforeJSONValueReplacement = (await terser.minify(generate(file!).code, {
-			ecma: 2015,
-			compress: {
-				passes: Infinity,
-				unsafe: true,
-				unsafe_arrows: true,
-				unsafe_comps: true,
-				unsafe_symbols: true,
-				unsafe_methods: true,
-				unsafe_proto: true,
-				unsafe_regexp: true,
-				unsafe_undefined: true,
-				sequences: false
-			},
-			format: { semicolons: false },
-			keep_classnames: !mangleNames,
-			keep_fnames: !mangleNames
-		})).code!
-			.replace(new RegExp(`_PROTOTYPE_PROPERTY_${uniqueID}_`, "g"), `"prototype"`)
-			.replace(new RegExp(`_PROTO_PROPERTY_${uniqueID}_`, "g"), `"__proto__"`)
-	}
+	})).code!
+		.replace(new RegExp(`_PROTOTYPE_PROPERTY_${uniqueID}_`, "g"), `"prototype"`)
+		.replace(new RegExp(`_PROTO_PROPERTY_${uniqueID}_`, "g"), `"__proto__"`)
 
 	let comment: string | null = null
 	let hasComment = false
+	let code
 
 	{
-		const file = await parse(code)
 		const promises: Promise<any>[] = []
 
 		traverse(file, {

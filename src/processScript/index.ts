@@ -266,7 +266,7 @@ export async function processScript(
 		// + (code.match(/DB\$/g)?.length ?? 0)
 
 	if (shouldMinify)
-		code = await minify(code, autocomplete, { uniqueID, mangleNames })
+		code = await minify(file, autocomplete, { uniqueID, mangleNames })
 	else {
 		traverse(file, {
 			MemberExpression({ node: memberExpression }) {
