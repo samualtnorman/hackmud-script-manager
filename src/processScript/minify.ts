@@ -26,7 +26,7 @@ type MinifyOptions = {
  * @param autocomplete the comment inserted after the function signature
  * @param options {@link MinifyOptions details}
  */
-export async function minify(code: string, autocomplete: string, {
+export async function minify(code: string, autocomplete?: string, {
 	uniqueID = "00000000000",
 	mangleNames = false
 }: Partial<MinifyOptions> = {}) {

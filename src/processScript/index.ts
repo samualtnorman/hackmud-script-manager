@@ -98,15 +98,90 @@ export async function processScript(
 	const time = performance.now()
 	const sourceCode = code
 	let autocomplete
-	let seclevel
-	let semicolons
+	let statedSeclevel
 
-	({ autocomplete, code, seclevel, semicolons } = preprocess(code, { uniqueID }))
+	// TODO do seclevel detection and verification per module
+
+	const classScriptMatch = code.match(/^function\s*\((?:.+\/\/(.+)|)/)
+
+	if (classScriptMatch) {
+		code = `export default ${code}`
+		autocomplete = classScriptMatch[1]
+	} else {
+		for (const line of code.split("\n")) {
+			const comment = line.match(/^\s*\/\/(.+)/)
+
+			if (!comment)
+				break
+
+			const commentContent = comment[1].trim()
+
+			if (commentContent.startsWith("@autocomplete "))
+				autocomplete = commentContent.slice(14).trimStart()
+			else if (commentContent.startsWith("@seclevel ")) {
+				const seclevelString = commentContent.slice(10).trimStart().toLowerCase()
+
+				switch (seclevelString) {
+					case "fullsec":
+					case "full":
+					case "fs":
+					case "4s":
+					case "f":
+					case "4": {
+						statedSeclevel = 4
+					} break
+
+					case "highsec":
+					case "high":
+					case "hs":
+					case "3s":
+					case "h":
+					case "3": {
+						statedSeclevel = 3
+					} break
+
+					case "midsec":
+					case "mid":
+					case "ms":
+					case "2s":
+					case "m":
+					case "2": {
+						statedSeclevel = 2
+					} break
+
+					case "lowsec":
+					case "low":
+					case "ls":
+					case "1s":
+					case "l":
+					case "1": {
+						statedSeclevel = 1
+					} break
+
+					case "nullsec":
+					case "null":
+					case "ns":
+					case "0s":
+					case "n":
+					case "0": {
+						statedSeclevel = 0
+					} break
+
+					default:
+						// TODO turn into warninig when I get round to those
+						throw new Error(`unrecognised seclevel "${seclevelString}"`)
+				}
+			}
+		}
+	}
+
 	assert(uniqueID.match(/^\w{11}$/))
 
 	const filePathResolved = filePath
 		? resolvePath(filePath)
 		: "script"
+
+	let seclevel = 4
 
 	const bundle = await rollup({
 		plugins: [
@@ -125,7 +200,11 @@ export async function processScript(
 					return null
 				},
 				transform(code) {
-					return preprocess(code, { uniqueID }).code
+					const { code: prerocessedCode, seclevel: detectedSeclevel } = preprocess(code, { uniqueID })
+
+					seclevel = Math.min(seclevel, detectedSeclevel)
+
+					return prerocessedCode
 				}
 			},
 			rollupPluginBabel({
@@ -161,9 +240,17 @@ export async function processScript(
 		]
 	})
 
+	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
+
 	code = (await bundle.generate({})).output[0].code
 
-	const file = await transform(parse(code, { sourceType: "module" }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel })
+	let file
+
+	({ file, seclevel } = await transform(parse(code, { sourceType: "module" }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
+
+	if (statedSeclevel != undefined && seclevel < statedSeclevel)
+		// TODO replace with a warning and build script anyway
+		throw new Error(`detected seclevel ${seclevelNames[seclevel]} is lower than stated seclevel ${seclevelNames[statedSeclevel]}`)
 
 	code = generate(file).code
 
@@ -173,8 +260,8 @@ export async function processScript(
 	// all semicolons out of the count and add the number of semicolons in the
 	// source to make things fair
 	let srcLength = countHackmudCharacters(code.replace(/^function\s*\w+\(/, "function("))
-		- (code.match(/;/g)?.length || 0)
-		+ semicolons
+		// - (code.match(/;/g)?.length || 0)
+		// + semicolons
 		// + (code.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
 		// + (code.match(/DB\$/g)?.length ?? 0)
 

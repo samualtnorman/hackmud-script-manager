@@ -19,63 +19,29 @@ export type PreprocessOptions = {
 export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<PreprocessOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
 
-	let preScriptComments: string | undefined
-	let autocomplete: string | undefined
-
-	[ , preScriptComments, code, autocomplete ] = code.match(/((?:^\s*\/\/.*\n)*)\s*((?:.+?\/\/\s*(.+?)\s*$)?[^]*)/m)!
-
+	// TODO rename stuff that trips this
 	if (code.match(/(?:SC|DB)\$/))
 		throw new Error("SC$ and DB$ are protected and cannot appear in a script")
 
-	let seclevel: number | undefined
-
-	for (const line of preScriptComments.split("\n")) {
-		let [ , autocompleteMatch, seclevelMatch ] = (line.match(/^\s*\/\/\s*(?:@autocomplete\s*([^\s].*?)|@seclevel\s*([^\s].*?))\s*$/) || []) as [ never, string | undefined, string | undefined ]
-
-		if (autocompleteMatch)
-			autocomplete = autocompleteMatch
-		else if (seclevelMatch) {
-			if (seclevelMatch.match(/^(?:fullsec|f|4|fs|full)$/i))
-				seclevel = 4
-			else if (seclevelMatch.match(/^(?:highsec|h|3|hs|high)$/i))
-				seclevel = 3
-			else if (seclevelMatch.match(/^(?:midsec|m|2|ms|mid)$/i))
-				seclevel = 2
-			else if (seclevelMatch.match(/^(?:lowsec|l|1|ls|low)$/i))
-				seclevel = 1
-			else if (seclevelMatch.match(/^(?:nullsec|n|0|ns|null)$/i))
-				seclevel = 0
-		}
-	}
-
-	// TODO move this over to using the new system for finding subscripts
-
-	let detectedSeclevel = 4
-
-	if (code.match(/[#$][n0]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
-		detectedSeclevel = 0
-	else if (code.match(/[#$][l1]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
-		detectedSeclevel = 1
-	else if (code.match(/[#$][m2]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
-		detectedSeclevel = 2
-	else if (code.match(/[#$][h3]s\.[a-z_][a-z_0-9]{0,24}\.[a-z_][a-z_0-9]{0,24}\(/))
-		detectedSeclevel = 3
-
-	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
-
-	if (seclevel == undefined)
-		seclevel = detectedSeclevel
-	else if (detectedSeclevel < seclevel)
-		// TODO replace with a warning and build script anyway
-		throw new Error(`detected seclevel ${seclevelNames[detectedSeclevel]} is lower than stated seclevel ${seclevelNames[seclevel]}`)
-
-	const semicolons = code.match(/;/g)?.length ?? 0
 	const sourceCode = code
 
 	code = code.replace(/^function\s*\(/, "export default function (")
 
-	// TODO I'm not actually doing anything with this yet
+	const subscriptSeclevelCharacterToNumber: Record<string, number> = {
+		f: 4,
+		h: 3,
+		m: 2,
+		l: 1,
+		n: 0,
+		4: 4,
+		3: 3,
+		2: 2,
+		1: 1,
+		0: 0
+	}
+
 	let file
+	let seclevel = 4
 
 	while (true) {
 		let error
@@ -127,9 +93,12 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 		// TODO detect typos and warn e.g. we throw on `#db.ObjectID(` and it makes it look like we don't support it
 		if (match = codeSlice.match(/^#[fhmln43210]s\.scripts\.quine\(\)/))
 			code = spliceString(code, JSON.stringify(sourceCode), error.pos, match[0].length)
-		else if (match = codeSlice.match(/^#[fhmln43210]?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/))
-			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[1]}$${match[2]}(`, error.pos, match[0].length)
-		else if (match = codeSlice.match(/^#D\(/))
+		else if (match = codeSlice.match(/^#([fhmln43210])?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/)) {
+			if (match[1])
+				seclevel = Math.min(seclevel, subscriptSeclevelCharacterToNumber[match[1]])
+
+			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[2]}$${match[3]}(`, error.pos, match[0].length)
+		} else if (match = codeSlice.match(/^#D\(/))
 			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, match[0].length)
 		else if (match = codeSlice.match(/^#FMCL/))
 			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, match[0].length)
@@ -174,10 +143,8 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 	}
 
 	return {
-		semicolons,
-		autocomplete,
-		seclevel,
-		code: generate(file).code
+		code: generate(file).code,
+		seclevel
 	}
 }
 
