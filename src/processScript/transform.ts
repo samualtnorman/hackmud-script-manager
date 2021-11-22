@@ -288,119 +288,61 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
+	// rollup removes all the inline exports and places a statement at the end instead
+	const lastStatement = program.node.body[program.node.body.length - 1]
+	let exportDefaultName
+
+	if (lastStatement.type == "ExportNamedDeclaration") {
+		program.node.body.pop()
+
+		for (const specifier of lastStatement.specifiers) {
+			assert(specifier.type == "ExportSpecifier", `${specifier.type} is currently unsupported`)
+
+			const exportedName = specifier.exported.type == "Identifier"
+				? specifier.exported.name
+				: specifier.exported.value
+
+			if (exportedName == "default")
+				exportDefaultName = specifier.local.name
+			else
+				exports.set(specifier.local.name, exportedName)
+		}
+	}
+
 	const globalBlock: BlockStatement = t.blockStatement([])
 	let mainFunction: FunctionDeclaration | undefined
-	const liveGlobalVariables: string[] = []
 
 	for (const statement of program.node.body) {
-		if (statement.type == "ExportDefaultDeclaration") {
-			if (statement.declaration.type == "FunctionDeclaration" || statement.declaration.type == "FunctionExpression" || statement.declaration.type == "ArrowFunctionExpression") {
-				mainFunction = t.functionDeclaration(
-					t.identifier(topFunctionName),
-					statement.declaration.params,
-					statement.declaration.body.type == "BlockStatement"
-						? statement.declaration.body
-						: t.blockStatement([ t.returnStatement(statement.declaration.body) ])
-				)
-			} else {
-				assert(t.isExpression(statement.declaration))
+		if (statement.type == "VariableDeclaration") {
+			for (const declarator of statement.declarations) {
+				if (declarator.id.type == "Identifier" && declarator.init && (declarator.init.type == "FunctionExpression" || declarator.init.type == "ArrowFunctionExpression") && !declarator.init.async && !declarator.init.generator) {
+					mainFunction = t.functionDeclaration(
+						t.identifier(topFunctionName),
+						declarator.init.params,
+						declarator.init.body.type == "BlockStatement"
+							? declarator.init.body
+							: t.blockStatement([ t.returnStatement(declarator.init.body) ])
+					)
 
-				mainFunction = t.functionDeclaration(
-					t.identifier(topFunctionName),
-					[
-						t.identifier("context"),
-						t.identifier("args")
-					],
-					t.blockStatement([
-						t.returnStatement(
-							t.callExpression(statement.declaration, [])
-						)
-					])
-				)
-			}
-		} else if (statement.type == "ExportNamedDeclaration") {
-			if (statement.declaration) {
-				if (statement.declaration.type == "VariableDeclaration") {
-					for (const declarator of statement.declaration.declarations) {
-						for (const identifierName in t.getBindingIdentifiers(declarator.id)) {
-							if (statement.declaration.kind == "const")
-								exports.set(identifierName, identifierName)
-							else
-								liveExports.set(identifierName, identifierName)
-
-							globalBlock.body.push(
-								t.variableDeclaration(
-									"let",
-									[ t.variableDeclarator(t.identifier(identifierName)) ]
-								)
-							)
-						}
-
-						if (declarator.init) {
-							globalBlock.body.push(
-								t.expressionStatement(
-									t.assignmentExpression(
-										"=",
-										declarator.id,
-										declarator.init
-									)
-								)
-							)
-						}
-					}
-				} else {
-					assert("id" in statement.declaration && statement.declaration.id, `unsupported export type "${statement.declaration.type}"`)
-
-					const name = statement.declaration.id.type == "Identifier"
-						? statement.declaration.id.name
-						: statement.declaration.id.value
-
-					exports.set(name, name)
-					globalBlock.body.push(statement.declaration)
+					continue
 				}
-			} else if (statement.specifiers) {
-				for (const specifier of statement.specifiers) {
-					assert(specifier.type == "ExportSpecifier", `${specifier.type} is currently unsupported`)
 
-					const exportedName = specifier.exported.type == "Identifier"
-						? specifier.exported.name
-						: specifier.exported.value
-
-					if (exportedName == "default") {
+				for (const identifierName in t.getBindingIdentifiers(declarator.id)) {
+					if (identifierName == exportDefaultName) {
 						mainFunction = t.functionDeclaration(
 							t.identifier(topFunctionName),
-							[
-								t.identifier("context"),
-								t.identifier("args")
-							],
+							[ t.identifier("context"), t.identifier("args") ],
 							t.blockStatement([
 								t.returnStatement(
-									t.callExpression(specifier.local, [])
+									t.callExpression(t.identifier(exportDefaultName), [])
 								)
 							])
 						)
-					} else if (liveGlobalVariables.includes(specifier.local.name)) {
-						liveExports.set(
-							specifier.local.name,
-							exportedName
-						)
-					} else {
-						exports.set(
-							specifier.local.name,
-							exportedName
-						)
 					}
-				}
-			}
-		} else if (statement.type == "VariableDeclaration") {
-			for (const declarator of statement.declarations) {
-				for (const identifierName in t.getBindingIdentifiers(declarator.id)) {
-					if (statement.kind != "const") {
-						if (exports.has(identifierName)) {
-							liveExports.set(identifierName, exports.get(identifierName)!)
-							exports.delete(identifierName)
-						} else
-							liveGlobalVariables.push(identifierName)
+
+					if (statement.kind != "const" && exports.has(identifierName)) {
+						liveExports.set(identifierName, exports.get(identifierName)!)
+						exports.delete(identifierName)
 					}
 
 					globalBlock.body.push(
@@ -424,23 +366,27 @@ export async function transform(file: File, sourceCode: string, {
 				}
 			}
 		} else if (statement.type == "FunctionDeclaration") {
-			globalBlock.body.push(
-				t.variableDeclaration(
-					"let",
-					[
-						t.variableDeclarator(
-							statement.id!,
-							t.functionExpression(
-								null,
-								statement.params,
-								statement.body,
-								statement.generator,
-								statement.async
+			if (statement.id!.name == exportDefaultName)
+				mainFunction = statement
+			else {
+				globalBlock.body.push(
+					t.variableDeclaration(
+						"let",
+						[
+							t.variableDeclarator(
+								statement.id!,
+								t.functionExpression(
+									null,
+									statement.params,
+									statement.body,
+									statement.generator,
+									statement.async
+								)
 							)
-						)
-					]
+						]
+					)
 				)
-			)
+			}
 		} else
 			globalBlock.body.push(statement)
 	}
