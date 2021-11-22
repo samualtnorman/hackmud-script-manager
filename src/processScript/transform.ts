@@ -826,7 +826,7 @@ export async function transform(file: File, sourceCode: string, {
 		},
 
 		ThisExpression(path) {
-			path.replaceWith(t.identifier(`_UNDEFINED_${uniqueID}_`))
+			path.replaceWith(t.identifier("undefined"))
 		},
 
 		BigIntLiteral(path) {
