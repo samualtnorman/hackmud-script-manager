@@ -288,7 +288,8 @@ export async function processScript(
 		code = format(generate(file).code, {
 			parser: "babel",
 			arrowParens: "avoid",
-			semi: false
+			semi: false,
+			trailingComma: "none"
 		})
 	}
 
