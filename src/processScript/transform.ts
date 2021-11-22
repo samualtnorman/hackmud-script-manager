@@ -246,7 +246,7 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	// TODO detect not being called and warn
+	// TODO turn not calling into a arrow function wrapper
 	if (program.scope.hasGlobal("$D")) {
 		for (const referencePath of getReferencePathsToGlobal("$D", program))
 			referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG`))
@@ -529,7 +529,8 @@ export async function transform(file: File, sourceCode: string, {
 						}
 
 						for (const referencePath of binding.constantViolations) {
-							assert(referencePath.node.type == "AssignmentExpression")
+							if (referencePath.node.type != "AssignmentExpression")
+								continue
 
 							for (const [ name, node ] of Object.entries(t.getBindingIdentifiers(referencePath.node))) {
 								if (name == declarator.id.name) {
