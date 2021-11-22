@@ -167,6 +167,12 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 		))
 	}
 
+	if (program.scope.hasGlobal("Proxy")) {
+		file.program.body.unshift(t.importDeclaration([
+			t.importDefaultSpecifier(t.identifier("Proxy"))
+		], t.stringLiteral("proxy-polyfill/src/proxy.js")))
+	}
+
 	return {
 		semicolons,
 		autocomplete,

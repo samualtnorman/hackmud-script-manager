@@ -65,6 +65,7 @@
 		"chalk": "^4.1.2",
 		"chokidar": "^3.5.2",
 		"prettier": "^2.4.1",
+		"proxy-polyfill": "^0.3.2",
 		"rollup": "^2.60.0",
 		"terser": "^5.10.0"
 	},
