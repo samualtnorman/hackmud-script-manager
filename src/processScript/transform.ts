@@ -316,7 +316,7 @@ export async function transform(file: File, sourceCode: string, {
 	for (const statement of program.node.body) {
 		if (statement.type == "VariableDeclaration") {
 			for (const declarator of statement.declarations) {
-				if (declarator.id.type == "Identifier" && declarator.init && (declarator.init.type == "FunctionExpression" || declarator.init.type == "ArrowFunctionExpression") && !declarator.init.async && !declarator.init.generator) {
+				if (declarator.id.type == "Identifier" && declarator.id.name == exportDefaultName && declarator.init && (declarator.init.type == "FunctionExpression" || declarator.init.type == "ArrowFunctionExpression") && !declarator.init.async && !declarator.init.generator) {
 					mainFunction = t.functionDeclaration(
 						t.identifier(topFunctionName),
 						declarator.init.params,
