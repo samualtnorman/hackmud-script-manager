@@ -237,7 +237,8 @@ export async function processScript(
 			rollupPluginCommonJS(),
 			rollupPluginNodeResolve({ extensions }),
 			rollupPluginJSON()
-		]
+		],
+		treeshake: { moduleSideEffects: "no-external" }
 	})
 
 	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
