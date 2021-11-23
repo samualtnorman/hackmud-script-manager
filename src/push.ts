@@ -1,4 +1,4 @@
-import { countHackmudCharacters, DynamicMap, forEachParallel, writeFilePersistent } from "@samual/lib"
+import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import type { Info } from "."
@@ -107,9 +107,9 @@ export async function push(
 	}
 
 	// foo.*
-	await forEachParallel(wildScriptUsers, async user => {
+	await Promise.all([ ...wildScriptUsers ].map(async user => {
 		await readDirectory(resolvePath(sourceDirectory, user), { withFileTypes: true }).then(async dirents => {
-			await forEachParallel(dirents, async dirent => {
+			await Promise.all(dirents.map(async dirent => {
 				const extension = getFileExtension(dirent.name)
 
 				if (dirent.isFile() && supportedExtensions.includes(extension)) {
@@ -142,19 +142,19 @@ export async function push(
 
 					onPush(info)
 				}
-			})
+			}))
 		}, (error: NodeJS.ErrnoException) => {
 			if (error.code != "ENOENT")
 				throw error
 		})
-	})
+	}))
 
 	// foo.bar
-	await forEachParallel(scriptNamesByUser, async ([ user, scripts ]) => {
+	await Promise.all([ ...scriptNamesByUser ].map(async ([ user, scripts ]) => {
 		if (wildScriptUsers.has(user))
 			return
 
-		await forEachParallel(scripts, async scriptName => {
+		await Promise.all([ ...scripts ].map(async scriptName => {
 			let code
 			let fileName
 
@@ -195,12 +195,12 @@ export async function push(
 				onPush(info)
 			} else
 				usersByGlobalScriptsToPush.get(scriptName).add(user)
-		})
-	})
+		}))
+	}))
 
 	// foo.* (global)
 	if (wildScriptUsers.size) {
-		await forEachParallel(sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true }), async dirent => {
+		await Promise.all((sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true })).map(async dirent => {
 			const extension = getFileExtension(dirent.name)
 
 			if (!dirent.isFile() || !supportedExtensions.includes(extension))
@@ -235,7 +235,7 @@ export async function push(
 				srcLength
 			}
 
-			await forEachParallel(usersToPushTo, user =>
+			await Promise.all(usersToPushTo.map(user =>
 				writeFilePersistent(
 					resolvePath(
 						hackmudDirectory,
@@ -246,14 +246,14 @@ export async function push(
 						.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, "g"), user)
 						.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, "g"), `${user}.${scriptName}`)
 				)
-			)
+			))
 
 			allInfo.push(info)
 			onPush(info)
-		})
+		}))
 	} else {
 		// foo.bar (global)
-		await forEachParallel(usersByGlobalScriptsToPush, async ([ scriptName, users ]) => {
+		await Promise.all([ ...usersByGlobalScriptsToPush ].map(async ([ scriptName, users ]) => {
 			let code
 			let fileName!: string
 			let filePath!: string
@@ -289,7 +289,7 @@ export async function push(
 					srcLength
 				}
 
-				await forEachParallel(users, user =>
+				await Promise.all([ ...users ].map(user =>
 					writeFilePersistent(
 						resolvePath(
 							hackmudDirectory,
@@ -300,12 +300,12 @@ export async function push(
 							.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, "g"), user)
 							.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, "g"), `${user}.${scriptName}`)
 					)
-				)
+				))
 
 				allInfo.push(info)
 				onPush(info)
 			}
-		})
+		}))
 	}
 
 	return allInfo
