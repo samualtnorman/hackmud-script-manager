@@ -1,9 +1,10 @@
 import babelGenerator from "@babel/generator"
-import babelTraverse from "@babel/traverse"
-import t, { Expression, File } from "@babel/types"
+import babelTraverse, { NodePath } from "@babel/traverse"
+import t, { Expression, File, FunctionDeclaration, Program } from "@babel/types"
 import { assert, countHackmudCharacters, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
+import { getReferencePathsToGlobal } from "./shared"
 
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -30,6 +31,56 @@ export async function minify(file: File, autocomplete?: string, {
 	mangleNames = false
 }: Partial<MinifyOptions> = {}) {
 	assert(uniqueID.match(/^\w{11}$/))
+
+	let program!: NodePath<Program>
+
+	traverse(file, {
+		Program(path) {
+			program = path
+			path.skip()
+		}
+	})
+
+	// typescript does not like NodePath#get() and becomes very slow so I have to dance around it
+	const mainFunctionPath = (program.get("body.0" as string) as NodePath<FunctionDeclaration>)
+
+	for (const parameter of [ ...mainFunctionPath.node.params ].reverse()) {
+		if (parameter.type == "Identifier") {
+			const binding = mainFunctionPath.scope.getBinding(parameter.name)!
+
+			if (!binding.referenced) {
+				mainFunctionPath.node.params.pop()
+				continue
+			}
+		}
+
+		break
+	}
+
+	for (const global in (program.scope as any).globals as Record<string, any>) {
+		if (global == "arguments" || global.startsWith(`$${uniqueID}`))
+			continue
+
+		const referencePaths = getReferencePathsToGlobal(global, program)
+
+		if (5 + global.length + referencePaths.length >= global.length * referencePaths.length)
+			continue
+
+		for (const path of referencePaths)
+			path.replaceWith(t.identifier(`_GLOBAL_${global}_${uniqueID}_`))
+
+		mainFunctionPath.node.body.body.unshift(
+			t.variableDeclaration(
+				"let",
+				[
+					t.variableDeclarator(
+						t.identifier(`_GLOBAL_${global}_${uniqueID}_`),
+						t.identifier(global)
+					)
+				]
+			)
+		)
+	}
 
 	const jsonValues: any[] = []
 	let undefinedIsReferenced = false

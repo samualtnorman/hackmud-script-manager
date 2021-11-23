@@ -1,7 +1,8 @@
 import babelTraverse, { NodePath } from "@babel/traverse"
-import t, { BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, Program } from "@babel/types"
+import t, { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
 import { clearObject } from "@samual/lib"
-import { assert, ensure } from "@samual/lib/assert"
+import { assert } from "@samual/lib/assert"
+import { getReferencePathsToGlobal } from "./shared"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
@@ -867,49 +868,6 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	})
 
-	// TODO this should probably be done in the minify step
-	// typescript does not like NodePath#get() and becomes very slow so I have to dance around it
-	const mainFunctionScope = (program.get("body.0" as string) as NodePath<FunctionDeclaration>).scope
-
-	for (const parameter of [ ...mainFunction.params ].reverse()) {
-		if (parameter.type == "Identifier") {
-			const binding = mainFunctionScope.getBinding(parameter.name)!
-
-			if (!binding.referenced) {
-				mainFunction.params.pop()
-				continue
-			}
-		}
-
-		break
-	}
-
-	// TODO this should be done in the minify step
-	for (const global in (program.scope as any).globals as Record<string, any>) {
-		if (global == "arguments" || global.startsWith(`$${uniqueID}`))
-			continue
-
-		const referencePaths = getReferencePathsToGlobal(global, program)
-
-		if (5 + global.length + referencePaths.length >= global.length * referencePaths.length)
-			continue
-
-		for (const path of referencePaths)
-			path.replaceWith(t.identifier(`_GLOBAL_${global}_${uniqueID}_`))
-
-		mainFunction.body.body.unshift(
-			t.variableDeclaration(
-				"let",
-				[
-					t.variableDeclarator(
-						t.identifier(`_GLOBAL_${global}_${uniqueID}_`),
-						t.identifier(global)
-					)
-				]
-			)
-		)
-	}
-
 	return { file, seclevel }
 
 	function createGetFunctionPrototypeNode() {
@@ -940,21 +898,3 @@ export async function transform(file: File, sourceCode: string, {
 }
 
 export default transform
-
-function getReferencePathsToGlobal(name: string, program: NodePath<Program>) {
-	const [ variableDeclaration ] = program.unshiftContainer(
-		"body",
-		t.variableDeclaration(
-			"let",
-			[ t.variableDeclarator(t.identifier(name)) ]
-		)
-	)
-
-	program.scope.crawl()
-
-	const binding = ensure(program.scope.getBinding(name))
-
-	variableDeclaration.remove()
-
-	return binding.referencePaths as NodePath<Identifier>[]
-}
