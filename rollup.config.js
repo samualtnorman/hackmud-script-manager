@@ -61,50 +61,26 @@ export default async ({ w }) => {
 }
 
 /**
- * @param path the directory to start recursively finding files in
- * @param filter either a blacklist or a filter function that returns false to ignore file name
- * @returns promise that resolves to array of found files
- * @type {(path: string, filter?: string[] | ((name: string) => boolean)) => Promise<string[]>}
+ * @param {string} path the directory to start recursively finding files in
+ * @param {string[] | ((name: string) => boolean)} filter either a blacklist or a filter function that returns false to ignore file name
+ * @returns {string[]} promise that resolves to array of found files
  */
-async function findFiles(path, filter = []) {
-	const paths = []
-	let /** @type {(name: string) => boolean} */ filterFunction
+async function findFiles(path, filter = [], paths = []) {
+	const filterFunction = Array.isArray(filter)
+		? name => !filter.includes(name)
+		: filter
 
-	if (Array.isArray(filter))
-		filterFunction = name => !filter.includes(name)
-	else
-		filterFunction = filter
-
-	for (const dirent of await readDirectory(path, { withFileTypes: true })) {
+	await Promise.all((await readDirectory(path, { withFileTypes: true })).map(async dirent => {
 		if (!filterFunction(dirent.name))
-			continue
+			return
 
 		const direntPath = `${path}/${dirent.name}`
 
 		if (dirent.isDirectory())
-			await findFilesSub(direntPath, filterFunction, paths)
+			findFiles(direntPath, filterFunction, paths)
 		else if (dirent.isFile())
 			paths.push(direntPath)
-	}
+	}))
 
-	return paths
-}
-
-async function findFilesSub(path, filterFunction, paths) {
-	const promises = []
-
-	for (const dirent of await readDirectory(path, { withFileTypes: true })) {
-		if (!filterFunction(dirent.name))
-			continue
-
-		const direntPath = `${path}/${dirent.name}`
-
-		if (dirent.isDirectory())
-			promises.push(findFilesSub(direntPath, filterFunction, paths))
-		else if (dirent.isFile())
-			paths.push(direntPath)
-	}
-
-	await Promise.all(promises)
 	return paths
 }
