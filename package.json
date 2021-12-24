@@ -62,7 +62,7 @@
 		"@rollup/plugin-json": "^4.1.0",
 		"@rollup/plugin-node-resolve": "^13.0.6",
 		"acorn": "^8.5.0",
-		"chalk": "^4.1.2",
+		"chalk": "^5.0.0",
 		"chokidar": "^3.5.2",
 		"prettier": "^2.4.1",
 		"proxy-polyfill": "^0.3.2",
@@ -72,7 +72,7 @@
 	"devDependencies": {
 		"@babel/preset-env": "^7.16.4",
 		"@babel/preset-typescript": "^7.16.0",
-		"@samual/lib": "^0.2.0-27ea8d5",
+		"@samual/lib": "^0.2.0-890d658",
 		"@types/babel__core": "^7.1.16",
 		"@types/node": "^12.20.37",
 		"@types/prettier": "^2.4.2",
