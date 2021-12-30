@@ -1,7 +1,6 @@
 import babelTraverse, { NodePath } from "@babel/traverse"
 import t, { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
-import { clearObject } from "@samual/lib"
-import { assert } from "@samual/lib/assert"
+import { assert, clearObject } from "@samual/lib"
 import { getReferencePathsToGlobal } from "./shared"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -10,30 +9,30 @@ export type TransformOptions = {
 	/** 11 a-z 0-9 characters */
 	uniqueID: string
 
-	/** the user the script will be uploaded to (or set to `true` if it is not yet known) */
+	/** the user going to be hosting this script (or set to `true` if not yet known) */
 	scriptUser: string | true
 
-	/** the name of this script (or set to `true` if it is not yet known) */
+	/** the name of this script (or set to `true` if not yet known) */
 	scriptName: string | true
 
 	seclevel: number
 }
 
 const globalFunctionsUnder7Characters = [
-	"Map",
-	"Set",
-	"Date",
-	"JSON",
-	"Math",
-	"Array",
-	"Error",
-	"isNaN",
-	"Number",
-	"Object",
-	"RegExp",
-	"String",
-	"Symbol",
-	"BigInt"
+	`Map`,
+	`Set`,
+	`Date`,
+	`JSON`,
+	`Math`,
+	`Array`,
+	`Error`,
+	`isNaN`,
+	`Number`,
+	`Object`,
+	`RegExp`,
+	`String`,
+	`Symbol`,
+	`BigInt`
 ]
 
 /**
@@ -43,16 +42,15 @@ const globalFunctionsUnder7Characters = [
  *
  * @param options {@link TransformOptions details}
  */
-export async function transform(file: File, sourceCode: string, {
-	uniqueID = "00000000000",
-	scriptUser = "UNKNOWN",
-	scriptName = "UNKNOWN",
+export function transform(file: File, sourceCode: string, {
+	uniqueID = `00000000000`,
+	scriptUser = `UNKNOWN`,
+	scriptName = `UNKNOWN`,
 	seclevel = 4
 }: Partial<TransformOptions> = {}) {
 	const topFunctionName = `_SCRIPT_${uniqueID}_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
-
 	let program!: NodePath<t.Program>
 
 	traverse(file, {
@@ -62,28 +60,28 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	})
 
-	if (program.scope.hasGlobal("_START")) {
-		for (const referencePath of getReferencePathsToGlobal("_START", program))
-			referencePath.replaceWith(t.identifier("_ST"))
+	if (program.scope.hasGlobal(`_START`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_START`, program))
+			referencePath.replaceWith(t.identifier(`_ST`))
 	}
 
-	if (program.scope.hasGlobal("_TIMEOUT")) {
-		for (const referencePath of getReferencePathsToGlobal("_START", program))
-			referencePath.replaceWith(t.identifier("_TO"))
+	if (program.scope.hasGlobal(`_TIMEOUT`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_START`, program))
+			referencePath.replaceWith(t.identifier(`_TO`))
 	}
 
-	if (program.scope.hasGlobal("_SOURCE")) {
-		for (const referencePath of getReferencePathsToGlobal("_SOURCE", program))
+	if (program.scope.hasGlobal(`_SOURCE`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_SOURCE`, program))
 			referencePath.replaceWith(t.stringLiteral(sourceCode))
 	}
 
-	if (program.scope.hasGlobal("_BUILD_DATE")) {
-		for (const referencePath of getReferencePathsToGlobal("_BUILD_DATE", program))
+	if (program.scope.hasGlobal(`_BUILD_DATE`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_BUILD_DATE`, program))
 			referencePath.replaceWith(t.numericLiteral(Date.now()))
 	}
 
-	if (program.scope.hasGlobal("_SCRIPT_USER")) {
-		for (const referencePath of getReferencePathsToGlobal("_SCRIPT_USER", program)) {
+	if (program.scope.hasGlobal(`_SCRIPT_USER`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program)) {
 			if (scriptUser == true)
 				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_USER`))
 			else
@@ -91,8 +89,8 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	if (program.scope.hasGlobal("_SCRIPT_NAME")) {
-		for (const referencePath of getReferencePathsToGlobal("_SCRIPT_NAME", program)) {
+	if (program.scope.hasGlobal(`_SCRIPT_NAME`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_NAME`, program)) {
 			if (scriptName == true)
 				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_NAME`))
 			else
@@ -100,8 +98,8 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	if (program.scope.hasGlobal("_FULL_SCRIPT_NAME")) {
-		for (const referencePath of getReferencePathsToGlobal("_FULL_SCRIPT_NAME", program)) {
+	if (program.scope.hasGlobal(`_FULL_SCRIPT_NAME`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_FULL_SCRIPT_NAME`, program)) {
 			if (scriptUser == true || scriptName == true)
 				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME`))
 			else
@@ -111,23 +109,21 @@ export async function transform(file: File, sourceCode: string, {
 
 	let functionDotPrototypeIsReferencedMultipleTimes = false
 
-	if (program.scope.hasGlobal("Function")) {
-		const FunctionReferencePaths = getReferencePathsToGlobal("Function", program)
+	if (program.scope.hasGlobal(`Function`)) {
+		const FunctionReferencePaths = getReferencePathsToGlobal(`Function`, program)
 
 		if (FunctionReferencePaths.length == 1) {
-			const [ referencePath ] = FunctionReferencePaths
+			const referencePath = FunctionReferencePaths[0]!
 
-			assert(referencePath.parent.type == "MemberExpression", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
-			assert(referencePath.parent.property.type == "Identifier", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
-			assert(referencePath.parent.property.name == "prototype", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
-
+			assert(referencePath.parent.type == `MemberExpression`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
+			assert(referencePath.parent.property.type == `Identifier`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
+			assert(referencePath.parent.property.name == `prototype`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
 			referencePath.parentPath.replaceWith(createGetFunctionPrototypeNode())
 		} else {
 			for (const referencePath of FunctionReferencePaths) {
-				assert(referencePath.parent.type == "MemberExpression", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
-				assert(referencePath.parent.property.type == "Identifier", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
-				assert(referencePath.parent.property.name == "prototype", "`Function` isn't available in hackmud, only `Function.prototype` is accessible")
-
+				assert(referencePath.parent.type == `MemberExpression`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
+				assert(referencePath.parent.property.type == `Identifier`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
+				assert(referencePath.parent.property.name == `prototype`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
 				functionDotPrototypeIsReferencedMultipleTimes = true
 
 				referencePath.parentPath.replaceWith(
@@ -144,13 +140,13 @@ export async function transform(file: File, sourceCode: string, {
 	// TODO warn when script name is invalid
 	// TODO turn not calling into a arrow function wrapper
 
-	for (const fakeSubscriptObjectName of [ "$fs", "$4s", "$s" ]) {
+	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == "MemberExpression")
-				assert(referencePath.parent.property.type == "Identifier")
-				assert(referencePath.parentPath.parentPath?.node.type == "MemberExpression")
-				assert(referencePath.parentPath.parentPath?.node.property.type == "Identifier")
+				assert(referencePath.parent.type == `MemberExpression`)
+				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
 
 				// BUG this is causing typescript to be slow
 				referencePath.parentPath.parentPath.replaceWith(
@@ -160,15 +156,15 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	for (const fakeSubscriptObjectName of [ "$hs", "$3s" ]) {
+	for (const fakeSubscriptObjectName of [ `$hs`, `$3s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 3
 
 			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == "MemberExpression")
-				assert(referencePath.parent.property.type == "Identifier")
-				assert(referencePath.parentPath.parentPath?.node.type == "MemberExpression")
-				assert(referencePath.parentPath.parentPath?.node.property.type == "Identifier")
+				assert(referencePath.parent.type == `MemberExpression`)
+				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
 
 				// BUG this is causing typescript to be slow
 				referencePath.parentPath.parentPath.replaceWith(
@@ -178,15 +174,15 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	for (const fakeSubscriptObjectName of [ "$ms", "$2s" ]) {
+	for (const fakeSubscriptObjectName of [ `$ms`, `$2s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 2
 
 			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == "MemberExpression")
-				assert(referencePath.parent.property.type == "Identifier")
-				assert(referencePath.parentPath.parentPath?.node.type == "MemberExpression")
-				assert(referencePath.parentPath.parentPath?.node.property.type == "Identifier")
+				assert(referencePath.parent.type == `MemberExpression`)
+				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
 
 				// BUG this is causing typescript to be slow
 				referencePath.parentPath.parentPath.replaceWith(
@@ -196,15 +192,15 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	for (const fakeSubscriptObjectName of ["$ls", "$1s" ]) {
+	for (const fakeSubscriptObjectName of [ `$ls`, `$1s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 1
 
 			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == "MemberExpression")
-				assert(referencePath.parent.property.type == "Identifier")
-				assert(referencePath.parentPath.parentPath?.node.type == "MemberExpression")
-				assert(referencePath.parentPath.parentPath?.node.property.type == "Identifier")
+				assert(referencePath.parent.type == `MemberExpression`)
+				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
 
 				// BUG this is causing typescript to be slow
 				referencePath.parentPath.parentPath.replaceWith(
@@ -214,15 +210,15 @@ export async function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	for (const fakeSubscriptObjectName of [ "$ns", "$0s" ]) {
+	for (const fakeSubscriptObjectName of [ `$ns`, `$0s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 0
 
 			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == "MemberExpression")
-				assert(referencePath.parent.property.type == "Identifier")
-				assert(referencePath.parentPath.parentPath?.node.type == "MemberExpression")
-				assert(referencePath.parentPath.parentPath?.node.property.type == "Identifier")
+				assert(referencePath.parent.type == `MemberExpression`)
+				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
 
 				// BUG this is causing typescript to be slow
 				referencePath.parentPath.parentPath.replaceWith(
@@ -236,10 +232,10 @@ export async function transform(file: File, sourceCode: string, {
 
 	// TODO warn when db method is invalid
 	// TODO turn not calling into a arrow function wrapper
-	if (program.scope.hasGlobal("$db")) {
-		for (const referencePath of getReferencePathsToGlobal("$db", program)) {
-			assert(referencePath.parentPath.node.type == "MemberExpression")
-			assert(referencePath.parentPath.node.property.type == "Identifier")
+	if (program.scope.hasGlobal(`$db`)) {
+		for (const referencePath of getReferencePathsToGlobal(`$db`, program)) {
+			assert(referencePath.parentPath.node.type == `MemberExpression`)
+			assert(referencePath.parentPath.node.property.type == `Identifier`)
 
 			referencePath.parentPath.replaceWith(
 				t.identifier(`$${uniqueID}$DB$${referencePath.parentPath.node.property.name}`)
@@ -248,41 +244,40 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	// TODO turn not calling into a arrow function wrapper
-	if (program.scope.hasGlobal("$D")) {
-		for (const referencePath of getReferencePathsToGlobal("$D", program))
+	if (program.scope.hasGlobal(`$D`)) {
+		for (const referencePath of getReferencePathsToGlobal(`$D`, program))
 			referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG`))
 	}
 
-	if (program.scope.hasGlobal("$FMCL")) {
-		for (const referencePath of getReferencePathsToGlobal("$FMCL", program))
+	if (program.scope.hasGlobal(`$FMCL`)) {
+		for (const referencePath of getReferencePathsToGlobal(`$FMCL`, program))
 			referencePath.replaceWith(t.identifier(`$${uniqueID}$FMCL`))
 	}
 
-	if (program.scope.hasGlobal("$G")) {
-		for (const referencePath of getReferencePathsToGlobal("$G", program))
+	if (program.scope.hasGlobal(`$G`)) {
+		for (const referencePath of getReferencePathsToGlobal(`$G`, program))
 			referencePath.replaceWith(t.identifier(`$${uniqueID}$GLOBAL`))
 	}
 
-	if (program.scope.hasGlobal("_SECLEVEL")) {
-		for (const referencePath of getReferencePathsToGlobal("_SECLEVEL", program)) {
+	if (program.scope.hasGlobal(`_SECLEVEL`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_SECLEVEL`, program))
 			referencePath.replaceWith(t.numericLiteral(seclevel))
-		}
 	}
 
 	let needGetPrototypeOf = false
 	let needSetPrototypeOf = false
 
-	if (program.scope.hasGlobal("Object")) {
-		for (const referencePath of getReferencePathsToGlobal("Object", program)) {
-			if (referencePath.parent.type != "MemberExpression" || referencePath.parent.computed)
+	if (program.scope.hasGlobal(`Object`)) {
+		for (const referencePath of getReferencePathsToGlobal(`Object`, program)) {
+			if (referencePath.parent.type != `MemberExpression` || referencePath.parent.computed)
 				continue
 
-			assert(referencePath.parent.property.type == "Identifier")
+			assert(referencePath.parent.property.type == `Identifier`)
 
-			if (referencePath.parent.property.name == "getPrototypeOf") {
+			if (referencePath.parent.property.name == `getPrototypeOf`) {
 				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$GET_PROTOTYPE_OF`))
 				needGetPrototypeOf = true
-			} else if (referencePath.parent.property.name == "setPrototypeOf") {
+			} else if (referencePath.parent.property.name == `setPrototypeOf`) {
 				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$SET_PROTOTYPE_OF`))
 				needSetPrototypeOf = true
 			}
@@ -290,20 +285,20 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	// rollup removes all the inline exports and places a statement at the end instead
-	const lastStatement = program.node.body[program.node.body.length - 1]
+	const lastStatement = program.node.body[program.node.body.length - 1]!
 	let exportDefaultName
 
-	if (lastStatement.type == "ExportNamedDeclaration") {
+	if (lastStatement.type == `ExportNamedDeclaration`) {
 		program.node.body.pop()
 
 		for (const specifier of lastStatement.specifiers) {
-			assert(specifier.type == "ExportSpecifier", `${specifier.type} is currently unsupported`)
+			assert(specifier.type == `ExportSpecifier`, `${specifier.type} is currently unsupported`)
 
-			const exportedName = specifier.exported.type == "Identifier"
+			const exportedName = specifier.exported.type == `Identifier`
 				? specifier.exported.name
 				: specifier.exported.value
 
-			if (exportedName == "default")
+			if (exportedName == `default`)
 				exportDefaultName = specifier.local.name
 			else
 				exports.set(specifier.local.name, exportedName)
@@ -314,13 +309,13 @@ export async function transform(file: File, sourceCode: string, {
 	let mainFunction: FunctionDeclaration | undefined
 
 	for (const statement of program.node.body) {
-		if (statement.type == "VariableDeclaration") {
+		if (statement.type == `VariableDeclaration`) {
 			for (const declarator of statement.declarations) {
-				if (declarator.id.type == "Identifier" && declarator.id.name == exportDefaultName && declarator.init && (declarator.init.type == "FunctionExpression" || declarator.init.type == "ArrowFunctionExpression") && !declarator.init.async && !declarator.init.generator) {
+				if (declarator.id.type == `Identifier` && declarator.id.name == exportDefaultName && declarator.init && (declarator.init.type == `FunctionExpression` || declarator.init.type == `ArrowFunctionExpression`) && !declarator.init.async && !declarator.init.generator) {
 					mainFunction = t.functionDeclaration(
 						t.identifier(topFunctionName),
 						declarator.init.params,
-						declarator.init.body.type == "BlockStatement"
+						declarator.init.body.type == `BlockStatement`
 							? declarator.init.body
 							: t.blockStatement([ t.returnStatement(declarator.init.body) ])
 					)
@@ -332,7 +327,7 @@ export async function transform(file: File, sourceCode: string, {
 					if (identifierName == exportDefaultName) {
 						mainFunction = t.functionDeclaration(
 							t.identifier(topFunctionName),
-							[ t.identifier("context"), t.identifier("args") ],
+							[ t.identifier(`context`), t.identifier(`args`) ],
 							t.blockStatement([
 								t.returnStatement(
 									t.callExpression(t.identifier(exportDefaultName), [])
@@ -341,14 +336,14 @@ export async function transform(file: File, sourceCode: string, {
 						)
 					}
 
-					if (statement.kind != "const" && exports.has(identifierName)) {
+					if (statement.kind != `const` && exports.has(identifierName)) {
 						liveExports.set(identifierName, exports.get(identifierName)!)
 						exports.delete(identifierName)
 					}
 
 					globalBlock.body.push(
 						t.variableDeclaration(
-							"let",
+							`let`,
 							[ t.variableDeclarator(t.identifier(identifierName)) ]
 						)
 					)
@@ -358,7 +353,7 @@ export async function transform(file: File, sourceCode: string, {
 					globalBlock.body.push(
 						t.expressionStatement(
 							t.assignmentExpression(
-								"=",
+								`=`,
 								declarator.id,
 								declarator.init
 							)
@@ -366,13 +361,13 @@ export async function transform(file: File, sourceCode: string, {
 					)
 				}
 			}
-		} else if (statement.type == "FunctionDeclaration") {
+		} else if (statement.type == `FunctionDeclaration`) {
 			if (statement.id!.name == exportDefaultName)
 				mainFunction = statement
 			else {
 				globalBlock.body.push(
 					t.variableDeclaration(
-						"let",
+						`let`,
 						[
 							t.variableDeclarator(
 								statement.id!,
@@ -395,8 +390,8 @@ export async function transform(file: File, sourceCode: string, {
 	mainFunction ||= t.functionDeclaration(
 		t.identifier(topFunctionName),
 		[
-			t.identifier("context"),
-			t.identifier("args")
+			t.identifier(`context`),
+			t.identifier(`args`)
 		],
 		t.blockStatement([])
 	)
@@ -414,7 +409,7 @@ export async function transform(file: File, sourceCode: string, {
 						),
 						...[ ...liveExports ].map(
 							([ local, exported ]) => t.objectMethod(
-								"get",
+								`get`,
 								t.identifier(exported),
 								[],
 								t.blockStatement([
@@ -435,37 +430,36 @@ export async function transform(file: File, sourceCode: string, {
 		let hoistedGlobalBlockFunctions = 0
 
 		for (const [ globalBlockIndex, globalBlockStatement ] of [ ...globalBlock.body.entries() ].reverse()) {
-			if (globalBlockStatement.type == "VariableDeclaration") {
+			if (globalBlockStatement.type == `VariableDeclaration`) {
 				assert(globalBlockStatement.declarations.length == 1)
 
-				const declarator = globalBlockStatement.declarations[0]
+				const declarator = globalBlockStatement.declarations[0]!
 
-				assert(declarator.id.type == "Identifier", `declarator.id.type was "${declarator.id.type}"`)
-
+				assert(declarator.id.type == `Identifier`, `declarator.id.type was "${declarator.id.type}"`)
 				program.scope.crawl()
 
 				if (program.scope.hasGlobal(declarator.id.name)) {
 					globalBlock.body.splice(globalBlockIndex, 1)
 
 					const [ globalBlockPath ] = program.unshiftContainer(
-						"body",
+						`body`,
 						globalBlock
 					)
 
 					const [ globalBlockStatementPath ] = program.unshiftContainer(
-						"body",
+						`body`,
 						globalBlockStatement
 					)
 
 					program.scope.crawl()
 
-					if (!declarator.init || (declarator.init.type != "FunctionExpression" && declarator.init.type != "ArrowFunctionExpression") || Object.keys((program.scope as any).globals).find(global => globalBlockVariables.has(global))) {
+					if (!declarator.init || (declarator.init.type != `FunctionExpression` && declarator.init.type != `ArrowFunctionExpression`) || Object.keys((program.scope as any).globals).some(global => globalBlockVariables.has(global))) {
 						const binding = program.scope.getBinding(declarator.id.name)
 
 						assert(binding)
 
 						for (const referencePath of binding.referencePaths) {
-							assert(referencePath.node.type == "Identifier")
+							assert(referencePath.node.type == `Identifier`)
 
 							referencePath.replaceWith(
 								t.memberExpression(
@@ -476,7 +470,7 @@ export async function transform(file: File, sourceCode: string, {
 						}
 
 						for (const referencePath of binding.constantViolations) {
-							if (referencePath.node.type != "AssignmentExpression")
+							if (referencePath.node.type != `AssignmentExpression`)
 								continue
 
 							for (const [ name, node ] of Object.entries(t.getBindingIdentifiers(referencePath.node))) {
@@ -501,7 +495,7 @@ export async function transform(file: File, sourceCode: string, {
 								0,
 								t.expressionStatement(
 									t.assignmentExpression(
-										"=",
+										`=`,
 										t.memberExpression(
 											t.identifier(`$${uniqueID}$GLOBAL`),
 											t.identifier(declarator.id.name)
@@ -523,19 +517,19 @@ export async function transform(file: File, sourceCode: string, {
 					}
 				} else
 					globalBlockVariables.add(declarator.id.name)
-			} else if (globalBlockStatement.type == "ClassDeclaration") {
+			} else if (globalBlockStatement.type == `ClassDeclaration`) {
 				program.scope.crawl()
 
 				if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
 					globalBlock.body.splice(globalBlockIndex, 1)
 
 					const [ globalBlockPath ] = program.unshiftContainer(
-						"body",
+						`body`,
 						globalBlock
 					)
 
 					const [ globalBlockStatementPath ] = program.unshiftContainer(
-						"body",
+						`body`,
 						globalBlockStatement
 					)
 
@@ -546,7 +540,7 @@ export async function transform(file: File, sourceCode: string, {
 					assert(binding)
 
 					for (const referencePath of binding.referencePaths) {
-						assert(referencePath.node.type == "Identifier")
+						assert(referencePath.node.type == `Identifier`)
 
 						referencePath.replaceWith(
 							t.memberExpression(
@@ -564,7 +558,7 @@ export async function transform(file: File, sourceCode: string, {
 						0,
 						t.expressionStatement(
 							t.assignmentExpression(
-								"=",
+								`=`,
 								t.memberExpression(
 									t.identifier(`$${uniqueID}$GLOBAL`),
 									t.identifier(globalBlockStatement.id.name)
@@ -582,8 +576,8 @@ export async function transform(file: File, sourceCode: string, {
 			}
 		}
 
-		if (program.scope.hasGlobal("_EXPORTS")) {
-			for (const referencePath of getReferencePathsToGlobal("_EXPORTS", program)) {
+		if (program.scope.hasGlobal(`_EXPORTS`)) {
+			for (const referencePath of getReferencePathsToGlobal(`_EXPORTS`, program)) {
 				referencePath.replaceWith(
 					t.arrayExpression(
 						[ ...exports.keys(), ...liveExports.keys() ]
@@ -599,7 +593,7 @@ export async function transform(file: File, sourceCode: string, {
 				0,
 				t.ifStatement(
 					t.unaryExpression(
-						"!",
+						`!`,
 						t.identifier(`$${uniqueID}$FMCL`)
 					),
 					globalBlock
@@ -609,7 +603,7 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	if (functionDotPrototypeIsReferencedMultipleTimes) {
-		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
 				t.identifier(`$${uniqueID}$FUNCTION_DOT_PROTOTYPE`),
 				createGetFunctionPrototypeNode()
@@ -618,16 +612,16 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	if (needSetPrototypeOf) {
-		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
 				t.identifier(`$${uniqueID}$SET_PROTOTYPE_OF`),
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
-							t.identifier("Object"),
-							t.identifier("call")
+							t.identifier(`Object`),
+							t.identifier(`call`)
 						),
-						t.identifier("bind")
+						t.identifier(`bind`)
 					),
 					[ t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`) ]
 				)
@@ -636,16 +630,16 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	if (needGetPrototypeOf) {
-		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
 				t.identifier(`$${uniqueID}$GET_PROTOTYPE_OF`),
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
-							t.identifier("Object"),
-							t.identifier("call")
+							t.identifier(`Object`),
+							t.identifier(`call`)
 						),
-						t.identifier("bind")
+						t.identifier(`bind`)
 					),
 					[ t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`) ]
 				)
@@ -654,44 +648,44 @@ export async function transform(file: File, sourceCode: string, {
 	}
 
 	if (needGetPrototypeOf || needSetPrototypeOf) {
-		mainFunction.body.body.unshift(t.variableDeclaration("let", [
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
 				t.objectPattern(needGetPrototypeOf
-					? needSetPrototypeOf
+					? (needSetPrototypeOf
 						? [
 							t.objectProperty(
-								t.identifier("get"),
+								t.identifier(`get`),
 								t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`)
 							),
 							t.objectProperty(
-								t.identifier("set"),
+								t.identifier(`set`),
 								t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`)
 							)
 						]
 						: [
 							t.objectProperty(
-								t.identifier("get"),
+								t.identifier(`get`),
 								t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`)
 							)
 						]
-					: [
+					) : [
 						t.objectProperty(
-							t.identifier("set"),
+							t.identifier(`set`),
 							t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`)
 						)
 					]
 				),
 				t.callExpression(
 					t.memberExpression(
-						t.identifier("Object"),
-						t.identifier("getOwnPropertyDescriptor")
+						t.identifier(`Object`),
+						t.identifier(`getOwnPropertyDescriptor`)
 					),
 					[
 						t.memberExpression(
-							t.identifier("Object"),
-							t.identifier("prototype")
+							t.identifier(`Object`),
+							t.identifier(`prototype`)
 						),
-						t.stringLiteral("__proto__")
+						t.stringLiteral(`__proto__`)
 					]
 				)
 			)
@@ -700,15 +694,15 @@ export async function transform(file: File, sourceCode: string, {
 
 	traverse(file, {
 		BlockStatement({ node: blockStatement }) {
-			for (const [ i, functionDeclaration ] of blockStatement.body.entries()) {
-				if (functionDeclaration.type != "FunctionDeclaration" || functionDeclaration.generator)
+			for (const [ index, functionDeclaration ] of blockStatement.body.entries()) {
+				if (functionDeclaration.type != `FunctionDeclaration` || functionDeclaration.generator)
 					continue
 
-				blockStatement.body.splice(i, 1)
+				blockStatement.body.splice(index, 1)
 
 				blockStatement.body.unshift(
 					t.variableDeclaration(
-						"let",
+						`let`,
 						[
 							t.variableDeclarator(
 								functionDeclaration.id!,
@@ -727,21 +721,19 @@ export async function transform(file: File, sourceCode: string, {
 		ClassBody({ node: classBody, scope, parent }) {
 			assert(t.isClass(parent))
 
-			let thisIsReferenced = false
+			let thisIsReferenced = false as boolean
 
 			for (const classMethod of classBody.body) {
-				if (classMethod.type != "ClassMethod")
+				if (classMethod.type != `ClassMethod`)
 					continue
 
-				let methodReferencesThis = false
+				let methodReferencesThis = false as boolean
 
 				traverse(classMethod.body, {
 					ThisExpression(path) {
 						methodReferencesThis = true
 						thisIsReferenced = true
-						path.replaceWith(
-							t.identifier(`_THIS_${uniqueID}_`)
-						)
+						path.replaceWith(t.identifier(`_THIS_${uniqueID}_`))
 					},
 
 					Function(path) {
@@ -752,12 +744,12 @@ export async function transform(file: File, sourceCode: string, {
 				if (!methodReferencesThis)
 					continue
 
-				if (classMethod.kind == "constructor") {
+				if (classMethod.kind == `constructor`) {
 					const superCalls: NodePath<CallExpression>[] = []
 
 					traverse(classMethod.body, {
 						CallExpression(path) {
-							if (path.node.callee.type == "Super")
+							if (path.node.callee.type == `Super`)
 								superCalls.push(path)
 						}
 					}, scope)
@@ -765,7 +757,7 @@ export async function transform(file: File, sourceCode: string, {
 					if (!superCalls.length) {
 						classMethod.body.body.unshift(
 							t.variableDeclaration(
-								"let",
+								`let`,
 								[
 									t.variableDeclarator(
 										t.identifier(`_THIS_${uniqueID}_`),
@@ -774,14 +766,14 @@ export async function transform(file: File, sourceCode: string, {
 								]
 							)
 						)
-					} else if (superCalls.length == 1 && superCalls[0].parent.type == "ExpressionStatement" && superCalls[0].parentPath.parentPath!.parent == classMethod) {
-						superCalls[0].parentPath.replaceWith(
+					} else if (superCalls.length == 1 && superCalls[0]!.parent.type == `ExpressionStatement` && superCalls[0]!.parentPath.parentPath!.parent == classMethod) {
+						superCalls[0]!.parentPath.replaceWith(
 							t.variableDeclaration(
-								"let",
+								`let`,
 								[
 									t.variableDeclarator(
 										t.identifier(`_THIS_${uniqueID}_`),
-										superCalls[0].node
+										superCalls[0]!.node
 									)
 								]
 							)
@@ -790,7 +782,7 @@ export async function transform(file: File, sourceCode: string, {
 						for (const path of superCalls) {
 							path.replaceWith(
 								t.assignmentExpression(
-									"=",
+									`=`,
 									t.identifier(`_THIS_${uniqueID}_`),
 									path.node
 								)
@@ -799,7 +791,7 @@ export async function transform(file: File, sourceCode: string, {
 
 						classMethod.body.body.unshift(
 							t.variableDeclaration(
-								"let",
+								`let`,
 								[
 									t.variableDeclarator(
 										t.identifier(`_THIS_${uniqueID}_`)
@@ -818,14 +810,14 @@ export async function transform(file: File, sourceCode: string, {
 				// TODO for classes that need it, create a super class for this one to extend from with `valueOf()` assigned to an unused name
 
 				classMethod.body.body.unshift(t.variableDeclaration(
-					"let",
+					`let`,
 					[
 						t.variableDeclarator(
 							t.identifier(`_THIS_${uniqueID}_`),
 							t.callExpression(
 								t.memberExpression(
 									t.super(),
-									t.identifier("valueOf")
+									t.identifier(`valueOf`)
 								),
 								[]
 							)
@@ -835,16 +827,16 @@ export async function transform(file: File, sourceCode: string, {
 			}
 
 			if (!parent.superClass && thisIsReferenced)
-				parent.superClass = t.identifier("Object")
+				parent.superClass = t.identifier(`Object`)
 		},
 
 		VariableDeclaration({ node: variableDeclaration }) {
-			if (variableDeclaration.kind == "const")
-				variableDeclaration.kind = "let"
+			if (variableDeclaration.kind == `const`)
+				variableDeclaration.kind = `let`
 		},
 
 		ThisExpression(path) {
-			path.replaceWith(t.identifier("undefined"))
+			path.replaceWith(t.identifier(`undefined`))
 		},
 
 		BigIntLiteral(path) {
@@ -853,14 +845,14 @@ export async function transform(file: File, sourceCode: string, {
 			if (BigInt(bigIntAsNumber) == BigInt(path.node.value)) {
 				path.replaceWith(
 					t.callExpression(
-						t.identifier("BigInt"),
+						t.identifier(`BigInt`),
 						[ t.numericLiteral(bigIntAsNumber) ]
 					)
 				)
 			} else {
 				path.replaceWith(
 					t.callExpression(
-						t.identifier("BigInt"),
+						t.identifier(`BigInt`),
 						[ t.stringLiteral(path.node.value) ]
 					)
 				)
@@ -878,21 +870,21 @@ export async function transform(file: File, sourceCode: string, {
 			return t.memberExpression(
 				t.memberExpression(
 					t.identifier(globalFunction),
-					t.identifier("constructor")
+					t.identifier(`constructor`)
 				),
-				t.identifier("prototype")
+				t.identifier(`prototype`)
 			)
 		}
 
 		return t.memberExpression(
 			t.memberExpression(
 				t.arrowFunctionExpression(
-					[ t.identifier("_") ],
-					t.identifier("_")
+					[ t.identifier(`_`) ],
+					t.identifier(`_`)
 				),
-				t.identifier("constructor")
+				t.identifier(`constructor`)
 			),
-			t.identifier("prototype")
+			t.identifier(`prototype`)
 		)
 	}
 }

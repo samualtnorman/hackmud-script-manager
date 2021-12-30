@@ -54,10 +54,10 @@ export type ProcessOptions = {
 	/** 11 a-z 0-9 characters */
 	uniqueID: string
 
-	/** the user the script will be uploaded to (or set to `true` if it is not yet known) */
+	/** the user going to be hosting this script (or set to `true` if not yet known) */
 	scriptUser: string | true
 
-	/** the name of this script (or set to `true` if it is not yet known) */
+	/** the name of this script (or set to `true` if not yet known) */
 	scriptName: string | true
 
 	filePath: string
@@ -76,9 +76,9 @@ export async function processScript(
 	code: string,
 	{
 		minify: shouldMinify = true,
-		uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0"),
-		scriptUser = "UNKNOWN",
-		scriptName = "UNKNOWN",
+		uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
+		scriptUser = `UNKNOWN`,
+		scriptName = `UNKNOWN`,
 		filePath,
 		mangleNames = false
 	}: Partial<ProcessOptions> = {}
@@ -88,12 +88,8 @@ export async function processScript(
 	warnings: { message: string, line: number }[]
 	timeTook: number
 }> {
-	assert(uniqueID.match(/^\w{11}$/))
-
-	if (filePath)
-		filePath = resolvePath(filePath)
-	else
-		filePath = "script"
+	assert(/^\w{11}$/.exec(uniqueID))
+	filePath = filePath ? resolvePath(filePath) : `script`
 
 	const time = performance.now()
 	const sourceCode = code
@@ -102,68 +98,68 @@ export async function processScript(
 
 	// TODO do seclevel detection and verification per module
 
-	const classScriptMatch = code.match(/^function\s*\((?:.+\/\/(.+)|)/)
+	const autocompleteMatch = /^function\s*\(.+\/\/(?<autocomplete>.+)/.exec(code)
 
-	if (classScriptMatch) {
-		code = `export default ${code}`
-		autocomplete = classScriptMatch[1]
+	if (autocompleteMatch) {
+		code = `export default ${code}`;
+		({ autocomplete } = autocompleteMatch.groups!)
 	} else {
-		for (const line of code.split("\n")) {
-			const comment = line.match(/^\s*\/\/(.+)/)
+		for (const line of code.split(`\n`)) {
+			const comment = /^\s*\/\/(?<commentContent>.+)/.exec(line)
 
 			if (!comment)
 				break
 
-			const commentContent = comment[1].trim()
+			const commentContent = comment.groups!.commentContent!.trim()
 
-			if (commentContent.startsWith("@autocomplete "))
+			if (commentContent.startsWith(`@autocomplete `))
 				autocomplete = commentContent.slice(14).trimStart()
-			else if (commentContent.startsWith("@seclevel ")) {
+			else if (commentContent.startsWith(`@seclevel `)) {
 				const seclevelString = commentContent.slice(10).trimStart().toLowerCase()
 
 				switch (seclevelString) {
-					case "fullsec":
-					case "full":
-					case "fs":
-					case "4s":
-					case "f":
-					case "4": {
+					case `fullsec`:
+					case `full`:
+					case `fs`:
+					case `4s`:
+					case `f`:
+					case `4`: {
 						statedSeclevel = 4
 					} break
 
-					case "highsec":
-					case "high":
-					case "hs":
-					case "3s":
-					case "h":
-					case "3": {
+					case `highsec`:
+					case `high`:
+					case `hs`:
+					case `3s`:
+					case `h`:
+					case `3`: {
 						statedSeclevel = 3
 					} break
 
-					case "midsec":
-					case "mid":
-					case "ms":
-					case "2s":
-					case "m":
-					case "2": {
+					case `midsec`:
+					case `mid`:
+					case `ms`:
+					case `2s`:
+					case `m`:
+					case `2`: {
 						statedSeclevel = 2
 					} break
 
-					case "lowsec":
-					case "low":
-					case "ls":
-					case "1s":
-					case "l":
-					case "1": {
+					case `lowsec`:
+					case `low`:
+					case `ls`:
+					case `1s`:
+					case `l`:
+					case `1`: {
 						statedSeclevel = 1
 					} break
 
-					case "nullsec":
-					case "null":
-					case "ns":
-					case "0s":
-					case "n":
-					case "0": {
+					case `nullsec`:
+					case `null`:
+					case `ns`:
+					case `0s`:
+					case `n`:
+					case `0`: {
 						statedSeclevel = 0
 					} break
 
@@ -175,21 +171,21 @@ export async function processScript(
 		}
 	}
 
-	assert(uniqueID.match(/^\w{11}$/))
+	assert(/^\w{11}$/.exec(uniqueID))
 
 	const filePathResolved = filePath
 		? resolvePath(filePath)
-		: "script"
+		: `script`
 
 	let seclevel = 4
 
 	const bundle = await rollup({
 		plugins: [
 			{
-				name: "emit script",
+				name: `emit script`,
 				buildStart() {
 					this.emitFile({
-						type: "chunk",
+						type: `chunk`,
 						id: filePathResolved
 					})
 				},
@@ -208,7 +204,7 @@ export async function processScript(
 				}
 			},
 			rollupPluginBabel({
-				babelHelpers: "bundled",
+				babelHelpers: `bundled`,
 				plugins: [
 					[ babelPluginTransformTypescript.default ],
 					[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
@@ -216,9 +212,9 @@ export async function processScript(
 					[ babelPluginProposalFunctionBind.default ],
 					[ babelPluginProposalFunctionSent.default ],
 					[ babelPluginProposalPartialApplication.default ],
-					[ babelPluginProposalPipelineOperator.default, { proposal: "hack", topicToken: "%" } ],
+					[ babelPluginProposalPipelineOperator.default, { proposal: `hack`, topicToken: `%` } ],
 					[ babelPluginProposalThrowExpressions.default ],
-					[ babelPluginProposalRecordAndTuple.default, { syntaxType: "hash", importPolyfill: true } ],
+					[ babelPluginProposalRecordAndTuple.default, { syntaxType: `hash`, importPolyfill: true } ],
 					[ babelPluginProposalClassProperties.default ],
 					[ babelPluginProposalClassStaticBlock.default ],
 					[ babelPluginProposalPrivatePropertyInObject.default ],
@@ -238,35 +234,39 @@ export async function processScript(
 			rollupPluginNodeResolve({ extensions }),
 			rollupPluginJSON()
 		],
-		treeshake: { moduleSideEffects: "no-external" }
+		treeshake: { moduleSideEffects: `no-external` }
 	})
 
-	const seclevelNames = [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
+	const seclevelNames = [ `NULLSEC`, `LOWSEC`, `MIDSEC`, `HIGHSEC`, `FULLSEC` ]
 
+	// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 	code = (await bundle.generate({})).output[0].code
 
 	let file
 
-	({ file, seclevel } = await transform(parse(code, { sourceType: "module" }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
+	// eslint-disable-next-line require-atomic-updates -- this will probably be fine
+	({ file, seclevel } = await transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
 
 	if (statedSeclevel != undefined && seclevel < statedSeclevel)
 		// TODO replace with a warning and build script anyway
 		throw new Error(`detected seclevel ${seclevelNames[seclevel]} is lower than stated seclevel ${seclevelNames[statedSeclevel]}`)
 
+	// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 	code = generate(file).code
 
 	// TODO fix incorrect source length again
 
 	// the typescript inserts semicolons where they weren't already so we take
 	// all semicolons out of the count and add the number of semicolons in the
-	// source to make things fair
-	let srcLength = countHackmudCharacters(code.replace(/^function\s*\w+\(/, "function("))
+	// source to make character count fairer
+	const sourceLength = countHackmudCharacters(code.replace(/^function\s*\w+\(/, `function(`))
 		// - (code.match(/;/g)?.length || 0)
 		// + semicolons
 		// + (code.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
 		// + (code.match(/DB\$/g)?.length ?? 0)
 
 	if (shouldMinify)
+		// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 		code = await minify(file, autocomplete, { uniqueID, mangleNames })
 	else {
 		traverse(file, {
@@ -274,30 +274,30 @@ export async function processScript(
 				if (memberExpression.computed)
 					return
 
-				assert(memberExpression.property.type == "Identifier")
+				assert(memberExpression.property.type == `Identifier`)
 
-				if (memberExpression.property.name == "prototype") {
+				if (memberExpression.property.name == `prototype`) {
 					memberExpression.computed = true
-					memberExpression.property = t.stringLiteral("prototype")
-				} else if (memberExpression.property.name == "__proto__") {
+					memberExpression.property = t.stringLiteral(`prototype`)
+				} else if (memberExpression.property.name == `__proto__`) {
 					memberExpression.computed = true
-					memberExpression.property = t.stringLiteral("__proto__")
+					memberExpression.property = t.stringLiteral(`__proto__`)
 				}
 			}
 		})
 
 		code = format(generate(file).code, {
-			parser: "babel",
-			arrowParens: "avoid",
+			parser: `babel`,
+			arrowParens: `avoid`,
 			semi: false,
-			trailingComma: "none"
+			trailingComma: `none`
 		})
 	}
 
 	code = postprocess(code, seclevel, uniqueID)
 
 	return {
-		srcLength,
+		srcLength: sourceLength,
 		script: code,
 		warnings: [],
 		timeTook: performance.now() - time

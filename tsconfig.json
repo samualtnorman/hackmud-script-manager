@@ -1,12 +1,17 @@
 {
+	"include": [ "**/*", "package.json" ],
 	"compilerOptions": {
 		"rootDir": ".",
 		"outDir": ".",
 		"resolveJsonModule": true,
 		"composite": true,
 		"emitDeclarationOnly": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"checkJs": true,
+		"esModuleInterop": true,
+		"target": "ES2019",
+		"moduleResolution": "Node",
+		"strictNullChecks": true
 	},
-	"files": [ "package.json" ],
-	"exclude": [ "src" ]
+	"exclude": [ "src", "dist" ]
 }

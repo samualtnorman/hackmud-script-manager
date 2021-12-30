@@ -1,36 +1,36 @@
 import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import type { Info } from "."
+import { Info } from "."
 import { supportedExtensions } from "./constants.json"
 import processScript from "./processScript"
 
 const { readFile, readdir: readDirectory } = fs.promises
 
-interface PushOptions {
-	/**
-	 * array of scripts in the format `foo.bar`
-	 *
-	 * also accepts wild card e.g. `*.bar` or `foo.*`
-	 *
-	 * pushes everything by default
-	 */
-	scripts: string | string[]
-
-	/** callback when a script is pushed */
-	onPush: (info: Info) => void
-
+type PushOptions = {
 	/** whether to do the minify step (defaults to `true`) */
 	minify: boolean
 
 	/** whether to mangle function and class names (defaults to `false`) */
 	mangleNames: boolean
+
+	/**
+	 * array of scripts in the format `foo.bar`
+	 *
+	 * also accepts wild card (`*`) e.g. `*.bar` or `foo.*`
+	 *
+	 * pushes everything by default (`*.*`)
+	 */
+	scripts: string | string[]
+
+	/** callback called on script push */
+	onPush: (info: Info) => void
 }
 
 /**
  * Push scripts from a source directory to the hackmud directory.
  *
- * Files directly in the source folder are pushed to all users
+ * Pushes files directly in the source folder to all users
  * @param sourceDirectory directory containing source code
  * @param hackmudDirectory directory created by hackmud containing user data including scripts
  * @param options {@link PushOptions details}
@@ -40,30 +40,29 @@ export async function push(
 	sourceDirectory: string,
 	hackmudDirectory: string,
 	{
-		scripts = "*.*",
-		onPush = (info: Info) => {},
+		scripts = `*.*`,
+		onPush = () => {},
 		minify = true,
 		mangleNames = false
 	}: Partial<PushOptions> = {}
 ) {
-	if (typeof scripts == "string")
+	if (typeof scripts == `string`)
 		scripts = [ scripts ]
 
 	const scriptNamesByUser = new DynamicMap((user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
-
 	let pushEverything = false
 
 	for (const fullScriptName of scripts) {
-		const [ user, scriptName ] = fullScriptName.split(".")
+		const [ user, scriptName ] = fullScriptName.split(`.`)
 
-		if (!user || user == "*") {
-			if (!scriptName || scriptName == "*")
+		if (!user || user == `*`) {
+			if (!scriptName || scriptName == `*`)
 				pushEverything = true
 			else
 				wildUserScripts.add(scriptName)
-		} else if (!scriptName || scriptName == "*")
+		} else if (!scriptName || scriptName == `*`)
 			wildScriptUsers.add(user)
 		else
 			scriptNamesByUser.get(user).add(scriptName)
@@ -72,7 +71,6 @@ export async function push(
 	const usersByGlobalScriptsToPush = new DynamicMap((user: string) => new Set<string>())
 	const allInfo: Info[] = []
 	const scriptNamesAlreadyPushedByUser = new DynamicMap((user: string) => new Set<string>())
-
 	let sourceDirectoryDirents
 
 	// *.bar
@@ -87,7 +85,7 @@ export async function push(
 				.filter(dirent => dirent.isDirectory())
 				.map(dirent => dirent.name),
 			...hackmudDirectoryDirents
-				.filter(dirent => dirent.isFile() && getFileExtension(dirent.name) == ".key")
+				.filter(dirent => dirent.isFile() && getFileExtension(dirent.name) == `.key`)
 				.map(dirent => dirent.name.slice(0, -4)),
 			...scriptNamesByUser.keys(),
 			...wildScriptUsers
@@ -117,7 +115,7 @@ export async function push(
 					const filePath = resolvePath(sourceDirectory, user, dirent.name)
 
 					const { srcLength, script: minifiedCode } = await processScript(
-						await readFile(filePath, { encoding: "utf-8" }),
+						await readFile(filePath, { encoding: `utf-8` }),
 						{
 							minify,
 							scriptUser: user,
@@ -137,14 +135,12 @@ export async function push(
 
 					scriptNamesAlreadyPushedByUser.get(user).add(scriptName)
 					allInfo.push(info)
-
 					await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
-
 					onPush(info)
 				}
 			}))
 		}, (error: NodeJS.ErrnoException) => {
-			if (error.code != "ENOENT")
+			if (error.code != `ENOENT`)
 				throw error
 		})
 	}))
@@ -157,13 +153,15 @@ export async function push(
 		await Promise.all([ ...scripts ].map(async scriptName => {
 			let code
 			let fileName
-
 			let filePath!: string
 
+			// TODO there's definitly a better way to do this
 			for (const extension of supportedExtensions) {
 				try {
 					fileName = `${scriptName}${extension}`
-					code = await readFile(filePath = resolvePath(sourceDirectory, user, fileName), { encoding: "utf-8" })
+					// eslint-disable-next-line no-await-in-loop -- I don't think paralelysing this is worth it
+					code = await readFile(filePath = resolvePath(sourceDirectory, user, fileName), { encoding: `utf-8` })
+
 					break
 				} catch {}
 			}
@@ -189,9 +187,7 @@ export async function push(
 				}
 
 				allInfo.push(info)
-
-				await writeFilePersistent(resolvePath(hackmudDirectory, user, "scripts", `${scriptName}.js`), minifiedCode)
-
+				await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts`, `${scriptName}.js`), minifiedCode)
 				onPush(info)
 			} else
 				usersByGlobalScriptsToPush.get(scriptName).add(user)
@@ -199,8 +195,8 @@ export async function push(
 	}))
 
 	// foo.* (global)
-	if (wildScriptUsers.size) {
-		await Promise.all((sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true })).map(async dirent => {
+	await (wildScriptUsers.size
+		? Promise.all((sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true })).map(async dirent => {
 			const extension = getFileExtension(dirent.name)
 
 			if (!dirent.isFile() || !supportedExtensions.includes(extension))
@@ -212,11 +208,11 @@ export async function push(
 			if (!usersToPushTo.length)
 				return
 
-			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0")
+			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 			const filePath = resolvePath(sourceDirectory, dirent.name)
 
 			const { srcLength, script: minifiedCode } = await processScript(
-				await readFile(filePath, { encoding: "utf-8" }),
+				await readFile(filePath, { encoding: `utf-8` }),
 				{
 					minify,
 					scriptUser: true,
@@ -243,31 +239,31 @@ export async function push(
 						`scripts/${scriptName}.js`
 					),
 					minifiedCode
-						.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, "g"), user)
-						.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, "g"), `${user}.${scriptName}`)
+						.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, `g`), user)
+						.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, `g`), `${user}.${scriptName}`)
 				)
 			))
 
 			allInfo.push(info)
 			onPush(info)
-		}))
-	} else {
-		// foo.bar (global)
-		await Promise.all([ ...usersByGlobalScriptsToPush ].map(async ([ scriptName, users ]) => {
+		})) : Promise.all([ ...usersByGlobalScriptsToPush ].map(async ([ scriptName, users ]) => {
 			let code
 			let fileName!: string
 			let filePath!: string
 
+			// TODO there's definitly a better way to do this
 			for (const extension of supportedExtensions) {
 				try {
 					fileName = `${scriptName}${extension}`
-					code = await readFile(filePath = resolvePath(sourceDirectory, fileName), { encoding: "utf-8" })
+					// eslint-disable-next-line no-await-in-loop -- I don't think paralelysing this is worth it
+					code = await readFile(filePath = resolvePath(sourceDirectory, fileName), { encoding: `utf-8` })
+
 					break
 				} catch {}
 			}
 
 			if (code) {
-				const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, "0")
+				const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
 				const { srcLength, script: minifiedCode } = await processScript(
 					code,
@@ -297,8 +293,8 @@ export async function push(
 							`scripts/${scriptName}.js`
 						),
 						minifiedCode
-							.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, "g"), user)
-							.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, "g"), `${user}.${scriptName}`)
+							.replace(new RegExp(`$${uniqueID}$SCRIPT_USER`, `g`), user)
+							.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME`, `g`), `${user}.${scriptName}`)
 					)
 				))
 
@@ -306,7 +302,7 @@ export async function push(
 				onPush(info)
 			}
 		}))
-	}
+	)
 
 	return allInfo
 }

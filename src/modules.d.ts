@@ -1,5 +1,3 @@
 declare module "@babel/plugin-*" {
-	export default {
-		default: (...args: any[]) => any
-	}
+	export default { default: (...arguments_: any[]) => any }
 }

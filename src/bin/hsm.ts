@@ -3,19 +3,19 @@ import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual
 import chalk from "chalk"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
-import { basename as getBaseName, dirname as getPathDirectory, extname as getFileExtension, relative as relativePath, resolve as resolvePath } from "path"
+import { basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
 import { generateTypings, Info, processScript, pull, push, syncMacros, test, watch } from ".."
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants.json"
 
 const { readFile, rmdir: removeDirectory, writeFile, mkdir: makeDirectory } = fs.promises
 
-type ArgValue = boolean | number | string/* | ArgValue[]*/
+type ArgumentValue = boolean | number | string/* | ArgValue[]*/
 
-const configDirPath = resolvePath(getHomeDirectory(), ".config")
-const configFilePath = resolvePath(configDirPath, "hsm.json")
+const configDirectoryPath = resolvePath(getHomeDirectory(), `.config`)
+const configFilePath = resolvePath(configDirectoryPath, `hsm.json`)
 
-const options = new Map<string, ArgValue>()
+const options = new Map<string, ArgumentValue>()
 const commands: string[] = []
 
 let config: Record<string, any> & Partial<{
@@ -37,20 +37,20 @@ const userColours = new DynamicMap<string, string>(user => {
 	let hash = 0
 
 	for (const char of user)
-		hash += (hash >> 1) + hash + "xi1_8ratvsw9hlbgm02y5zpdcn7uekof463qj".indexOf(char) + 1
+		hash += (hash >> 1) + hash + `xi1_8ratvsw9hlbgm02y5zpdcn7uekof463qj`.indexOf(char) + 1
 
-	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6](user)
+	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6]!(user)
 })
 
-for (const arg of process.argv.slice(2)) {
-	if (arg[0] == "-") {
-		const [ key, valueRaw ] = arg.split("=")
-		let value: ArgValue = valueRaw
+for (const argument of process.argv.slice(2)) {
+	if (argument[0] == `-`) {
+		const [ key, valueRaw ] = argument.split(`=`)
+		let value: ArgumentValue | undefined = valueRaw
 
 		if (value) {
-			if (value == "true")
+			if (value == `true`)
 				value = true
-			else if (value == "false")
+			else if (value == `false`)
 				value = false
 			else {
 				const number = Number(value)
@@ -61,82 +61,87 @@ for (const arg of process.argv.slice(2)) {
 		} else
 			value = true
 
-		if (arg[1] == "-")
-			options.set(key.slice(2), value)
+		if (argument[1] == `-`)
+			options.set(key!.slice(2), value)
 		else {
-			for (const option of key.slice(1))
+			for (const option of key!.slice(1))
 				options.set(option, value)
 		}
 	} else
-		commands.push(arg)
+		commands.push(argument)
 }
 
 (async () => {
-	if (options.get("version") || options.get("v")) {
+	if (options.get(`version`) || options.get(`v`)) {
 		version()
+
 		return
 	}
 
-	if (options.get("help") || options.get("h")) {
+	if (options.get(`help`) || options.get(`h`)) {
 		help()
+
 		return
 	}
 
 	switch (commands[0]) {
-		case "push": {
+		case `push`: {
 			const config = await getConfig()
 
 			if (!config.hackmudPath) {
-				console.log("you need to set hackmudPath in config before you can use this command")
+				console.log(`you need to set hackmudPath in config before you can use this command`)
+
 				break
 			}
 
-			const srcPath = commands[1] || "."
+			const sourcePath = commands[1] || `.`
 			const hackmudPath = config.hackmudPath
 			const scripts = commands.slice(2)
 
 			if (!scripts.length)
-				scripts.push("*.*")
+				scripts.push(`*.*`)
 
 			const infos = await push(
-				srcPath,
+				sourcePath,
 				hackmudPath,
 				{
 					scripts,
 					onPush: onPushLogger,
-					minify: !options.get("skip-minify")
+					minify: !options.get(`skip-minify`)
 				}
 			)
 
 			if (!infos.length)
-				console.warn("couldn't find any scripts to push")
+				console.warn(`couldn't find any scripts to push`)
 
 			updateConfig()
 		} break
 
-		case "dev":
-		case "watch": {
+		case `dev`:
+		case `watch`: {
 			const config = await getConfig()
 
 			if (!config.hackmudPath) {
-				console.log("you need to set hackmudPath in config before you can use this command")
+				console.log(`you need to set hackmudPath in config before you can use this command`)
+
 				break
 			}
 
-			const srcPath = commands[1] || "."
+			const sourcePath = commands[1] || `.`
 			const hackmudPath = config.hackmudPath
-			const users = options.get("users")?.toString().split(",") || []
-			const scripts = options.get("scripts")?.toString().split(",") || []
-			const genTypes = options.get("gen-types")?.toString()
+			const users = options.get(`users`)?.toString().split(`,`) || []
+			const scripts = options.get(`scripts`)?.toString().split(`,`) || []
+			const genTypes = options.get(`gen-types`)?.toString()
 
-			watch(srcPath, hackmudPath, users, scripts, onPushLogger, { genTypes })
+			watch(sourcePath, hackmudPath, users, scripts, onPushLogger, { genTypes })
 		} break
 
-		case "pull": {
+		case `pull`: {
 			const config = await getConfig()
 
 			if (!config.hackmudPath) {
-				console.log("you need to set hackmudPath in config before you can use this command")
+				console.log(`you need to set hackmudPath in config before you can use this command`)
+
 				break
 			}
 
@@ -144,164 +149,195 @@ for (const arg of process.argv.slice(2)) {
 
 			if (!script) {
 				help()
+
 				break
 			}
 
-			const srcPath = commands[2] || "."
+			const sourcePath = commands[2] || `.`
 			const hackmudPath = config.hackmudPath
 
 			try {
-				await pull(srcPath, hackmudPath, script)
-			} catch (error) {
-				console.log("something went wrong, did you forget to #down the script?")
+				await pull(sourcePath, hackmudPath, script)
+			} catch {
+				console.log(`something went wrong, did you forget to #down the script?`)
 			}
 		} break
 
-		case "sync-macros": {
+		case `sync-macros`: {
 			const { hackmudPath } = await getConfig()
 
 			if (!hackmudPath) {
-				console.log("you need to set hackmudPath in config before you can use this command")
+				console.log(`you need to set hackmudPath in config before you can use this command`)
+
 				break
 			}
 
 			const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
+
 			console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
 		} break
 
-		case "test": {
-			const srcPath = resolvePath(commands[1] || ".")
+		case `test`: {
+			const sourcePath = resolvePath(commands[1] || `.`)
 			let errors = 0
 
-			console.log(`testing scripts in ${chalk.bold(srcPath)}\n`)
+			console.log(`testing scripts in ${chalk.bold(sourcePath)}\n`)
 
-			for (const { file, line, message } of await test(srcPath)) {
+			for (const { file, line, message } of await test(sourcePath)) {
 				console.log(`error "${chalk.bold(message)}" in ${chalk.bold(file)} on line ${chalk.bold(String(line))}`)
 				errors++
 			}
 
 			if (!errors) {
-				console.log("no errors found")
+				console.log(`no errors found`)
+
 				break
 			}
 
 			if (errors) {
 				process.exitCode = 1
 				console.log(`\nencountered ${chalk.bold(String(errors))} errors`)
+
 				break
 			}
 
-			console.log("no errors found")
+			console.log(`no errors found`)
 		} break
 
-		case "gen-types": {
-			const srcPath = resolvePath(commands[1] || ".")
-			let targetPath: string
+		case `gen-types`: {
+			const sourcePath = resolvePath(commands[1] || `.`)
 
-			if (commands[2])
-				targetPath = resolvePath(commands[2])
-			else
-				targetPath = resolvePath(srcPath, "../player.d.ts")
-
-			generateTypings(srcPath, targetPath, (await getConfig()).hackmudPath)
+			generateTypings(
+				sourcePath,
+				commands[2]
+					? resolvePath(commands[2])
+					: resolvePath(sourcePath, `../player.d.ts`),
+				(await getConfig()).hackmudPath
+			)
 		} break
 
-		case "config":
+		case `config`: {
 			switch (commands[1]) {
-				case "get": {
-					console.log(exploreObject(await getConfig(), commands[2].split(".")))
+				case `get`: {
+					if (commands[2])
+						console.log(exploreObject(await getConfig(), commands[2].split(`.`)))
+					else
+						console.log(await getConfig())
 				} break
 
-				case "delete": {
-					const keys = commands[2].split(".")
+				case `delete`: {
+					if (commands[2]) {
+						const keys = commands[2].split(`.`)
+						const lastKey = keys.pop()!
 
-					if (!keys.length) {
-						help()
-						break
-					}
+						if (!keys.length) {
+							help()
 
-					const config = await getConfig()
+							break
+						}
 
-					delete exploreObject(config, keys)?.[commands[3]]
+						const config = await getConfig()
 
-					console.log(config)
+						delete exploreObject(config, keys)?.[lastKey]
+						console.log(config)
+					} else
+						console.log(`Usage:\nhsm config delete <key>`)
 				} break
 
-				case "set": {
-					const keys = commands[2].split(".")
+				case `set`: {
+					if (commands[2] && commands[3]) {
+						const keys = commands[2].split(`.`)
+						const lastKey = keys.pop()!
 
-					if (!keys.length) {
-						help()
-						break
-					}
+						if (!keys.length) {
+							help()
 
-					const config = await getConfig()
-					let object = config
+							break
+						}
 
-					for (let key of keys.slice(0, -1))
-						object = typeof object[key] == "object" ? object[key] : object[key] = {}
+						const config = await getConfig()
 
-					object[keys.slice(-1)[0]] = commands[3]
+						if (!keys.length && lastKey == `hackmudPath`)
+							config.hackmudPath = resolvePath(commands[3])
+						else {
+							let object = config
 
-					if (config.hackmudPath)
-						config.hackmudPath = resolvePath(config.hackmudPath)
+							for (const key of keys) {
+								if (typeof object[key] == `object`)
+									object = object[key]
+								else {
+									object[key] = {}
+									object = object[key]
+								}
+							}
 
-					console.log(config)
+							object[lastKey] = commands[3]
+						}
+
+						console.log(config)
+					} else
+						console.log(`Usage:\nhsm config set <key> <value>`)
 				} break
 
 				default: {
 					if (commands[1])
-						console.log("unknown command")
+						console.log(`unknown command`)
 
 					help()
 				}
-			} break
+			}
+		} break
 
-		case "help":
-		case "h": {
+		case `help`:
+		case `h`: {
 			help()
 		} break
 
-		case "version":
-		case "v": {
+		case `version`:
+		case `v`: {
 			version()
 		} break
 
-		case "golf":
-		case "minify": {
+		case `golf`:
+		case `minify`: {
 			// TODO `--watch` option
 
-			if (!commands[1]) {
-				console.log(`Target required\nUsage: ${getBaseName(process.argv[1])} ${commands[0]} <target> [output]`)
+			const target = commands[1]
+
+			if (!target) {
+				console.log(`Target required\nUsage: ${getPathBaseName(process.argv[1]!)} ${commands[0]} <target> [output]`)
+
 				break
 			}
 
-			const fileExtension = getFileExtension(commands[1])
+			const fileExtension = getPathFileExtension(target)
 
 			if (!supportedExtensions.includes(fileExtension)) {
-				console.log(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(extension => chalk.bold(extension)).join('", "')}"`)
+				console.log(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(extension => chalk.bold(extension)).join(`", "`)}"`)
+
 				break
 			}
 
-			await readFile(commands[1], { encoding: "utf-8" }).then(
+			await readFile(target, { encoding: `utf-8` }).then(
 				async source => {
-					const fileBaseName = getBaseName(commands[1], fileExtension)
-					const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(".src")
+					const fileBaseName = getPathBaseName(target, fileExtension)
+					// eslint-disable-next-line unicorn/prevent-abbreviations -- the file extension is `src` not `source`
+					const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
 
 					const scriptName = fileBaseNameEndsWithDotSrc
 						? fileBaseName.slice(0, -4)
 						: fileBaseName
 
-					let scriptUser = "UNKNOWN"
+					let scriptUser = `UNKNOWN`
 
-					if (getBaseName(resolvePath(commands[1], "..")) == "scripts" && getBaseName(resolvePath(commands[1], "../../..")) == "hackmud")
-						scriptUser = getBaseName(resolvePath(commands[1], "../.."))
+					if (getPathBaseName(resolvePath(target, `..`)) == `scripts` && getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`)
+						scriptUser = getPathBaseName(resolvePath(target, `../..`))
 
-					const minify = !options.get("skip-minify")
-					const mangleNames = Boolean(options.get("mangle-names"))
+					const minify = !options.get(`skip-minify`)
+					const mangleNames = Boolean(options.get(`mangle-names`))
 
 					if (!minify && mangleNames)
-						console.warn("warning: `--mangle-names` has no effect while `--skip-minify` is active")
+						console.warn(`warning: \`--mangle-names\` has no effect while \`--skip-minify\` is active`)
 
 					const { script, srcLength, warnings, timeTook } = await processScript(
 						source,
@@ -309,7 +345,7 @@ for (const arg of process.argv.slice(2)) {
 							minify,
 							scriptUser,
 							scriptName,
-							filePath: commands[1],
+							filePath: target,
 							mangleNames
 						}
 					)
@@ -319,33 +355,29 @@ for (const arg of process.argv.slice(2)) {
 
 					let outputPath: string
 
-					if (commands[2])
-						outputPath = commands[2]
-					else {
-						outputPath = resolvePath(
-							getPathDirectory(commands[1]),
+					outputPath = commands[2] ? commands[2] : resolvePath(
+							getPathDirectory(target),
 
 							fileBaseNameEndsWithDotSrc
-								? `${scriptName}.js` :
-							fileExtension == ".js"
+								? `${scriptName}.js`
+							: (fileExtension == `.js`
 								? `${fileBaseName}.min.js`
 								: `${fileBaseName}.js`
+							)
 						)
-					}
 
 					const scriptLength = countHackmudCharacters(script)
 
 					await writeFilePersistent(outputPath, script)
 						.catch(async (error: NodeJS.ErrnoException) => {
-							if (!commands[2] || error.code != "EISDIR")
+							if (!commands[2] || error.code != `EISDIR`)
 								throw error
 
-							outputPath = resolvePath(outputPath, `${getBaseName(commands[1], fileExtension)}.js`)
-
+							outputPath = resolvePath(outputPath, `${getPathBaseName(target, fileExtension)}.js`)
 							await writeFilePersistent(outputPath, script)
 						})
 						.then(
-							() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(relativePath(".", outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),
+							() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),
 							(error: NodeJS.ErrnoException) => console.log(error.message)
 						)
 				},
@@ -355,7 +387,7 @@ for (const arg of process.argv.slice(2)) {
 
 		default: {
 			if (commands[0])
-				console.log("unknown command")
+				console.log(`unknown command`)
 
 			help()
 		}
@@ -366,77 +398,80 @@ for (const arg of process.argv.slice(2)) {
 
 function help() {
 	switch (commands[0]) {
-		case "config": {
+		case `config`: {
 			switch (commands[1]) {
-				case "get": {
-					console.log("hsm config get <key>")
+				case `get`: {
+					console.log(`hsm config get <key>`)
 				} break
 
-				case "set": {
-					console.log("hsm config set <key> <value>")
+				case `set`: {
+					console.log(`hsm config set <key> <value>`)
 				} break
 
-				case "delete": {
-					console.log("hsm config delete <key>")
+				case `delete`: {
+					console.log(`hsm config delete <key>`)
 				} break
 
 				default: {
-					console.log("hsm config <get, delete, set>")
+					console.log(`hsm config <get, delete, set>`)
 				}
 			}
 		} break
 
-		case "push": {
-			console.log("hsm push [<dir> [...\"<script user>.<script name>\"]]")
+		case `push`: {
+			console.log(`hsm push [<dir> [..."<script user>.<script name>"]]`)
 		} break
 
-		case "watch": {
-			console.log("hsm watch [dir]")
+		case `watch`: {
+			console.log(`hsm watch [dir]`)
 		} break
 
-		case "pull": {
-			console.log("hsm pull <script user>.<script name>")
+		case `pull`: {
+			console.log(`hsm pull <script user>.<script name>`)
 		} break
 
-		case "minify":
-		case "golf": {
-			console.log(`${getBaseName(process.argv[1])} ${commands[0]} <target> [output]`)
+		case `minify`:
+		case `golf`: {
+			console.log(`${getPathBaseName(process.argv[1]!)} ${commands[0]} <target> [output]`)
 		} break
 
 		default: {
-			console.log("hsm <push, watch, pull, config, golf>")
+			console.log(`hsm <push, watch, pull, config, golf>`)
 		}
 	}
 }
 
-async function version() {
+function version() {
 	console.log(moduleVersion)
 }
 
-async function getConfig() {
+function getConfig() {
 	if (config)
 		return config
 
-	return config = await readFile(configFilePath, { encoding: "utf-8" })
+	return config = readFile(configFilePath, { encoding: `utf-8` })
 		.then(configFile => {
-			let tempConfig
+			let temporaryConfig
 
 			try {
-				tempConfig = JSON.parse(configFile)
+				temporaryConfig = JSON.parse(configFile)
 			} catch {
 				// TODO log to error log file
-				console.log("config file was corrupted, resetting")
+				console.log(`config file was corrupted, resetting`)
+
 				return {}
 			}
 
-			if (!tempConfig || typeof tempConfig != "object") {
-				console.log("config file was corrupted, resetting")
+			if (!temporaryConfig || typeof temporaryConfig != `object`) {
+				console.log(`config file was corrupted, resetting`)
+
 				return {}
 			}
 
-			return tempConfig
+			return temporaryConfig
 		}, () => {
 			console.log(`creating config file at ${configFilePath}`)
+
 			return {}
 		})
 }
@@ -444,7 +479,7 @@ async function getConfig() {
 function exploreObject(object: any, keys: string[], createPath = false) {
 	for (const key of keys) {
 		if (createPath)
-			object = typeof object[key] == "object" ? object[key] : object[key] = {}
+			object = typeof object[key] == `object` ? object[key] : object[key] = {}
 		else
 			object = object?.[key]
 	}
@@ -458,12 +493,12 @@ function updateConfig() {
 
 		writeFile(configFilePath, json).catch(async error => {
 			switch (error.code) {
-				case "EISDIR": {
+				case `EISDIR`: {
 					await removeDirectory(configFilePath)
 				} break
 
-				case "ENOENT": {
-					await makeDirectory(configDirPath)
+				case `ENOENT`: {
+					await makeDirectory(configDirectoryPath)
 				} break
 
 				default: {
@@ -482,6 +517,7 @@ function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
 
 	if (error) {
 		console.log(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
+
 		return
 	}
 
@@ -489,7 +525,7 @@ function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
 		`pushed ${
 			chalk.bold(file)
 		} to ${
-			users.map(user => chalk.bold(userColours.get(user))).join(", ")
+			users.map(user => chalk.bold(userColours.get(user))).join(`, `)
 		} | ${
 			chalk.bold(String(minLength))
 		} chars from ${
@@ -499,7 +535,7 @@ function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
 		} (${
 			chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)
 		}) | ${
-			chalk.bold(`${resolvePath(config!.hackmudPath!, users[0], "scripts", getBaseName(file, getFileExtension(file)))}.js`)
+			chalk.bold(`${resolvePath(config!.hackmudPath!, users[0]!, `scripts`, getPathBaseName(file, getPathFileExtension(file)))}.js`)
 		}`
 	)
 }

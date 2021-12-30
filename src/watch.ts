@@ -1,8 +1,7 @@
-import { countHackmudCharacters, writeFilePersistent } from "@samual/lib"
 import { watch as watchDirectory } from "chokidar"
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import type { Info } from "."
+import { Info } from "."
 import { supportedExtensions } from "./constants.json"
 import generateTypings from "./generateTypings"
 import processScript from "./processScript"
@@ -12,14 +11,14 @@ const { readFile, readdir: readDirectory } = fs.promises
 /**
  * Watches target file or folder for updates and builds and pushes updated file.
  *
- * @param srcDir path to folder containing source files
- * @param hackmudDir path to hackmud directory
- * @param users users to push to (pushes to all if empty)
- * @param scripts scripts to push from (pushes from all if empty)
- * @param onPush function that's called after each script has been built and written
+ * @param sourceDirectory path to folder containing source files
+ * @param hackmudDirectory path to hackmud directory
+ * @param users to push to (pushes to all if empty)
+ * @param scripts to push from (pushes from all if empty)
+ * @param onPush function that's called on each script push
  */
-export function watch(srcDir: string, hackmudDir: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string | undefined } = {}) {
-	const watcher = watchDirectory("", { depth: 1, cwd: srcDir, awaitWriteFinish: { stabilityThreshold: 100 } }).on("change", async path => {
+export function watch(sourceDirectory: string, hackmudDirectory: string, users: string[], scripts: string[], onPush?: (info: Info) => void, { genTypes }: { genTypes?: string | undefined } = {}) {
+	const watcher = watchDirectory(``, { depth: 1, cwd: sourceDirectory, awaitWriteFinish: { stabilityThreshold: 100 } }).on(`change`, async path => {
 		const extension = getFileExtension(path)
 
 		if (supportedExtensions.includes(extension)) {
@@ -28,15 +27,15 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 			if (path == fileName) {
 				if (!scripts.length || scripts.includes(name)) {
-					const sourceCode = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
+					const sourceCode = await readFile(resolvePath(sourceDirectory, path), { encoding: `utf-8` })
 					const skips = new Map<string, string[]>()
 					const promisesSkips: Promise<any>[] = []
 
-					for (const dir of await readDirectory(srcDir, { withFileTypes: true })) {
-						if (!dir.isDirectory())
+					for (const dirent of await readDirectory(sourceDirectory, { withFileTypes: true })) {
+						if (!dirent.isDirectory())
 							continue
 
-						promisesSkips.push(readDirectory(resolvePath(srcDir, dir.name), { withFileTypes: true }).then(files => {
+						promisesSkips.push(readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true }).then(files => {
 							for (const file of files) {
 								if (!file.isFile())
 									continue
@@ -50,9 +49,9 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 								const skip = skips.get(name)
 
 								if (skip)
-									skip.push(dir.name)
+									skip.push(dirent.name)
 								else
-									skips.set(name, [ dir.name ])
+									skips.set(name, [ dirent.name ])
 							}
 						}))
 					}
@@ -61,11 +60,11 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 					let error = null
 
-					const { script, srcLength } = await processScript(sourceCode).catch(reason => {
-						error = reason
+					const { srcLength } = await processScript(sourceCode).catch(error_ => {
+						error = error_
 
 						return {
-							script: "",
+							script: ``,
 							srcLength: 0
 						}
 					})
@@ -80,28 +79,29 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 
 					const promises: Promise<any>[] = []
 
-					if (!error) {
-						if (script) {
-							const skip = skips.get(name) || []
+					// if (!error) {
+					// 	if (script) {
+					// 		const skip = skips.get(name) || []
 
-							info.minLength = countHackmudCharacters(script)
+					// 		info.minLength = countHackmudCharacters(script)
 
-							if (!users.length) {
-								users = (await readDirectory(hackmudDir, { withFileTypes: true }))
-									.filter(a => a.isFile() && getFileExtension(a.name) == ".key")
-									.map(a => getBaseName(a.name, ".key"))
-							}
+					// 		if (!users.length) {
+					// 			// eslint-disable-next-line require-atomic-updates
+					// 			users = (await readDirectory(hackmudDir, { withFileTypes: true }))
+					// 				.filter(dirent => dirent.isFile() && getFileExtension(dirent.name) == `.key`)
+					// 				.map(dirent => getBaseName(dirent.name, `.key`))
+					// 		}
 
-							for (const user of users) {
-								if (skip.includes(user))
-									continue
+					// 		for (const user of users) {
+					// 			if (skip.includes(user))
+					// 				continue
 
-								info.users.push(user)
-								promises.push(writeFilePersistent(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script))
-							}
-						} else
-							info.error = new Error("processed script was empty")
-					}
+					// 			info.users.push(user)
+					// 			promises.push(writeFilePersistent(resolvePath(hackmudDir, user, `scripts`, `${name}.js`), script))
+					// 		}
+					// 	} else
+					// 		info.error = new Error(`processed script was empty`)
+					// }
 
 					if (onPush) {
 						await Promise.all(promises)
@@ -109,17 +109,17 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 					}
 				}
 			} else {
-				const user = getBaseName(resolvePath(path, ".."))
+				const user = getBaseName(resolvePath(path, `..`))
 
 				if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
-					const sourceCode = await readFile(resolvePath(srcDir, path), { encoding: "utf-8" })
+					const sourceCode = await readFile(resolvePath(sourceDirectory, path), { encoding: `utf-8` })
 					let error = null
 
-					const { script, srcLength } = await processScript(sourceCode).catch(reason => {
-						error = reason
+					const { srcLength } = await processScript(sourceCode).catch(error_ => {
+						error = error_
 
 						return {
-							script: "",
+							script: ``,
 							srcLength: 0
 						}
 					})
@@ -132,13 +132,13 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 						srcLength
 					}
 
-					if (!error) {
-						if (script) {
-							info.minLength = countHackmudCharacters(script)
-							await writeFilePersistent(resolvePath(hackmudDir, user, "scripts", `${name}.js`), script)
-						} else
-							info.error = new Error("processed script was empty")
-					}
+					// if (!error) {
+					// 	if (script) {
+					// 		info.minLength = countHackmudCharacters(script)
+					// 		await writeFilePersistent(resolvePath(hackmudDir, user, `scripts`, `${name}.js`), script)
+					// 	} else
+					// 		info.error = new Error(`processed script was empty`)
+					// }
 
 					onPush?.(info)
 				}
@@ -147,9 +147,9 @@ export function watch(srcDir: string, hackmudDir: string, users: string[], scrip
 	})
 
 	if (genTypes) {
-		generateTypings(srcDir, resolvePath(srcDir, genTypes), hackmudDir)
-		watcher.on("add", () => generateTypings(srcDir, resolvePath(srcDir, genTypes), hackmudDir))
-		watcher.on("unlink", () => generateTypings(srcDir, resolvePath(srcDir, genTypes), hackmudDir))
+		generateTypings(sourceDirectory, resolvePath(sourceDirectory, genTypes), hackmudDirectory)
+		watcher.on(`add`, () => generateTypings(sourceDirectory, resolvePath(sourceDirectory, genTypes), hackmudDirectory))
+		watcher.on(`unlink`, () => generateTypings(sourceDirectory, resolvePath(sourceDirectory, genTypes), hackmudDirectory))
 	}
 }
 

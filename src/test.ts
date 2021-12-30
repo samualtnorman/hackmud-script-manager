@@ -5,7 +5,7 @@ import processScript from "./processScript"
 
 const { readFile, readdir: readDirectory } = fs.promises
 
-export async function test(srcPath: string) {
+export async function test(sourcePath: string) {
 	const promises: Promise<any>[] = []
 
 	const errors: {
@@ -14,9 +14,9 @@ export async function test(srcPath: string) {
 		line: number
 	}[] = []
 
-	for (const dirent of await readDirectory(srcPath, { withFileTypes: true })) {
+	for (const dirent of await readDirectory(sourcePath, { withFileTypes: true })) {
 		if (dirent.isDirectory()) {
-			promises.push(readDirectory(resolvePath(srcPath, dirent.name), { withFileTypes: true }).then(files => {
+			promises.push(readDirectory(resolvePath(sourcePath, dirent.name), { withFileTypes: true }).then(files => {
 				const promises: Promise<any>[] = []
 
 				for (const file of files) {
@@ -24,12 +24,13 @@ export async function test(srcPath: string) {
 						continue
 
 					promises.push(
-						readFile(resolvePath(srcPath, dirent.name, file.name), { encoding: "utf-8" })
+						readFile(resolvePath(sourcePath, dirent.name, file.name), { encoding: `utf-8` })
 							.then(processScript)
 							.then(({ warnings }) =>
 								errors.push(...warnings.map(({ message, line }) => ({
 									file: `${dirent.name}/${file.name}`,
-									message, line
+									message,
+									line
 								})))
 							)
 					)
@@ -39,12 +40,13 @@ export async function test(srcPath: string) {
 			}))
 		} else if (dirent.isFile() && supportedExtensions.includes(getFileExtension(dirent.name))) {
 			promises.push(
-				readFile(resolvePath(srcPath, dirent.name), { encoding: "utf-8" })
+				readFile(resolvePath(sourcePath, dirent.name), { encoding: `utf-8` })
 					.then(processScript)
 					.then(({ warnings }) =>
 						errors.push(...warnings.map(({ message, line }) => ({
 							file: dirent.name,
-							message, line
+							message,
+							line
 						})))
 					)
 			)

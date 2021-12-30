@@ -13,8 +13,8 @@
 		"noImplicitOverride": true,
 		"moduleResolution": "Node",
 		"resolveJsonModule": true,
-		"emitDeclarationOnly": true
+		"emitDeclarationOnly": true,
+		"noUncheckedIndexedAccess": true
 	},
-	"exclude": [ "bin" ],
 	"references": [ { "path": ".." } ]
 }

@@ -13,19 +13,19 @@ export type PreprocessOptions = {
 }
 
 /**
- * @param code source code to be preprocessed
+ * @param code source code for preprocessing
  * @param options {@link PreprocessOptions details}
  */
-export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<PreprocessOptions> = {}) {
-	assert(uniqueID.match(/^\w{11}$/))
+export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
+	assert(/^\w{11}$/.test(uniqueID))
 
-	// TODO rename stuff that trips this
-	if (code.match(/(?:SC|DB)\$/))
-		throw new Error("SC$ and DB$ are protected and cannot appear in a script")
+	// TODO rename variables that trips this
+	if (/(?:SC|DB)\$/.test(code))
+		throw new Error(`SC$ and DB$ are protected and cannot appear in a script`)
 
 	const sourceCode = code
 
-	code = code.replace(/^function\s*\(/, "export default function (")
+	code = code.replace(/^function\s*\(/, `export default function (`)
 
 	const subscriptSeclevelCharacterToNumber: Record<string, number> = {
 		f: 4,
@@ -49,27 +49,28 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 		try {
 			file = parse(code, {
 				plugins: [
-					"typescript",
-					[ "decorators", { decoratorsBeforeExport: true } ],
-					"doExpressions",
-					"functionBind",
-					"functionSent",
-					"partialApplication",
-					[ "pipelineOperator", { proposal: "hack", topicToken: "%" } ],
-					"throwExpressions",
-					[ "recordAndTuple", { syntaxType: "hash" } ],
-					"classProperties",
-					"classPrivateProperties",
-					"classPrivateMethods",
-					"logicalAssignment",
-					"numericSeparator",
-					"nullishCoalescingOperator",
-					"optionalChaining",
-					"optionalCatchBinding",
-					"objectRestSpread"
+					`typescript`,
+					[ `decorators`, { decoratorsBeforeExport: true } ],
+					`doExpressions`,
+					`functionBind`,
+					`functionSent`,
+					`partialApplication`,
+					[ `pipelineOperator`, { proposal: `hack`, topicToken: `%` } ],
+					`throwExpressions`,
+					[ `recordAndTuple`, { syntaxType: `hash` } ],
+					`classProperties`,
+					`classPrivateProperties`,
+					`classPrivateMethods`,
+					`logicalAssignment`,
+					`numericSeparator`,
+					`nullishCoalescingOperator`,
+					`optionalChaining`,
+					`optionalCatchBinding`,
+					`objectRestSpread`
 				],
-				sourceType: "module"
+				sourceType: `module`
 			})
+
 			break
 		} catch (error_) {
 			assert(error_ instanceof SyntaxError)
@@ -77,35 +78,35 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 			error = error_ as SyntaxError & {
 				pos: number
 				code: string
-				reasonCode: String
+				reasonCode: string
 			}
 		}
 
-		if (error.code != "BABEL_PARSER_SYNTAX_ERROR" || error.reasonCode != "PrivateInExpectedIn") {
-			console.log(code.slice(error.pos).match(/.+/)?.[0])
+		if (error.code != `BABEL_PARSER_SYNTAX_ERROR` || error.reasonCode != `PrivateInExpectedIn`) {
+			console.log((/.+/.exec(code.slice(error.pos)))?.[0])
+
 			throw error
 		}
 
 		const codeSlice = code.slice(error.pos)
-
 		let match
 
 		// TODO detect typos and warn e.g. we throw on `#db.ObjectID(` and it makes it look like we don't support it
-		if (match = codeSlice.match(/^#[fhmln43210]s\.scripts\.quine\(\)/))
-			code = spliceString(code, JSON.stringify(sourceCode), error.pos, match[0].length)
-		else if (match = codeSlice.match(/^#([fhmln43210])?s\.([a-z_][a-z_0-9]{0,24})\.([a-z_][a-z_0-9]{0,24})\(/)) {
+		if ((match = /^#[0-4fhmln]s\.scripts\.quine\(\)/.exec(codeSlice)))
+			code = spliceString(code, JSON.stringify(sourceCode), error.pos, match[0]!.length)
+		else if ((match = /^#(?<seclevel>[0-4fhmln])?s\.(?<userName>[_a-z][\d_a-z]{0,24})\.(?<scriptName>[_a-z][\d_a-z]{0,24})\(/.exec(codeSlice))) {
 			if (match[1])
-				seclevel = Math.min(seclevel, subscriptSeclevelCharacterToNumber[match[1]])
+				seclevel = Math.min(seclevel, subscriptSeclevelCharacterToNumber[match[1]]!)
 
-			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[2]}$${match[3]}(`, error.pos, match[0].length)
-		} else if (match = codeSlice.match(/^#D\(/))
-			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, match[0].length)
-		else if (match = codeSlice.match(/^#FMCL/))
-			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, match[0].length)
-		else if (match = codeSlice.match(/^#G/))
-			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, match[0].length)
-		else if (match = codeSlice.match(/^#db\.(i|r|f|u|u1|us|ObjectId)\(/))
-			code = spliceString(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, match[0].length)
+			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[2]}$${match[3]}(`, error.pos, match[0]!.length)
+		} else if ((match = /^#D\(/.exec(codeSlice)))
+			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, match[0]!.length)
+		else if ((match = /^#FMCL/.exec(codeSlice)))
+			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, match[0]!.length)
+		else if ((match = /^#G/.exec(codeSlice)))
+			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, match[0]!.length)
+		else if ((match = /^#db\.(?<methodName>[irfu]|u1|us|ObjectId)\(/.exec(codeSlice)))
+			code = spliceString(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, match[0]!.length)
 		else
 			throw error
 	}
@@ -119,27 +120,27 @@ export function preprocess(code: string, { uniqueID = "00000000000" }: Partial<P
 		}
 	})
 
-	const needRecord = program.scope.hasGlobal("Record")
-	const needTuple = program.scope.hasGlobal("Tuple")
+	const needRecord = program.scope.hasGlobal(`Record`)
+	const needTuple = program.scope.hasGlobal(`Tuple`)
 
 	if (needRecord || needTuple) {
 		file.program.body.unshift(t.importDeclaration(
 			needRecord
-				? needTuple
+				? (needTuple
 					? [
-						t.importSpecifier(t.identifier("Record"), t.identifier("Record")),
-						t.importSpecifier(t.identifier("Tuple"), t.identifier("Tuple"))
+						t.importSpecifier(t.identifier(`Record`), t.identifier(`Record`)),
+						t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`))
 					]
-					: [ t.importSpecifier(t.identifier("Record"), t.identifier("Record")) ]
-				: [ t.importSpecifier(t.identifier("Tuple"), t.identifier("Tuple")) ],
-			t.stringLiteral("@bloomberg/record-tuple-polyfill")
+					: [ t.importSpecifier(t.identifier(`Record`), t.identifier(`Record`)) ]
+				) : [ t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`)) ],
+			t.stringLiteral(`@bloomberg/record-tuple-polyfill`)
 		))
 	}
 
-	if (program.scope.hasGlobal("Proxy")) {
+	if (program.scope.hasGlobal(`Proxy`)) {
 		file.program.body.unshift(t.importDeclaration([
-			t.importDefaultSpecifier(t.identifier("Proxy"))
-		], t.stringLiteral("proxy-polyfill/src/proxy.js")))
+			t.importDefaultSpecifier(t.identifier(`Proxy`))
+		], t.stringLiteral(`proxy-polyfill/src/proxy.js`)))
 	}
 
 	return {

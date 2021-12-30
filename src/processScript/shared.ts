@@ -4,9 +4,9 @@ import { ensure } from "@samual/lib/assert"
 
 export function getReferencePathsToGlobal(name: string, program: NodePath<Program>) {
 	const [ variableDeclaration ] = program.unshiftContainer(
-		"body",
+		`body`,
 		t.variableDeclaration(
-			"let",
+			`let`,
 			[ t.variableDeclarator(t.identifier(name)) ]
 		)
 	)
