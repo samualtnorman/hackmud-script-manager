@@ -29,13 +29,12 @@ export function watch(sourceDirectory: string, hackmudDirectory: string, users: 
 				if (!scripts.length || scripts.includes(name)) {
 					const sourceCode = await readFile(resolvePath(sourceDirectory, path), { encoding: `utf-8` })
 					const skips = new Map<string, string[]>()
-					const promisesSkips: Promise<any>[] = []
 
-					for (const dirent of await readDirectory(sourceDirectory, { withFileTypes: true })) {
+					await Promise.all((await readDirectory(sourceDirectory, { withFileTypes: true })).map(async dirent => {
 						if (!dirent.isDirectory())
-							continue
+							return
 
-						promisesSkips.push(readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true }).then(files => {
+						await readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true }).then(files => {
 							for (const file of files) {
 								if (!file.isFile())
 									continue
@@ -53,10 +52,8 @@ export function watch(sourceDirectory: string, hackmudDirectory: string, users: 
 								else
 									skips.set(name, [ dirent.name ])
 							}
-						}))
-					}
-
-					await Promise.all(promisesSkips)
+						})
+					}))
 
 					let error = null
 
@@ -77,7 +74,7 @@ export function watch(sourceDirectory: string, hackmudDirectory: string, users: 
 						srcLength
 					}
 
-					const promises: Promise<any>[] = []
+					// const promises: Promise<any>[] = []
 
 					// if (!error) {
 					// 	if (script) {
@@ -104,7 +101,7 @@ export function watch(sourceDirectory: string, hackmudDirectory: string, users: 
 					// }
 
 					if (onPush) {
-						await Promise.all(promises)
+						// await Promise.all(promises)
 						onPush(info)
 					}
 				}
