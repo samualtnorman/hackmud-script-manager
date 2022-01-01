@@ -89,7 +89,6 @@ rules:
   key-spacing: warn
   "@typescript-eslint/keyword-spacing": warn
   linebreak-style: warn
-  "@typescript-eslint/lines-between-class-members": warn
   new-parens: warn
   no-multi-spaces: warn
   no-whitespace-before-property: warn
@@ -148,6 +147,8 @@ rules:
   eslint-comments/require-description: warn
   write-good-comments/write-good-comments: warn
   array-func/prefer-array-from: off
+  unicorn/filename-case: off
+  unicorn/prefer-code-point: off
 
   no-constant-condition:
     - warn
@@ -393,13 +394,6 @@ rules:
     - warn
     - sortCharacterClasses: false
 
-  unicorn/filename-case:
-    - warn
-    - cases:
-        camelCase: true
-        pascalCase: true
-        kebabCase: true
-
   unicorn/prevent-abbreviations:
     - warn
     - checkFilenames: false
@@ -408,3 +402,7 @@ rules:
     - warn
     - blacklist:
       - charClassClassrangesMerge
+
+  "@typescript-eslint/lines-between-class-members":
+    - warn
+    - allowSingleLine: true
