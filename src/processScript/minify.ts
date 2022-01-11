@@ -87,7 +87,9 @@ export async function minify(file: File, autocomplete?: string, {
 	// this needs `as boolean` because typescript is dumb
 	let undefinedIsReferenced = false as boolean
 
-	traverse(file, {
+	const fileBeforeJSONValueReplacement = t.cloneNode(file)
+
+	traverse(fileBeforeJSONValueReplacement, {
 		MemberExpression({ node: memberExpression }) {
 			if (memberExpression.computed)
 				return
@@ -105,7 +107,7 @@ export async function minify(file: File, autocomplete?: string, {
 	})
 
 	// BUG the source char count is off for this version of the script
-	const scriptBeforeJSONValueReplacement = (await terser.minify(generate(file!).code, {
+	const scriptBeforeJSONValueReplacement = (await terser.minify(generate(fileBeforeJSONValueReplacement!).code, {
 		ecma: 2015,
 		compress: {
 			passes: Infinity,
