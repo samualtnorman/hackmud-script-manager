@@ -206,7 +206,7 @@ export async function processScript(
 			rollupPluginBabel({
 				babelHelpers: `bundled`,
 				plugins: [
-					[ babelPluginTransformTypescript.default ],
+					[ babelPluginTransformTypescript.default, { allowDeclareFields: true, optimizeConstEnums: true } ],
 					[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
 					[ babelPluginProposalDoExpressions.default ],
 					[ babelPluginProposalFunctionBind.default ],
@@ -234,7 +234,7 @@ export async function processScript(
 			rollupPluginNodeResolve({ extensions }),
 			rollupPluginJSON()
 		],
-		treeshake: { moduleSideEffects: `no-external` }
+		treeshake: { moduleSideEffects: false }
 	})
 
 	const seclevelNames = [ `NULLSEC`, `LOWSEC`, `MIDSEC`, `HIGHSEC`, `FULLSEC` ]
