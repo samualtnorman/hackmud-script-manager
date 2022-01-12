@@ -504,6 +504,8 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = null
 		else if (property.value.type == `BooleanLiteral` || property.value.type == `NumericLiteral` || property.value.type == `StringLiteral`)
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = property.value.value
+		else if (property.value.type == `TemplateLiteral` && !property.value.expressions.length)
+			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = property.value.quasis[0]!.value.cooked
 		else
 			return false
 	}
@@ -537,6 +539,8 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 			o.push(null)
 		else if (element.type == `BooleanLiteral` || element.type == `NumericLiteral` || element.type == `StringLiteral`)
 			o.push(element.value)
+		else if (element.type == `TemplateLiteral` && !element.expressions.length)
+			o.push(element.quasis[0]!.value.cooked)
 		else
 			return false
 	}
