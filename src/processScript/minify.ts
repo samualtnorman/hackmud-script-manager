@@ -17,7 +17,6 @@ type MinifyOptions = {
 	mangleNames: boolean
 }
 
-// TODO when there are more than 3 references to `$G`, place a `let _GLOBAL_0_ = $G` at the top and replace references with `_GLOBAL_0_`
 // TODO move autocomplete code outside this function
 // TODO allow not mangling class and function names
 
@@ -77,6 +76,25 @@ export async function minify(file: File, autocomplete?: string, {
 					t.variableDeclarator(
 						t.identifier(`_GLOBAL_${global}_${uniqueID}_`),
 						t.identifier(global)
+					)
+				]
+			)
+		)
+	}
+
+	const hashGReferencePaths = getReferencePathsToGlobal(`$${uniqueID}$GLOBAL`, program)
+
+	if (hashGReferencePaths.length > 3) {
+		for (const path of hashGReferencePaths)
+			path.replaceWith(t.identifier(`_G_${uniqueID}_`))
+
+		mainFunctionPath.node.body.body.unshift(
+			t.variableDeclaration(
+				`let`,
+				[
+					t.variableDeclarator(
+						t.identifier(`_G_${uniqueID}_`),
+						t.identifier(`$${uniqueID}$GLOBAL`)
 					)
 				]
 			)
