@@ -220,7 +220,6 @@ for (const argument of process.argv.slice(2)) {
 				case `set`: {
 					if (commands[2] && commands[3]) {
 						const keys = commands[2].split(`.`)
-						const lastKey = keys.pop()!
 
 						if (!keys.length) {
 							help()
@@ -228,6 +227,7 @@ for (const argument of process.argv.slice(2)) {
 							break
 						}
 
+						const lastKey = keys.pop()!
 						const config = await getConfig()
 
 						if (!keys.length && lastKey == `hackmudPath`)
@@ -418,11 +418,11 @@ function version() {
 	console.log(moduleVersion)
 }
 
-function getConfig() {
+async function getConfig() {
 	if (config)
 		return config
 
-	return config = readFile(configFilePath, { encoding: `utf-8` })
+	return config = await readFile(configFilePath, { encoding: `utf-8` })
 		.then(configFile => {
 			let temporaryConfig
 
@@ -462,7 +462,7 @@ function exploreObject(object: any, keys: string[], createPath = false) {
 
 function updateConfig() {
 	if (config) {
-		const json = JSON.stringify(config)
+		const json = JSON.stringify(config, undefined, `\t`)
 
 		writeFile(configFilePath, json).catch(async error => {
 			switch (error.code) {
