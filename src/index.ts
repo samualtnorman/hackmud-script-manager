@@ -4,7 +4,6 @@ export { processScript } from "./processScript"
 export { pull } from "./pull"
 export { push } from "./push"
 export { syncMacros } from "./syncMacros"
-export { test } from "./test"
 export { watch } from "./watch"
 
 // TODO `clean()` function that delete all scripts in hackmud directory #70

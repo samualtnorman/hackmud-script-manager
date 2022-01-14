@@ -4,7 +4,7 @@ import chalk from "chalk"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
 import { basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
-import { generateTypings, Info, processScript, pull, push, syncMacros, test, watch } from ".."
+import { generateTypings, Info, processScript, pull, push, syncMacros, watch } from ".."
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants.json"
 
@@ -175,33 +175,6 @@ for (const argument of process.argv.slice(2)) {
 			const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
 
 			console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
-		} break
-
-		case `test`: {
-			const sourcePath = resolvePath(commands[1] || `.`)
-			let errors = 0
-
-			console.log(`testing scripts in ${chalk.bold(sourcePath)}\n`)
-
-			for (const { file, line, message } of await test(sourcePath)) {
-				console.log(`error "${chalk.bold(message)}" in ${chalk.bold(file)} on line ${chalk.bold(String(line))}`)
-				errors++
-			}
-
-			if (!errors) {
-				console.log(`no errors found`)
-
-				break
-			}
-
-			if (errors) {
-				process.exitCode = 1
-				console.log(`\nencountered ${chalk.bold(String(errors))} errors`)
-
-				break
-			}
-
-			console.log(`no errors found`)
 		} break
 
 		case `gen-types`: {
