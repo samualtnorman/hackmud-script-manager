@@ -35,13 +35,13 @@ jobs:
       if: github.event_name == 'push' || github.event_name == 'pull_request' && github.event.pull_request.merged
       run: |
         node scripts/version-dev
-        npm run build
+        npm run package
         cd dist
         npm publish --tag dev
 
     - name: Publish release
       if: github.event_name == 'release'
       run: |
-        npm run build
+        npm run package
         cd dist
         npm publish

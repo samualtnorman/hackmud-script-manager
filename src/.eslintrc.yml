@@ -1,0 +1,7 @@
+extends:
+  - ../.eslintrc.yml
+
+rules:
+  "@typescript-eslint/no-unnecessary-condition":
+    - warn
+    - allowConstantLoopConditions: true

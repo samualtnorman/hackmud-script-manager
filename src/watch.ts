@@ -55,7 +55,7 @@ export function watch(sourceDirectory: string, hackmudDirectory: string, users: 
 						})
 					}))
 
-					let error = null
+					let error
 
 					const { srcLength } = await processScript(sourceCode).catch(error_ => {
 						error = error_
@@ -110,7 +110,7 @@ export function watch(sourceDirectory: string, hackmudDirectory: string, users: 
 
 				if ((!users.length || users.includes(user)) && (!scripts.length || scripts.includes(name))) {
 					const sourceCode = await readFile(resolvePath(sourceDirectory, path), { encoding: `utf-8` })
-					let error = null
+					let error
 
 					const { srcLength } = await processScript(sourceCode).catch(error_ => {
 						error = error_

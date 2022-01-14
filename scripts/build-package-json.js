@@ -32,5 +32,5 @@ const { writeFile, readFile } = fs.promises;
 			packageConfig.exports[name.slice(0, -6)] = nameWithExtension
 	}
 
-	await writeFile(`dist/package.json`, JSON.stringify(packageConfig, null, `\t`))
+	await writeFile(`dist/package.json`, JSON.stringify(packageConfig, undefined, `\t`))
 })()

@@ -1,17 +1,21 @@
 {
-	"include": [ "**/*", "package.json" ],
 	"compilerOptions": {
-		"rootDir": ".",
-		"outDir": ".",
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"moduleResolution": "Node",
 		"resolveJsonModule": true,
-		"composite": true,
-		"emitDeclarationOnly": true,
-		"skipLibCheck": true,
+		"noEmit": true,
 		"checkJs": true,
 		"esModuleInterop": true,
-		"target": "ES2019",
-		"moduleResolution": "Node",
-		"strictNullChecks": true
+		"forceConsistentCasingInFileNames": true,
+		"target": "ES2019", /* ES2019 is oldest properly supported ES version in Node 12 which is the oldest currently supported Node version */
+		"skipLibCheck": true
 	},
-	"exclude": [ "src", "dist" ]
+	"include": [ "*", "scripts/*", "game-scripts/*" ],
+	"exclude": [ "index.cjs" ]
 }

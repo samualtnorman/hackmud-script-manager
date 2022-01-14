@@ -27,9 +27,11 @@
 		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"scripts": {
-		"build": "rm -rf dist && rollup --config && tsc --project src && node scripts/build-package-json && cp LICENSE index.cjs package-lock.json README.md dist",
+		"build": "rollup --config",
 		"dev": "rollup --config --watch",
-		"lint": "eslint ."
+		"lint": "eslint .; tsc",
+		"test": "node --experimental-vm-modules node_modules/jest/bin/jest",
+		"package": "rm -rf dist && rollup --config && tsc --project src --declaration true --emitDeclarationOnly true --noEmit false --outDir dist && node scripts/build-package-json && cp LICENSE package-lock.json README.md dist"
 	},
 	"dependencies": {
 		"@babel/core": "^7.16.0",

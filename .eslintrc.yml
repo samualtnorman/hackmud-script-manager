@@ -11,12 +11,12 @@ parserOptions:
   project:
     - ./tsconfig.json
     - ./src/tsconfig.json
+    - ./game-scripts/tsconfig.json
 
 plugins:
   - "@typescript-eslint"
   - unicorn
   - eslint-comments
-  - write-good-comments
   - array-func
   - regexp
   - optimize-regex
@@ -29,6 +29,11 @@ extends:
   - plugin:array-func/recommended
   - plugin:regexp/recommended
 
+ignorePatterns:
+  - node_modules
+  - dist
+  - index.cjs
+
 rules:
   no-undef: off
   "@typescript-eslint/no-explicit-any": off
@@ -37,7 +42,7 @@ rules:
   no-unmodified-loop-condition: warn
   no-unreachable-loop: warn
   no-unused-private-class-members: warn
-  require-atomic-updates: warn
+  # require-atomic-updates: warn
   class-methods-use-this: warn
   default-case-last: warn
   "@typescript-eslint/default-param-last": warn
@@ -137,18 +142,22 @@ rules:
   unicorn/prefer-number-properties: off
   unicorn/explicit-length-check: off
   unicorn/no-await-expression-member: off
-  unicorn/no-null: off
+  unicorn/no-null: warn
   unicorn/import-index: warn
   unicorn/no-unsafe-regex: warn
   unicorn/no-unused-properties: warn
   # unicorn/prefer-string-replace-all: warn
   # unicorn/prefer-top-level-await: warn
   eslint-comments/no-unused-disable: warn
-  eslint-comments/require-description: warn
-  write-good-comments/write-good-comments: warn
   array-func/prefer-array-from: off
   unicorn/filename-case: off
   unicorn/prefer-code-point: off
+  unicorn/no-new-array: off
+  unicorn/empty-brace-spaces: warn
+  unicorn/no-lonely-if: warn
+  eslint-comments/disable-enable-pair: off
+  "@typescript-eslint/no-unnecessary-condition": off
+  unicorn/no-useless-undefined: off
 
   no-constant-condition:
     - warn
@@ -381,10 +390,6 @@ rules:
     - warn
     - allow:
       - arrowFunctions
-
-  "@typescript-eslint/no-unnecessary-condition":
-    - warn
-    - allowConstantLoopConditions: true
 
   "@typescript-eslint/require-array-sort-compare":
     - warn

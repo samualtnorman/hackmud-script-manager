@@ -372,7 +372,7 @@ export function transform(file: File, sourceCode: string, {
 							t.variableDeclarator(
 								statement.id!,
 								t.functionExpression(
-									null,
+									undefined,
 									statement.params,
 									statement.body,
 									statement.generator,
@@ -564,7 +564,7 @@ export function transform(file: File, sourceCode: string, {
 									t.identifier(globalBlockStatement.id.name)
 								),
 								t.classExpression(
-									null,
+									undefined,
 									globalBlockStatement.superClass,
 									globalBlockStatement.body,
 									globalBlockStatement.decorators

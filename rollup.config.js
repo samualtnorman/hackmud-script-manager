@@ -5,11 +5,13 @@ import nodeResolve from "@rollup/plugin-node-resolve"
 import fs from "fs"
 import preserveShebang from "rollup-plugin-preserve-shebang"
 import { terser } from "rollup-plugin-terser"
-import packageConfig from "./package.json"
+import packageConfig_ from "./package.json"
 
 const { readdir: readDirectory } = fs.promises
 
 /** @typedef {import("rollup").RollupOptions} RollupOptions */
+
+const /** @type {Record<string, any>} */ packageConfig = packageConfig_
 
 const plugins = [
 	babel({
@@ -22,13 +24,13 @@ const plugins = [
 	preserveShebang()
 ]
 
+const sourceDirectory = `src`
+
+const findFilesPromise = findFiles(sourceDirectory)
 const external = []
 
 if (`dependencies` in packageConfig)
 	external.push(...Object.keys(packageConfig.dependencies))
-
-const sourceDirectory = `src`
-const findFilesPromise = findFiles(sourceDirectory)
 
 /** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
 export default async ({ w }) => {
@@ -39,7 +41,7 @@ export default async ({ w }) => {
 			keep_fnames: true
 		}))
 	} else if (`devDependencies` in packageConfig)
-		external.push(...Object.keys(packageConfig.devDependencies).map(name => new RegExp(`^${name}(?:/|$)`)))
+		external.push(...Object.keys(packageConfig.devDependencies))
 
 	return {
 		input: Object.fromEntries(
@@ -52,9 +54,9 @@ export default async ({ w }) => {
 			interop: `auto`
 		},
 		plugins,
-		external,
+		external: external.map(name => new RegExp(`^${name}(?:/|$)`)),
 		preserveEntrySignatures: `allow-extension`,
-		treeshake: { moduleSideEffects: `no-external` }
+		treeshake: { moduleSideEffects: false }
 	}
 }
 

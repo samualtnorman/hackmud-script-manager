@@ -49,7 +49,7 @@ export async function push(
 	if (typeof scripts == `string`)
 		scripts = [ scripts ]
 
-	const scriptNamesByUser = new DynamicMap((user: string) => new Set<string>())
+	const scriptNamesByUser = new DynamicMap((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
 	let pushEverything = false
@@ -68,9 +68,9 @@ export async function push(
 			scriptNamesByUser.get(user).add(scriptName)
 	}
 
-	const usersByGlobalScriptsToPush = new DynamicMap((user: string) => new Set<string>())
+	const usersByGlobalScriptsToPush = new DynamicMap((_user: string) => new Set<string>())
 	const allInfo: Info[] = []
-	const scriptNamesAlreadyPushedByUser = new DynamicMap((user: string) => new Set<string>())
+	const scriptNamesAlreadyPushedByUser = new DynamicMap((_user: string) => new Set<string>())
 	let sourceDirectoryDirents
 
 	// *.bar
@@ -129,7 +129,7 @@ export async function push(
 						file: `${user}/${dirent.name}`,
 						users: [ user ],
 						minLength: countHackmudCharacters(minifiedCode),
-						error: null,
+						error: undefined,
 						srcLength
 					}
 
@@ -182,7 +182,7 @@ export async function push(
 					file: `${user}/${fileName}`,
 					users: [ user ],
 					minLength: countHackmudCharacters(minifiedCode),
-					error: null,
+					error: undefined,
 					srcLength
 				}
 
@@ -227,7 +227,7 @@ export async function push(
 				file: dirent.name,
 				users: usersToPushTo,
 				minLength: countHackmudCharacters(minifiedCode),
-				error: null,
+				error: undefined,
 				srcLength
 			}
 
@@ -281,7 +281,7 @@ export async function push(
 					file: fileName,
 					users: [ ...users ],
 					minLength: countHackmudCharacters(minifiedCode),
-					error: null,
+					error: undefined,
 					srcLength
 				}
 

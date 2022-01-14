@@ -146,7 +146,7 @@ export async function minify(file: File, autocomplete?: string, {
 		.replace(new RegExp(`_PROTOTYPE_PROPERTY_${uniqueID}_`, `g`), `"prototype"`)
 		.replace(new RegExp(`_PROTO_PROPERTY_${uniqueID}_`, `g`), `"__proto__"`)
 
-	let comment: string | null = null
+	let comment: string | undefined
 	let hasComment = false
 	let code
 
@@ -250,12 +250,14 @@ export async function minify(file: File, autocomplete?: string, {
 					},
 
 					NullLiteral(path) {
+						/* eslint-disable unicorn/no-null */
 						let jsonValueIndex = jsonValues.indexOf(null)
 
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(null)
 
 						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+						/* eslint-enable unicorn/no-null */
 					},
 
 					BooleanLiteral(path) {
@@ -456,7 +458,7 @@ export async function minify(file: File, autocomplete?: string, {
 	})).code || ``
 
 	// this step affects the character count and can't happen after the count comparison
-	if (comment != null) {
+	if (comment != undefined) {
 		code = spliceString(code, `${autocomplete ? `//${autocomplete}\n` : ``}\n//\t${comment}\t\n`, getFunctionBodyStart(code) + 1)
 		code = code.replace(`$${uniqueID}$SPLIT_INDEX`, await minifyNumber(code.split(`\t`).findIndex(part => part == comment)))
 	}
@@ -501,6 +503,7 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 			else
 				return false
 		} else if (property.value.type == `NullLiteral`)
+			// eslint-disable-next-line unicorn/no-null
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = null
 		else if (property.value.type == `BooleanLiteral` || property.value.type == `NumericLiteral` || property.value.type == `StringLiteral`)
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = property.value.value
@@ -536,6 +539,7 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 			else
 				return false
 		} else if (element.type == `NullLiteral`)
+			// eslint-disable-next-line unicorn/no-null
 			o.push(null)
 		else if (element.type == `BooleanLiteral` || element.type == `NumericLiteral` || element.type == `StringLiteral`)
 			o.push(element.value)

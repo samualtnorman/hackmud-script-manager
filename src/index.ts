@@ -15,5 +15,5 @@ export type Info = {
 	users: string[]
 	srcLength: number
 	minLength: number
-	error: Error | null
+	error: Error | undefined
 }

@@ -193,7 +193,7 @@ export async function processScript(
 					if (id == filePathResolved)
 						return code
 
-					return null
+					return undefined
 				},
 				transform(code) {
 					const { code: prerocessedCode, seclevel: detectedSeclevel } = preprocess(code, { uniqueID })
@@ -239,19 +239,16 @@ export async function processScript(
 
 	const seclevelNames = [ `NULLSEC`, `LOWSEC`, `MIDSEC`, `HIGHSEC`, `FULLSEC` ]
 
-	// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 	code = (await bundle.generate({})).output[0].code
 
 	let file
 
-	// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 	({ file, seclevel } = await transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
 
 	if (statedSeclevel != undefined && seclevel < statedSeclevel)
 		// TODO replace with a warning and build script anyway
 		throw new Error(`detected seclevel ${seclevelNames[seclevel]} is lower than stated seclevel ${seclevelNames[statedSeclevel]}`)
 
-	// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 	code = generate(file).code
 
 	// TODO fix incorrect source length again
@@ -266,7 +263,6 @@ export async function processScript(
 		// + (code.match(/DB\$/g)?.length ?? 0)
 
 	if (shouldMinify)
-		// eslint-disable-next-line require-atomic-updates -- this will probably be fine
 		code = await minify(file, autocomplete, { uniqueID, mangleNames })
 	else {
 		traverse(file, {

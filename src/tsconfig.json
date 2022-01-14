@@ -1,20 +1,12 @@
 {
 	"compilerOptions": {
-		"target": "ES2019", /* ES2019 is oldest properly supported ES version in Node 12 which is the oldest currently supported Node version */
-		"module": "ES2020",
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"declaration": true,
-		"outDir": "../dist",
-		"useUnknownInCatchVariables": true,
 		"exactOptionalPropertyTypes": true,
-		"noImplicitOverride": true,
-		"moduleResolution": "Node",
-		"resolveJsonModule": true,
-		"emitDeclarationOnly": true,
-		"noUncheckedIndexedAccess": true
+		"noUncheckedIndexedAccess": true,
+		"strict": true,
+		"useUnknownInCatchVariables": true,
+		"strictNullChecks": true,
+		"module": "ES2020"
 	},
-	"references": [ { "path": ".." } ]
+	"extends": "../tsconfig.json",
+	"include": [ "**/*" ]
 }
