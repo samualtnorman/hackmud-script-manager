@@ -1,5 +1,5 @@
 import fs from "fs"
-import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
+import { basename as getBaseName, extname as getFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
 
 const { readdir: readDirectory, writeFile } = fs.promises
 
@@ -43,10 +43,12 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 		}
 	}))
 
+	sourceDirectory = getRelativePath(`.`, sourceDirectory)
+
 	let o = ``
 
 	for (const script of wildScripts)
-		o += `import { script as $${script}$ } from "./src/${script}"\n`
+		o += `import $${script}$ from "./${sourceDirectory}/${script}"\n`
 
 	o += `\n`
 
@@ -54,7 +56,7 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 		const scripts = allScripts[user]!
 
 		for (const script of scripts)
-			o += `import { script as $${user}$${script}$ } from "./src/${user}/${script}"\n`
+			o += `import $${user}$${script}$ from "./${sourceDirectory}/${user}/${script}"\n`
 	}
 
 	// TODO detect security level and generate apropriate code
@@ -78,7 +80,7 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 	for (const script of wildAnyScripts)
 		o += `\t${script}: (...args: any) => any\n`
 
-	o += `}\n\ndeclare global {\n\tinterface PlayerFullsec {`
+	o += `}\n\ninterface PlayerFullsec {`
 
 	let lastWasMultiLine = true
 
@@ -88,32 +90,32 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 
 		if ((scripts && scripts.length) || (anyScripts && anyScripts.length)) {
 			lastWasMultiLine = true
-			o += `\n\t\t${user}: WildFullsec & {\n`
+			o += `\n\t${user}: WildFullsec & {\n`
 
 			if (scripts) {
 				for (const script of scripts)
-					o += `\t\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
+					o += `\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
 			}
 
 			if (anyScripts) {
 				for (const script of anyScripts)
-					o += `\t\t\t${script}: (...args: any) => any\n`
+					o += `\t\t${script}: (...args: any) => any\n`
 			}
 
-			o += `\t\t}`
+			o += `\t}`
 		} else {
 			if (lastWasMultiLine) {
 				o += `\n`
 				lastWasMultiLine = false
 			}
 
-			o += `\t\t${user}: WildFullsec`
+			o += `\t${user}: WildFullsec`
 		}
 
 		o += `\n`
 	}
 
-	o += `\t}\n}\n`
+	o += `}\n`
 	await writeFile(target, o)
 }
 
