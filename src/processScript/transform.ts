@@ -475,8 +475,10 @@ export function transform(file: File, sourceCode: string, {
 
 							for (const [ name, node ] of Object.entries(t.getBindingIdentifiers(referencePath.node))) {
 								if (name == declarator.id.name) {
+									clearObject(node)
+
 									Object.assign(
-										clearObject(node),
+										node,
 										t.memberExpression(
 											t.identifier(`$${uniqueID}$GLOBAL`),
 											t.identifier(name)
