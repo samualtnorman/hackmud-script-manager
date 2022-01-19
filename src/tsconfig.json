@@ -5,8 +5,14 @@
 		"strict": true,
 		"useUnknownInCatchVariables": true,
 		"strictNullChecks": true,
-		"module": "ES2020"
+		"module": "ES2020",
+		"rootDir": ".",
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"outDir": "../dist",
+		"tsBuildInfoFile": "../src.tsbuildinfo"
 	},
 	"extends": "../tsconfig.json",
-	"include": [ "**/*" ]
+	"include": [ "**/*", "constants.json" ],
+	"references": [ { "path": ".." } ]
 }

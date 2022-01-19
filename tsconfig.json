@@ -9,13 +9,14 @@
 		"noUnusedParameters": true,
 		"moduleResolution": "Node",
 		"resolveJsonModule": true,
-		"noEmit": true,
 		"checkJs": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"target": "ES2019", /* ES2019 is oldest properly supported ES version in Node 12 which is the oldest currently supported Node version */
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"composite": true,
+		"emitDeclarationOnly": true
 	},
-	"include": [ "*", "scripts/*", "game-scripts/*" ],
+	"include": [ "*", "scripts/*", "game-scripts/*", "package.json" ],
 	"exclude": [ "index.cjs" ]
 }
