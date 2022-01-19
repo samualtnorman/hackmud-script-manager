@@ -1,3 +1,11 @@
 {
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"files.exclude": {
+		"LICENSE": true,
+		"node_modules": true,
+		"package-lock.json": true,
+		"index.cjs": true,
+		"*.tsbuildinfo": true,
+		".gitattributes": true
+	}
 }
