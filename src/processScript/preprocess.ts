@@ -24,6 +24,16 @@ export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<P
 		throw new Error(`SC$ and DB$ are protected and cannot appear in a script`)
 
 	const sourceCode = code
+	let lengthBefore
+
+	do {
+		lengthBefore = code.length
+
+		code = code
+			.replace(/^\s+/, ``)
+			.replace(/^\/\/.*/, ``)
+			.replace(/^\/\*[\s\S]*?\*\//, ``)
+	} while (code.length != lengthBefore)
 
 	code = code.replace(/^function\s*\(/, `export default function (`)
 
