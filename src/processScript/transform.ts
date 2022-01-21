@@ -285,8 +285,10 @@ export function transform(file: File, sourceCode: string, {
 	}
 
 	// rollup removes all the inline exports and places a statement at the end instead
-	const lastStatement = program.node.body[program.node.body.length - 1]!
+	const lastStatement = program.node.body[program.node.body.length - 1]
 	let exportDefaultName
+
+	assert(lastStatement, `program is empty`)
 
 	if (lastStatement.type == `ExportNamedDeclaration`) {
 		program.node.body.pop()
