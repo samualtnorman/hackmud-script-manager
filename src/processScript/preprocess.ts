@@ -153,6 +153,13 @@ export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<P
 		], t.stringLiteral(`proxy-polyfill/src/proxy.js`)))
 	}
 
+	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`) {
+		return {
+			code: `export default ${generate(file).code}`,
+			seclevel
+		}
+	}
+
 	return {
 		code: generate(file).code,
 		seclevel
