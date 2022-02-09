@@ -89,7 +89,6 @@ export async function processScript(
 	timeTook: number
 }> {
 	assert(/^\w{11}$/.exec(uniqueID))
-	filePath = filePath ? resolvePath(filePath) : `script`
 
 	const time = performance.now()
 	const sourceCode = code
