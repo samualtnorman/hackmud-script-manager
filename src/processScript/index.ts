@@ -242,7 +242,7 @@ export async function processScript(
 
 	let file
 
-	({ file, seclevel } = await transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
+	({ file, seclevel } = transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
 
 	if (statedSeclevel != undefined && seclevel < statedSeclevel)
 		// TODO replace with a warning and build script anyway
