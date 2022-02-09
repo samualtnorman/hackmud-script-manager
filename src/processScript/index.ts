@@ -174,26 +174,15 @@ export async function processScript(
 
 	const filePathResolved = filePath
 		? resolvePath(filePath)
-		: `script`
+		: `${uniqueID}.ts`
 
 	let seclevel = 4
 
 	const bundle = await rollup({
+		input: filePathResolved,
 		plugins: [
 			{
-				name: `emit script`,
-				buildStart() {
-					this.emitFile({
-						type: `chunk`,
-						id: filePathResolved
-					})
-				},
-				load(id) {
-					if (id == filePathResolved)
-						return code
-
-					return undefined
-				},
+				name: `hackmud-script-manager`,
 				transform(code) {
 					const { code: prerocessedCode, seclevel: detectedSeclevel } = preprocess(code, { uniqueID })
 
