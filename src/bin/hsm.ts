@@ -119,6 +119,13 @@ for (const argument of process.argv.slice(2)) {
 
 		case `dev`:
 		case `watch`: {
+			if (!commands[1]) {
+				console.error(`specify the directory to watch`)
+				help()
+
+				break
+			}
+
 			const config = await getConfig()
 
 			if (!config.hackmudPath) {
@@ -127,13 +134,21 @@ for (const argument of process.argv.slice(2)) {
 				break
 			}
 
-			const sourcePath = commands[1] || `.`
-			const hackmudPath = config.hackmudPath
-			const users = options.get(`users`)?.toString().split(`,`) || []
-			const scripts = options.get(`scripts`)?.toString().split(`,`) || []
-			const genTypes = options.get(`gen-types`)?.toString()
+			const scripts = commands.slice(2)
 
-			watch(sourcePath, hackmudPath, users, scripts, onPushLogger, { genTypes })
+			if (!scripts.length)
+				scripts.push(`*.*`)
+
+			if (options.has(`skip-minify`) && options.has(`mangle-names`))
+				console.warn(`pointless specifying both --skip-minify and --mangle-names`)
+
+			watch(commands[1], config.hackmudPath, {
+				scripts,
+				onPush: onPushLogger,
+				typeDeclarationPath: options.get(`type-declaration-path`)?.toString(),
+				minify: !options.get(`skip-minify`),
+				mangleNames: Boolean(options.get(`mangle-names`))
+			})
 		} break
 
 		case `pull`: {
@@ -395,8 +410,9 @@ function help() {
 			console.log(`hsm push [<dir> [..."<script user>.<script name>"]]`)
 		} break
 
+		case `dev`:
 		case `watch`: {
-			console.log(`hsm watch [dir]`)
+			console.log(`hsm ${commands[0]} <dir> [..."<script user>.<script name>"] [--skip-minify] [--mangle-names]`)
 		} break
 
 		case `pull`: {
@@ -485,9 +501,6 @@ function updateConfig() {
 }
 
 function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
-	if (!users.length)
-		return
-
 	if (error) {
 		console.log(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
 
