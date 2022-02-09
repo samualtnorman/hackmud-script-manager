@@ -7,7 +7,7 @@ import processScript from "./processScript"
 
 const { readFile, readdir: readDirectory } = fs.promises
 
-type PushOptions = {
+export type PushOptions = {
 	/** whether to do the minify step (defaults to `true`) */
 	minify: boolean
 
