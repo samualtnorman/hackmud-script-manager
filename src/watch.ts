@@ -2,7 +2,6 @@ import { assert, countHackmudCharacters, DynamicMap, writeFilePersistent } from 
 import { watch as watchDirectory } from "chokidar"
 import fs from "fs"
 import { basename as getPathBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import { Info } from "."
 import { supportedExtensions } from "./constants.json"
 import generateTypings from "./generateTypings"
 import processScript from "./processScript"
