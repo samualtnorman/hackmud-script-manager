@@ -21,7 +21,7 @@ export type PushOptions = {
 	 *
 	 * pushes everything by default (`*.*`)
 	 */
-	scripts: string | string[]
+	scripts: string[]
 
 	/** callback called on script push */
 	onPush: (info: Info) => void
@@ -40,15 +40,12 @@ export async function push(
 	sourceDirectory: string,
 	hackmudDirectory: string,
 	{
-		scripts = `*.*`,
+		scripts = [ `*.*` ],
 		onPush = () => {},
 		minify = true,
 		mangleNames = false
 	}: Partial<PushOptions> = {}
 ) {
-	if (typeof scripts == `string`)
-		scripts = [ scripts ]
-
 	const scriptNamesByUser = new DynamicMap((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()

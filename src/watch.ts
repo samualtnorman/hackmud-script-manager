@@ -40,9 +40,7 @@ export function watch(
 		typeDeclarationPath
 	}: PartialUndefinable<WatchOptions> = {}
 ) {
-	if (typeof scripts == `string`)
-		scripts = [ scripts ]
-	else if (!scripts.length)
+	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
 
 	const scriptNamesToUsers = new DynamicMap((_scriptName: string) => new Set<string>())
