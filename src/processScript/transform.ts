@@ -220,8 +220,21 @@ export function transform(file: File, sourceCode: string, {
 
 	// TODO turn not calling into a arrow function wrapper
 	if (program.scope.hasGlobal(`$D`)) {
-		for (const referencePath of getReferencePathsToGlobal(`$D`, program))
-			referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG`))
+		for (const referencePath of getReferencePathsToGlobal(`$D`, program)) {
+			if (referencePath.parentPath.type == `CallExpression`)
+				referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG`))
+			else {
+				referencePath.replaceWith(
+					t.arrowFunctionExpression(
+						[ t.identifier(`a`) ],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$DEBUG`),
+							[ t.identifier(`a`) ]
+						)
+					)
+				)
+			}
+		}
 	}
 
 	if (program.scope.hasGlobal(`$FMCL`)) {
