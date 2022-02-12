@@ -1,6 +1,7 @@
 import babelTraverse, { NodePath } from "@babel/traverse"
 import t, { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
 import { assert, clearObject } from "@samual/lib"
+import { validDBMethods } from "../constants.json"
 import { getReferencePathsToGlobal } from "./shared"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -172,12 +173,12 @@ export function transform(file: File, sourceCode: string, {
 
 	seclevel = Math.min(seclevel, detectedSeclevel)
 
-	// TODO warn when db method is invalid
 	// TODO turn not calling into a arrow function wrapper
 	if (program.scope.hasGlobal(`$db`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$db`, program)) {
 			assert(referencePath.parentPath.node.type == `MemberExpression`)
 			assert(referencePath.parentPath.node.property.type == `Identifier`)
+			assert(validDBMethods.includes(referencePath.parentPath.node.property.name), `invalid db method "${referencePath.parentPath.node.property.name}", valid db methods are "${validDBMethods.join(`", "`)}"`)
 
 			referencePath.parentPath.replaceWith(
 				t.identifier(`$${uniqueID}$DB$${referencePath.parentPath.node.property.name}`)
