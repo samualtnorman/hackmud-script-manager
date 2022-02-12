@@ -1,4 +1,4 @@
-import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
+import { countHackmudCharacters, DynamicMap, LaxPartial, writeFilePersistent } from "@samual/lib"
 import fs from "fs"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { Info } from "."
@@ -44,7 +44,7 @@ export async function push(
 		onPush = () => {},
 		minify = true,
 		mangleNames = false
-	}: Partial<PushOptions> = {}
+	}: LaxPartial<PushOptions> = {}
 ) {
 	const scriptNamesByUser = new DynamicMap((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
