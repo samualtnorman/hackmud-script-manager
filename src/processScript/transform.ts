@@ -137,8 +137,6 @@ export function transform(file: File, sourceCode: string, {
 
 	let detectedSeclevel = 4
 
-	// TODO warn when script name is invalid
-
 	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName))
 			processFakeSubscriptObject(fakeSubscriptObjectName)
@@ -816,6 +814,8 @@ export function transform(file: File, sourceCode: string, {
 			assert(referencePath.parent.property.type == `Identifier`)
 			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
 			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
+			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parent.property.name), `invalid user "${referencePath.parent.property.name}" in subscript`)
+			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parentPath.parentPath.node.property.name), `invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`)
 
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
 				// BUG this is causing typescript to be slow
