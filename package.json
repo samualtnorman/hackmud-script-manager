@@ -76,7 +76,7 @@
 	"devDependencies": {
 		"@babel/preset-env": "^7.16.4",
 		"@babel/preset-typescript": "^7.16.0",
-		"@samual/lib": "^0.2.2",
+		"@samual/lib": "^0.3.0",
 		"@types/babel__core": "^7.1.16",
 		"@types/node": "^12.20.37",
 		"@types/prettier": "^2.4.2",
