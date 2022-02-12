@@ -1,4 +1,4 @@
-import { assert, countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
+import { assert, countHackmudCharacters, DynamicMap, LaxPartial, writeFilePersistent } from "@samual/lib"
 import { watch as watchDirectory } from "chokidar"
 import fs from "fs"
 import { basename as getPathBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
@@ -8,8 +8,6 @@ import processScript from "./processScript"
 import { PushOptions } from "./push"
 
 const { readFile, readdir: readDirectory } = fs.promises
-
-type PartialUndefinable<T> = { [P in keyof T]?: T[P] | undefined }
 
 export type WatchOptions = PushOptions & {
 	/**
@@ -38,7 +36,7 @@ export function watch(
 		minify = true,
 		mangleNames = false,
 		typeDeclarationPath
-	}: PartialUndefinable<WatchOptions> = {}
+	}: LaxPartial<WatchOptions> = {}
 ) {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
