@@ -37,21 +37,7 @@ export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<P
 
 	code = code.replace(/^function\s*\(/, `export default function (`)
 
-	const subscriptSeclevelCharacterToNumber: Record<string, number> = {
-		f: 4,
-		h: 3,
-		m: 2,
-		l: 1,
-		n: 0,
-		4: 4,
-		3: 3,
-		2: 2,
-		1: 1,
-		0: 0
-	}
-
 	let file
-	let seclevel = 4
 
 	while (true) {
 		let error
@@ -101,22 +87,18 @@ export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<P
 		const codeSlice = code.slice(error.pos)
 		let match
 
-		// TODO detect typos and warn e.g. we throw on `#db.ObjectID(` and it makes it look like we don't support it
 		if ((match = /^#[0-4fhmln]s\.scripts\.quine\(\)/.exec(codeSlice)))
 			code = spliceString(code, JSON.stringify(sourceCode), error.pos, match[0]!.length)
-		else if ((match = /^#(?<seclevel>[0-4fhmln])?s\.(?<userName>[_a-z][\d_a-z]{0,24})\.(?<scriptName>[_a-z][\d_a-z]{0,24})\(/.exec(codeSlice))) {
-			if (match[1])
-				seclevel = Math.min(seclevel, subscriptSeclevelCharacterToNumber[match[1]]!)
-
-			code = spliceString(code, `$${uniqueID}$SUBSCRIPT$${match[2]}$${match[3]}(`, error.pos, match[0]!.length)
-		} else if ((match = /^#D\(/.exec(codeSlice)))
+		else if ((match = /^#[0-4fhmln]?s\./.exec(codeSlice)))
+			code = spliceString(code, `$`, error.pos, 1)
+		else if ((match = /^#D\(/.exec(codeSlice)))
 			code = spliceString(code, `$${uniqueID}$DEBUG(`, error.pos, match[0]!.length)
 		else if ((match = /^#FMCL/.exec(codeSlice)))
 			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, match[0]!.length)
 		else if ((match = /^#G/.exec(codeSlice)))
 			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, match[0]!.length)
-		else if ((match = /^#db\.(?<methodName>[irfu]|u1|us|ObjectId)\(/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueID}$DB$${match[1]}(`, error.pos, match[0]!.length)
+		else if ((match = /^#db\./.exec(codeSlice)))
+			code = spliceString(code, `$`, error.pos, 1)
 		else
 			throw error
 	}
@@ -153,17 +135,10 @@ export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<P
 		], t.stringLiteral(`proxy-polyfill/src/proxy.js`)))
 	}
 
-	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`) {
-		return {
-			code: `export default ${generate(file).code}`,
-			seclevel
-		}
-	}
+	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`)
+		return { code: `export default ${generate(file).code}` }
 
-	return {
-		code: generate(file).code,
-		seclevel
-	}
+	return { code: generate(file).code }
 }
 
 export default preprocess

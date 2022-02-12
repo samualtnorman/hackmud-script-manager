@@ -176,20 +176,12 @@ export async function processScript(
 		? resolvePath(filePath)
 		: `${uniqueID}.ts`
 
-	let seclevel = 4
-
 	const bundle = await rollup({
 		input: filePathResolved,
 		plugins: [
 			{
 				name: `hackmud-script-manager`,
-				transform(code) {
-					const { code: prerocessedCode, seclevel: detectedSeclevel } = preprocess(code, { uniqueID })
-
-					seclevel = Math.min(seclevel, detectedSeclevel)
-
-					return prerocessedCode
-				}
+				transform: code => preprocess(code, { uniqueID }).code
 			},
 			rollupPluginBabel({
 				babelHelpers: `bundled`,
@@ -229,9 +221,7 @@ export async function processScript(
 
 	code = (await bundle.generate({})).output[0].code
 
-	let file
-
-	({ file, seclevel } = transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName, seclevel }))
+	const { file, seclevel } = transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName })
 
 	if (statedSeclevel != undefined && seclevel < statedSeclevel)
 		// TODO replace with a warning and build script anyway
