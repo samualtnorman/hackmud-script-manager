@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
 import chalk from "chalk"
+import { watch as watchFile } from "chokidar"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
 import { basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
@@ -288,8 +289,6 @@ for (const argument of process.argv.slice(2)) {
 
 		case `golf`:
 		case `minify`: {
-			// TODO `--watch` option
-
 			const target = commands[1]
 
 			if (!target) {
@@ -306,71 +305,12 @@ for (const argument of process.argv.slice(2)) {
 				break
 			}
 
-			await readFile(target, { encoding: `utf-8` }).then(
-				async source => {
-					const fileBaseName = getPathBaseName(target, fileExtension)
-					// eslint-disable-next-line unicorn/prevent-abbreviations -- the file extension is `src` not `source`
-					const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
-
-					const scriptName = fileBaseNameEndsWithDotSrc
-						? fileBaseName.slice(0, -4)
-						: fileBaseName
-
-					let scriptUser = `UNKNOWN`
-
-					if (getPathBaseName(resolvePath(target, `..`)) == `scripts` && getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`)
-						scriptUser = getPathBaseName(resolvePath(target, `../..`))
-
-					const minify = !options.get(`skip-minify`)
-					const mangleNames = Boolean(options.get(`mangle-names`))
-
-					if (!minify && mangleNames)
-						console.warn(`warning: \`--mangle-names\` has no effect while \`--skip-minify\` is active`)
-
-					const { script, srcLength, warnings, timeTook } = await processScript(
-						source,
-						{
-							minify,
-							scriptUser,
-							scriptName,
-							filePath: target,
-							mangleNames
-						}
-					)
-
-					for (const { message, line } of warnings)
-						console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
-
-					let outputPath: string
-
-					outputPath = commands[2] ? commands[2] : resolvePath(
-							getPathDirectory(target),
-
-							fileBaseNameEndsWithDotSrc
-								? `${scriptName}.js`
-							: (fileExtension == `.js`
-								? `${fileBaseName}.min.js`
-								: `${fileBaseName}.js`
-							)
-						)
-
-					const scriptLength = countHackmudCharacters(script)
-
-					await writeFilePersistent(outputPath, script)
-						.catch(async (error: NodeJS.ErrnoException) => {
-							if (!commands[2] || error.code != `EISDIR`)
-								throw error
-
-							outputPath = resolvePath(outputPath, `${getPathBaseName(target, fileExtension)}.js`)
-							await writeFilePersistent(outputPath, script)
-						})
-						.then(
-							() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),
-							(error: NodeJS.ErrnoException) => console.log(error.message)
-						)
-				},
-				(error: NodeJS.ErrnoException) => console.log(error.message)
-			)
+			if (options.get(`watch`)) {
+				watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
+					.on(`ready`, () => console.log(`watching ${target}`))
+					.on(`change`, () => golfFile(target, fileExtension))
+			} else
+				await golfFile(target, fileExtension)
 		} break
 
 		default: {
@@ -382,6 +322,74 @@ for (const argument of process.argv.slice(2)) {
 	}
 
 	updateConfig()
+
+	async function golfFile(target: string, fileExtension: string) {
+		await readFile(target, { encoding: `utf-8` }).then(
+			async source => {
+				const fileBaseName = getPathBaseName(target, fileExtension)
+				// eslint-disable-next-line unicorn/prevent-abbreviations -- the file extension is `src` not `source`
+				const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
+
+				const scriptName = fileBaseNameEndsWithDotSrc
+					? fileBaseName.slice(0, -4)
+					: fileBaseName
+
+				let scriptUser = `UNKNOWN`
+
+				if (getPathBaseName(resolvePath(target, `..`)) == `scripts` && getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`)
+					scriptUser = getPathBaseName(resolvePath(target, `../..`))
+
+				const minify = !options.get(`skip-minify`)
+				const mangleNames = Boolean(options.get(`mangle-names`))
+
+				if (!minify && mangleNames)
+					console.warn(`warning: \`--mangle-names\` has no effect while \`--skip-minify\` is active`)
+
+				const { script, srcLength, warnings, timeTook } = await processScript(
+					source,
+					{
+						minify,
+						scriptUser,
+						scriptName,
+						filePath: target,
+						mangleNames
+					}
+				)
+
+				for (const { message, line } of warnings)
+					console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
+
+				let outputPath: string
+
+				outputPath = commands[2] ? commands[2] : resolvePath(
+					getPathDirectory(target),
+
+					fileBaseNameEndsWithDotSrc
+						? `${scriptName}.js`
+						: (fileExtension == `.js`
+							? `${fileBaseName}.min.js`
+							: `${fileBaseName}.js`
+						)
+				)
+
+				const scriptLength = countHackmudCharacters(script)
+
+				await writeFilePersistent(outputPath, script)
+					.catch(async (error: NodeJS.ErrnoException) => {
+						if (!commands[2] || error.code != `EISDIR`)
+							throw error
+
+						outputPath = resolvePath(outputPath, `${getPathBaseName(target, fileExtension)}.js`)
+						await writeFilePersistent(outputPath, script)
+					})
+					.then(
+						() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),
+						(error: NodeJS.ErrnoException) => console.log(error.message)
+					)
+			},
+			(error: NodeJS.ErrnoException) => console.log(error.message)
+		)
+	}
 })()
 
 function help() {
