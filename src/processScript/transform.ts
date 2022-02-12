@@ -138,93 +138,37 @@ export function transform(file: File, sourceCode: string, {
 	let detectedSeclevel = 4
 
 	// TODO warn when script name is invalid
-	// TODO turn not calling into a arrow function wrapper
 
 	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
-		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
-			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == `MemberExpression`)
-				assert(referencePath.parent.property.type == `Identifier`)
-				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
-				)
-			}
-		}
+		if (program.scope.hasGlobal(fakeSubscriptObjectName))
+			processFakeSubscriptObject(fakeSubscriptObjectName)
 	}
 
 	for (const fakeSubscriptObjectName of [ `$hs`, `$3s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 3
-
-			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == `MemberExpression`)
-				assert(referencePath.parent.property.type == `Identifier`)
-				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
-				)
-			}
+			processFakeSubscriptObject(fakeSubscriptObjectName)
 		}
 	}
 
 	for (const fakeSubscriptObjectName of [ `$ms`, `$2s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 2
-
-			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == `MemberExpression`)
-				assert(referencePath.parent.property.type == `Identifier`)
-				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
-				)
-			}
+			processFakeSubscriptObject(fakeSubscriptObjectName)
 		}
 	}
 
 	for (const fakeSubscriptObjectName of [ `$ls`, `$1s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 1
-
-			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == `MemberExpression`)
-				assert(referencePath.parent.property.type == `Identifier`)
-				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
-				)
-			}
+			processFakeSubscriptObject(fakeSubscriptObjectName)
 		}
 	}
 
 	for (const fakeSubscriptObjectName of [ `$ns`, `$0s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 0
-
-			for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-				assert(referencePath.parent.type == `MemberExpression`)
-				assert(referencePath.parent.property.type == `Identifier`)
-				assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-				assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
-				)
-			}
+			processFakeSubscriptObject(fakeSubscriptObjectName)
 		}
 	}
 
@@ -865,6 +809,33 @@ export function transform(file: File, sourceCode: string, {
 	})
 
 	return { file, seclevel }
+
+	function processFakeSubscriptObject(fakeSubscriptObjectName: string) {
+		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
+			assert(referencePath.parent.type == `MemberExpression`)
+			assert(referencePath.parent.property.type == `Identifier`)
+			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
+
+			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
+				// BUG this is causing typescript to be slow
+				referencePath.parentPath.parentPath.replaceWith(
+					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
+				)
+			} else {
+				// BUG this is causing typescript to be slow
+				referencePath.parentPath.parentPath.replaceWith(
+					t.arrowFunctionExpression(
+						[ t.restElement(t.identifier(`args`)) ],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`),
+							[ t.spreadElement(t.identifier(`args`)) ]
+						)
+					)
+				)
+			}
+		}
+	}
 
 	function createGetFunctionPrototypeNode() {
 		for (const globalFunction of globalFunctionsUnder7Characters) {
