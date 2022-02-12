@@ -173,16 +173,48 @@ export function transform(file: File, sourceCode: string, {
 
 	seclevel = Math.min(seclevel, detectedSeclevel)
 
-	// TODO turn not calling into a arrow function wrapper
 	if (program.scope.hasGlobal(`$db`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$db`, program)) {
 			assert(referencePath.parentPath.node.type == `MemberExpression`)
 			assert(referencePath.parentPath.node.property.type == `Identifier`)
-			assert(validDBMethods.includes(referencePath.parentPath.node.property.name), `invalid db method "${referencePath.parentPath.node.property.name}", valid db methods are "${validDBMethods.join(`", "`)}"`)
 
-			referencePath.parentPath.replaceWith(
-				t.identifier(`$${uniqueID}$DB$${referencePath.parentPath.node.property.name}`)
-			)
+			const databaseOpMethodName = referencePath.parentPath.node.property.name
+
+			assert(validDBMethods.includes(databaseOpMethodName), `invalid db method "${databaseOpMethodName}", valid db methods are "${validDBMethods.join(`", "`)}"`)
+
+			if (referencePath.parentPath.parentPath?.type == `CallExpression`)
+				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`))
+			else if (databaseOpMethodName == `ObjectId`) {
+				referencePath.parentPath.replaceWith(
+					t.arrowFunctionExpression(
+						[],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`),
+							[]
+						)
+					)
+				)
+			} else if (databaseOpMethodName == `i` || databaseOpMethodName == `r`) {
+				referencePath.parentPath.replaceWith(
+					t.arrowFunctionExpression(
+						[ t.identifier(`a`) ],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`),
+							[ t.identifier(`a`) ]
+						)
+					)
+				)
+			} else {
+				referencePath.parentPath.replaceWith(
+					t.arrowFunctionExpression(
+						[ t.identifier(`a`), t.identifier(`b`) ],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`),
+							[ t.identifier(`a`), t.identifier(`b`) ]
+						)
+					)
+				)
+			}
 		}
 	}
 
