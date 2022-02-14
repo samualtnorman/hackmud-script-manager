@@ -16,6 +16,8 @@ export type WatchOptions = PushOptions & {
 	 * writing the type declarations enables interscript type checking and autocompletetes for the args
 	 */
 	typeDeclarationPath: string
+
+	onReady: () => void
 }
 
 /**
@@ -35,7 +37,8 @@ export function watch(
 		onPush,
 		minify = true,
 		mangleNames = false,
-		typeDeclarationPath
+		typeDeclarationPath,
+		onReady
 	}: LaxPartial<WatchOptions> = {}
 ) {
 	if (!scripts.length)
@@ -222,6 +225,9 @@ export function watch(
 			error: undefined
 		})
 	})
+
+	if (onReady)
+		watcher.on(`ready`, onReady)
 
 	if (!typeDeclarationPath)
 		return

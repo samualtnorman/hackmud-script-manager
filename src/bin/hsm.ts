@@ -148,7 +148,8 @@ for (const argument of process.argv.slice(2)) {
 				onPush: onPushLogger,
 				typeDeclarationPath: options.get(`type-declaration-path`)?.toString(),
 				minify: !options.get(`skip-minify`),
-				mangleNames: Boolean(options.get(`mangle-names`))
+				mangleNames: Boolean(options.get(`mangle-names`)),
+				onReady: () => console.log(`watching`)
 			})
 		} break
 
