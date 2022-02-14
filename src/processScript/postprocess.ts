@@ -1,7 +1,13 @@
 import { findMatches, spliceString } from "@samual/lib"
 
 export function postprocess(code: string, seclevel: number, uniqueID: string) {
-	code = code.replace(/^function\s*\w+\(/, `function(`)
+	code = code
+		.replace(/^function\s*\w+\(/, `function(`)
+		.replace(new RegExp(`\\$${uniqueID}\\$\\\\\\\\0\\$SC_DOLLAR\\$`, `g`), `SC\\$`)
+		.replace(new RegExp(`\\$${uniqueID}\\$\\\\\\\\0\\$DB_DOLLAR\\$`, `g`), `DB\\$`)
+		.replace(new RegExp(`\\$${uniqueID}\\$\\\\\\\\0\\$D\\$`, `g`), `__D_\\S`)
+		.replace(new RegExp(`\\$${uniqueID}\\$\\\\\\\\0\\$FMCL\\$`, `g`), `__FMCL\\_`)
+		.replace(new RegExp(`\\$${uniqueID}\\$\\\\\\\\0\\$G\\$`, `g`), `__G\\_`)
 
 	for (const { index, match } of [ ...findMatches(new RegExp(`\\$${uniqueID}\\$[\\w$]+`, `g`), code) ].reverse()) {
 		const [ type, ...arguments_ ] = match.slice(13).split(`$`)

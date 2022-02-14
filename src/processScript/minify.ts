@@ -4,7 +4,7 @@ import t, { Expression, File, FunctionDeclaration, Program } from "@babel/types"
 import { assert, countHackmudCharacters, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
-import { getReferencePathsToGlobal } from "./shared"
+import { getReferencePathsToGlobal, includesIllegalString, replaceIllegalStrings } from "./shared"
 
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -19,6 +19,7 @@ type MinifyOptions = {
 
 // TODO move autocomplete code outside this function
 // TODO allow not mangling class and function names
+// TODO replace references to `arguments`
 
 /**
  * @param code compiled code and/or hackmud compatible code
@@ -120,6 +121,38 @@ export async function minify(file: File, autocomplete?: string, {
 			} else if (memberExpression.property.name == `__proto__`) {
 				memberExpression.computed = true
 				memberExpression.property = t.identifier(`_PROTO_PROPERTY_${uniqueID}_`)
+			} else if (includesIllegalString(memberExpression.property.name)) {
+				memberExpression.computed = true
+
+				memberExpression.property = t.stringLiteral(
+					replaceIllegalStrings(uniqueID, memberExpression.property.name)
+				)
+			}
+		},
+
+		ObjectProperty({ node: objectProperty }) {
+			if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
+				objectProperty.key = t.stringLiteral(replaceIllegalStrings(uniqueID, objectProperty.key.name))
+				objectProperty.shorthand = false
+			}
+		},
+
+		StringLiteral({ node }) {
+			node.value = replaceIllegalStrings(uniqueID, node.value)
+		},
+
+		TemplateLiteral({ node }) {
+			for (const templateElement of node.quasis) {
+				if (templateElement.value.cooked) {
+					templateElement.value.cooked = replaceIllegalStrings(uniqueID, templateElement.value.cooked)
+
+					templateElement.value.raw = templateElement.value.cooked
+						.replace(/`/g, `\\\``)
+						// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
+						.replace(/\$\{/g, `$\\{`)
+						.replace(/\\/g, `\\\\`)
+				} else
+					templateElement.value.raw = replaceIllegalStrings(uniqueID, templateElement.value.raw)
 			}
 		}
 	})
@@ -287,6 +320,8 @@ export async function minify(file: File, autocomplete?: string, {
 					},
 
 					StringLiteral(path) {
+						path.node.value = replaceIllegalStrings(uniqueID, path.node.value)
+
 						// eslint-disable-next-line @typescript-eslint/no-base-to-string -- the `NodePath`'s `.toString()` method compiles and returns the contained `Node`
 						if (path.node.value.includes(`\u0000`) || path.toString().length < 4)
 							return

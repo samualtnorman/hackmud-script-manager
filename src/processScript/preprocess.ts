@@ -19,10 +19,6 @@ export type PreprocessOptions = {
 export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
 	assert(/^\w{11}$/.test(uniqueID))
 
-	// TODO rename variables that trips this
-	if (/(?:SC|DB)\$/.test(code))
-		throw new Error(`SC$ and DB$ are protected and cannot appear in a script`)
-
 	const sourceCode = code
 	let lengthBefore
 

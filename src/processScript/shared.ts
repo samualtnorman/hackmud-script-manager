@@ -19,3 +19,16 @@ export function getReferencePathsToGlobal(name: string, program: NodePath<Progra
 
 	return binding.referencePaths as NodePath<Identifier>[]
 }
+
+export function includesIllegalString(toCheck: string) {
+	return toCheck.includes(`SC$`) || toCheck.includes(`DB$`) || toCheck.includes(`__D_S`) || toCheck.includes(`__FMCL_`) || toCheck.includes(`__G_`)
+}
+
+export function replaceIllegalStrings(uniqueID: string, toReplace: string) {
+	return toReplace
+		.replace(/SC\$/g, `$${uniqueID}$\\0$SC_DOLLAR$`)
+		.replace(/DB\$/g, `$${uniqueID}$\\0$DB_DOLLAR$`)
+		.replace(/__D_S/g, `$${uniqueID}$\\0$D$`)
+		.replace(/__FMCL_/g, `$${uniqueID}$\\0$FMCL$`)
+		.replace(/__G_/g, `$${uniqueID}$\\0$G$`)
+}

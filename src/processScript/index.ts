@@ -21,7 +21,7 @@ import babelPluginProposalThrowExpressions from "@babel/plugin-proposal-throw-ex
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
 import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
 import babelTraverse from "@babel/traverse"
-import t from "@babel/types"
+import t, { LVal } from "@babel/types"
 import rollupPluginBabel_ from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
@@ -35,6 +35,7 @@ import { supportedExtensions as extensions } from "../constants.json"
 import minify from "./minify"
 import postprocess from "./postprocess"
 import preprocess from "./preprocess"
+import { includesIllegalString, replaceIllegalStrings } from "./shared"
 import transform from "./transform"
 
 const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
@@ -256,11 +257,74 @@ export async function processScript(
 				} else if (memberExpression.property.name == `__proto__`) {
 					memberExpression.computed = true
 					memberExpression.property = t.stringLiteral(`__proto__`)
+				} else if (includesIllegalString(memberExpression.property.name)) {
+					memberExpression.computed = true
+
+					memberExpression.property = t.stringLiteral(
+						replaceIllegalStrings(uniqueID, memberExpression.property.name)
+					)
+				}
+			},
+
+			VariableDeclarator(path) {
+				renameVariables(path.node.id)
+
+				function renameVariables(lValue: LVal) {
+					switch (lValue.type) {
+						case `Identifier`: {
+							if (includesIllegalString(lValue.name))
+								path.scope.rename(lValue.name, `$${Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)}`)
+						} break
+
+						case `ObjectPattern`: {
+							for (const property of lValue.properties) {
+								assert(property.type == `ObjectProperty`)
+								renameVariables(property.value as LVal)
+							}
+						} break
+
+						case `ArrayPattern`: {
+							for (const element of lValue.elements) {
+								if (element)
+									renameVariables(element)
+							}
+						} break
+
+						default:
+							throw new Error(`unknown lValue type "${lValue.type}"`)
+					}
+				}
+			},
+
+			ObjectProperty({ node: objectProperty }) {
+				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
+					objectProperty.key = t.stringLiteral(replaceIllegalStrings(uniqueID, objectProperty.key.name))
+					objectProperty.shorthand = false
+				}
+			},
+
+			StringLiteral({ node }) {
+				node.value = replaceIllegalStrings(uniqueID, node.value)
+			},
+
+			TemplateLiteral({ node }) {
+				for (const templateElement of node.quasis) {
+					if (templateElement.value.cooked) {
+						templateElement.value.cooked = replaceIllegalStrings(uniqueID, templateElement.value.cooked)
+
+						templateElement.value.raw = templateElement.value.cooked
+							.replace(/`/g, `\\\``)
+							// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
+							.replace(/\$\{/g, `$\\{`)
+							.replace(/\\/g, `\\\\`)
+					} else
+						templateElement.value.raw = replaceIllegalStrings(uniqueID, templateElement.value.raw)
 				}
 			}
 		})
 
-		code = format(generate(file).code, {
+		// we can't have comments because they may contain illegal strings
+		code = format(generate(file, { comments: false }).code, {
 			parser: `babel`,
 			arrowParens: `avoid`,
 			semi: false,
@@ -269,6 +333,11 @@ export async function processScript(
 	}
 
 	code = postprocess(code, seclevel, uniqueID)
+
+	if (includesIllegalString(code))
+		throw new Error(`you found a weird edge case where I wasn't able to replace illegal strings like "SC$", please report thx`)
+
+	// TODO it is not neccesary to record the time took since the caller can do that
 
 	return {
 		srcLength: sourceLength,
