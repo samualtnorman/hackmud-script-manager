@@ -28,7 +28,6 @@ import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import { assert, countHackmudCharacters } from "@samual/lib"
 import { resolve as resolvePath } from "path"
-import { performance } from "perf_hooks"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants.json"
@@ -87,11 +86,9 @@ export async function processScript(
 	srcLength: number
 	script: string
 	warnings: { message: string, line: number }[]
-	timeTook: number
 }> {
 	assert(/^\w{11}$/.exec(uniqueID))
 
-	const time = performance.now()
 	const sourceCode = code
 	let autocomplete
 	let statedSeclevel
@@ -337,13 +334,10 @@ export async function processScript(
 	if (includesIllegalString(code))
 		throw new Error(`you found a weird edge case where I wasn't able to replace illegal strings like "SC$", please report thx`)
 
-	// TODO it is not neccesary to record the time took since the caller can do that
-
 	return {
 		srcLength: sourceLength,
 		script: code,
-		warnings: [],
-		timeTook: performance.now() - time
+		warnings: []
 	}
 }
 

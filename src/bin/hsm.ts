@@ -346,7 +346,9 @@ for (const argument of process.argv.slice(2)) {
 				if (!minify && mangleNames)
 					console.warn(`warning: \`--mangle-names\` has no effect while \`--skip-minify\` is active`)
 
-				const { script, srcLength, warnings, timeTook } = await processScript(
+				const timeStart = performance.now()
+
+				const { script, srcLength, warnings } = await processScript(
 					source,
 					{
 						minify,
@@ -356,6 +358,8 @@ for (const argument of process.argv.slice(2)) {
 						mangleNames
 					}
 				)
+
+				const timeTook = performance.now() - timeStart
 
 				for (const { message, line } of warnings)
 					console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
