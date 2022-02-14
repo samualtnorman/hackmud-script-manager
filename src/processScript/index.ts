@@ -313,10 +313,10 @@ export async function processScript(
 						templateElement.value.cooked = replaceIllegalStrings(uniqueID, templateElement.value.cooked)
 
 						templateElement.value.raw = templateElement.value.cooked
+							.replace(/\\/g, `\\\\`)
 							.replace(/`/g, `\\\``)
 							// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
 							.replace(/\$\{/g, `$\\{`)
-							.replace(/\\/g, `\\\\`)
 					} else
 						templateElement.value.raw = replaceIllegalStrings(uniqueID, templateElement.value.raw)
 				}
