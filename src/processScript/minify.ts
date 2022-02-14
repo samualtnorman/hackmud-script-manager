@@ -323,7 +323,7 @@ export async function minify(file: File, autocomplete?: string, {
 						path.node.value = replaceIllegalStrings(uniqueID, path.node.value)
 
 						// eslint-disable-next-line @typescript-eslint/no-base-to-string -- the `NodePath`'s `.toString()` method compiles and returns the contained `Node`
-						if (path.node.value.includes(`\u0000`) || path.toString().length < 4)
+						if (JSON.stringify(path.node.value).includes(`\\u00`) || path.toString().length < 4)
 							return
 
 						if (path.parentKey == `key` && path.parent.type == `ObjectProperty`)
