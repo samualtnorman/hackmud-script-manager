@@ -45,7 +45,7 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 export { minify } from "./minify"
 export { postprocess } from "./postprocess"
 export { preprocess } from "./preprocess"
-export { transform as compile } from "./transform"
+export { transform } from "./transform"
 
 export type ProcessOptions = {
 	/** whether to minify the given code */
