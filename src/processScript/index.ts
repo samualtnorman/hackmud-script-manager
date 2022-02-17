@@ -179,7 +179,7 @@ export async function processScript(
 		plugins: [
 			{
 				name: `hackmud-script-manager`,
-				transform: code => preprocess(code, { uniqueID }).code
+				transform: async code => (await preprocess(code, { uniqueID })).code
 			},
 			rollupPluginBabel({
 				babelHelpers: `bundled`,

@@ -3,6 +3,7 @@ import { parse } from "@babel/parser"
 import babelTraverse, { NodePath } from "@babel/traverse"
 import t, { Program } from "@babel/types"
 import { assert, spliceString } from "@samual/lib"
+import { resolve as resolveModule } from "import-meta-resolve"
 
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
@@ -16,7 +17,7 @@ export type PreprocessOptions = {
  * @param code source code for preprocessing
  * @param options {@link PreprocessOptions details}
  */
-export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
+export async function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
 	assert(/^\w{11}$/.test(uniqueID))
 
 	const sourceCode = code
@@ -128,7 +129,7 @@ export function preprocess(code: string, { uniqueID = `00000000000` }: Partial<P
 	if (program.scope.hasGlobal(`Proxy`)) {
 		file.program.body.unshift(t.importDeclaration([
 			t.importDefaultSpecifier(t.identifier(`Proxy`))
-		], t.stringLiteral(`proxy-polyfill/src/proxy.js`)))
+		], t.stringLiteral((await resolveModule(`proxy-polyfill/src/proxy.js`, import.meta.url)).slice(7))))
 	}
 
 	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`)

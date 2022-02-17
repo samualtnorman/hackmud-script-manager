@@ -68,6 +68,7 @@
 		"acorn": "^8.5.0",
 		"chalk": "^5.0.0",
 		"chokidar": "^3.5.2",
+		"import-meta-resolve": "^1.1.1",
 		"prettier": "^2.4.1",
 		"proxy-polyfill": "^0.3.2",
 		"rollup": "^2.60.0",
