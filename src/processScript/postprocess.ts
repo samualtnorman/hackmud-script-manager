@@ -11,6 +11,7 @@ export function postprocess(code: string, seclevel: number, uniqueID: string) {
 		.replace(new RegExp(`\\$${uniqueID}\\$FMCL`, `g`), `#FMCL`)
 		.replace(new RegExp(`\\$${uniqueID}\\$GLOBAL`, `g`), `#G`)
 		.replace(new RegExp(`\\$${uniqueID}\\$DB\\$(\\w+)`, `g`), `#db.$1`)
+		.replace(new RegExp(`\\$${uniqueID}\\$SLASH_SLASH\\$`, `g`), `/\\/`)
 }
 
 export default postprocess

@@ -31,4 +31,5 @@ export function replaceIllegalStrings(uniqueID: string, toReplace: string) {
 		.replace(/__D_S/g, `$${uniqueID}$\\0$D$`)
 		.replace(/__FMCL_/g, `$${uniqueID}$\\0$FMCL$`)
 		.replace(/__G_/g, `$${uniqueID}$\\0$G$`)
+		.replace(/\/\//g, `$${uniqueID}$SLASH_SLASH$`)
 }
