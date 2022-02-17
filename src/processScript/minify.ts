@@ -158,9 +158,6 @@ export async function minify(file: File, autocomplete?: string, {
 
 		RegExpLiteral(path) {
 			path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
-				.replace(/\\/g, `\\\\`)
-				.replace(/\//g, `\\/`)
-
 			delete path.node.extra
 		}
 	})
@@ -363,9 +360,6 @@ export async function minify(file: File, autocomplete?: string, {
 
 					RegExpLiteral(path) {
 						path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
-							.replace(/\\/g, `\\\\`)
-							.replace(/\//g, `\\/`)
-
 						delete path.node.extra
 					}
 				})

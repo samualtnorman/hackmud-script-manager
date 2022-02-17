@@ -309,9 +309,6 @@ export async function processScript(
 
 			RegExpLiteral(path) {
 				path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
-					.replace(/\\/g, `\\\\`)
-					.replace(/\//g, `\\/`)
-
 				delete path.node.extra
 			}
 		})
