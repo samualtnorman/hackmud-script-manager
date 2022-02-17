@@ -26,11 +26,11 @@ export function includesIllegalString(toCheck: string) {
 
 export function replaceUnsafeStrings(uniqueID: string, toReplace: string) {
 	return toReplace
-		.replace(/SC\$/g, `$${uniqueID}$\\0$SC_DOLLAR$`)
-		.replace(/DB\$/g, `$${uniqueID}$\\0$DB_DOLLAR$`)
-		.replace(/__D_S/g, `$${uniqueID}$\\0$D$`)
-		.replace(/__FMCL_/g, `$${uniqueID}$\\0$FMCL$`)
-		.replace(/__G_/g, `$${uniqueID}$\\0$G$`)
+		.replace(/SC\$/g, `$${uniqueID}$\\$SC_DOLLAR$`)
+		.replace(/DB\$/g, `$${uniqueID}$\\$DB_DOLLAR$`)
+		.replace(/__D_S/g, `$${uniqueID}$\\$D$`)
+		.replace(/__FMCL_/g, `$${uniqueID}$\\$FMCL$`)
+		.replace(/__G_/g, `$${uniqueID}$\\$G$`)
 		.replace(/\/\//g, `$${uniqueID}$SLASH_SLASH$`)
 		// eslint-disable-next-line unicorn/no-unsafe-regex
 		.replace(/#[0-4fhmln]?s(?:\.[_a-z][\d_a-z]{0,24}){2}\(/g, `$${uniqueID}$NOT_A_SUBSCRIPT$$$&$`)
