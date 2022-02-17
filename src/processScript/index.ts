@@ -317,6 +317,14 @@ export async function processScript(
 					} else
 						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
 				}
+			},
+
+			RegExpLiteral(path) {
+				path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+					.replace(/\\/g, `\\\\`)
+					.replace(/\//g, `\\/`)
+
+				delete path.node.extra
 			}
 		})
 

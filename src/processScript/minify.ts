@@ -154,6 +154,14 @@ export async function minify(file: File, autocomplete?: string, {
 				} else
 					templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
 			}
+		},
+
+		RegExpLiteral(path) {
+			path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+				.replace(/\\/g, `\\\\`)
+				.replace(/\//g, `\\/`)
+
+			delete path.node.extra
 		}
 	})
 
@@ -351,6 +359,14 @@ export async function minify(file: File, autocomplete?: string, {
 
 						node.computed = true
 						node.key = t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`)
+					},
+
+					RegExpLiteral(path) {
+						path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+							.replace(/\\/g, `\\\\`)
+							.replace(/\//g, `\\/`)
+
+						delete path.node.extra
 					}
 				})
 
