@@ -111,7 +111,7 @@ export async function push(
 					const scriptName = getBaseName(dirent.name, extension)
 					const filePath = resolvePath(sourceDirectory, user, dirent.name)
 
-					const { srcLength, script: minifiedCode } = await processScript(
+					const { script: minifiedCode } = await processScript(
 						await readFile(filePath, { encoding: `utf-8` }),
 						{
 							minify,
@@ -126,8 +126,7 @@ export async function push(
 						file: `${user}/${dirent.name}`,
 						users: [ user ],
 						minLength: countHackmudCharacters(minifiedCode),
-						error: undefined,
-						srcLength
+						error: undefined
 					}
 
 					scriptNamesAlreadyPushedByUser.get(user).add(scriptName)
@@ -164,7 +163,7 @@ export async function push(
 			}
 
 			if (code) {
-				const { srcLength, script: minifiedCode } = await processScript(
+				const { script: minifiedCode } = await processScript(
 					code,
 					{
 						minify,
@@ -179,8 +178,7 @@ export async function push(
 					file: `${user}/${fileName}`,
 					users: [ user ],
 					minLength: countHackmudCharacters(minifiedCode),
-					error: undefined,
-					srcLength
+					error: undefined
 				}
 
 				allInfo.push(info)
@@ -208,7 +206,7 @@ export async function push(
 			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 			const filePath = resolvePath(sourceDirectory, dirent.name)
 
-			const { srcLength, script: minifiedCode } = await processScript(
+			const { script: minifiedCode } = await processScript(
 				await readFile(filePath, { encoding: `utf-8` }),
 				{
 					minify,
@@ -224,8 +222,7 @@ export async function push(
 				file: dirent.name,
 				users: usersToPushTo,
 				minLength: countHackmudCharacters(minifiedCode),
-				error: undefined,
-				srcLength
+				error: undefined
 			}
 
 			await Promise.all(usersToPushTo.map(user =>
@@ -262,7 +259,7 @@ export async function push(
 			if (code) {
 				const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
-				const { srcLength, script: minifiedCode } = await processScript(
+				const { script: minifiedCode } = await processScript(
 					code,
 					{
 						minify,
@@ -278,8 +275,7 @@ export async function push(
 					file: fileName,
 					users: [ ...users ],
 					minLength: countHackmudCharacters(minifiedCode),
-					error: undefined,
-					srcLength
+					error: undefined
 				}
 
 				await Promise.all([ ...users ].map(user =>

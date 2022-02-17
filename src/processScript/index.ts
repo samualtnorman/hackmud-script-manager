@@ -26,7 +26,7 @@ import rollupPluginBabel_ from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
-import { assert, countHackmudCharacters } from "@samual/lib"
+import { assert } from "@samual/lib"
 import { resolve as resolvePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
@@ -83,7 +83,6 @@ export async function processScript(
 		mangleNames = false
 	}: Partial<ProcessOptions> = {}
 ): Promise<{
-	srcLength: number
 	script: string
 	warnings: { message: string, line: number }[]
 }> {
@@ -227,17 +226,6 @@ export async function processScript(
 
 	code = generate(file).code
 
-	// TODO fix incorrect source length again
-
-	// the typescript inserts semicolons where they weren't already so we take
-	// all semicolons out of the count and add the number of semicolons in the
-	// source to make character count fairer
-	const sourceLength = countHackmudCharacters(code.replace(/^function\s*\w+\(/, `function(`))
-		// - (code.match(/;/g)?.length || 0)
-		// + semicolons
-		// + (code.match(/SC\$[a-zA-Z_][a-zA-Z0-9_]*\$[a-zA-Z_][a-zA-Z0-9_]*\(/g)?.length ?? 0)
-		// + (code.match(/DB\$/g)?.length ?? 0)
-
 	if (shouldMinify)
 		code = await minify(file, autocomplete, { uniqueID, mangleNames })
 	else {
@@ -343,7 +331,6 @@ export async function processScript(
 		throw new Error(`you found a weird edge case where I wasn't able to replace illegal strings like "SC$", please report thx`)
 
 	return {
-		srcLength: sourceLength,
 		script: code,
 		warnings: []
 	}

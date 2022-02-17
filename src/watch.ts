@@ -126,7 +126,6 @@ export function watch(
 				onPush?.({
 					file: path,
 					users: [],
-					srcLength: 0,
 					minLength: 0,
 					error: new Error(`no users to push to`)
 				})
@@ -136,11 +135,10 @@ export function watch(
 
 			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 			const filePath = resolvePath(sourceDirectory, path)
-			let sourceCharacterCount
 			let minifiedCode: string
 
 			try {
-				({ srcLength: sourceCharacterCount, script: minifiedCode } = await processScript(
+				({ script: minifiedCode } = await processScript(
 					await readFile(filePath, { encoding: `utf-8` }),
 					{
 						minify,
@@ -157,7 +155,6 @@ export function watch(
 				onPush?.({
 					file: path,
 					users: [],
-					srcLength: 0,
 					minLength: 0,
 					error
 				})
@@ -176,8 +173,7 @@ export function watch(
 				file: path,
 				users: usersToPushTo,
 				minLength: countHackmudCharacters(minifiedCode),
-				error: undefined,
-				srcLength: sourceCharacterCount
+				error: undefined
 			})
 
 			return
@@ -190,11 +186,10 @@ export function watch(
 
 		const filePath = resolvePath(sourceDirectory, path)
 		const sourceCode = await readFile(filePath, { encoding: `utf-8` })
-		let sourceCharacterCount
 		let script
 
 		try {
-			({ srcLength: sourceCharacterCount, script } = await processScript(sourceCode, {
+			({ script } = await processScript(sourceCode, {
 				minify,
 				scriptUser: user,
 				scriptName,
@@ -207,7 +202,6 @@ export function watch(
 			onPush?.({
 				file: path,
 				users: [],
-				srcLength: 0,
 				minLength: 0,
 				error
 			})
@@ -220,7 +214,6 @@ export function watch(
 		onPush?.({
 			file: path,
 			users: [ user ],
-			srcLength: sourceCharacterCount,
 			minLength: countHackmudCharacters(script),
 			error: undefined
 		})

@@ -361,7 +361,7 @@ for (const argument of process.argv.slice(2)) {
 
 				const timeStart = performance.now()
 
-				const { script, srcLength, warnings } = await processScript(
+				const { script, warnings } = await processScript(
 					source,
 					{
 						minify,
@@ -401,7 +401,7 @@ for (const argument of process.argv.slice(2)) {
 						await writeFilePersistent(outputPath, script)
 					})
 					.then(
-						() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | saved ${chalk.bold(srcLength - scriptLength)} chars | took ${Math.round(timeTook * 100) / 100}ms`),
+						() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | took ${Math.round(timeTook * 100) / 100}ms`),
 						(error: NodeJS.ErrnoException) => console.log(error.message)
 					)
 			},
@@ -526,7 +526,7 @@ function updateConfig() {
 	}
 }
 
-function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
+function onPushLogger({ file, users, minLength, error }: Info) {
 	if (error) {
 		console.log(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
 
@@ -540,13 +540,7 @@ function onPushLogger({ file, users, srcLength, minLength, error }: Info) {
 			users.map(user => chalk.bold(userColours.get(user))).join(`, `)
 		} | ${
 			chalk.bold(String(minLength))
-		} chars from ${
-			chalk.bold(String(srcLength))
-		} | saved ${
-			chalk.bold(String(srcLength - minLength))
-		} (${
-			chalk.bold(`${Math.round((1 - (minLength / srcLength)) * 100)}%`)
-		}) | ${
+		} chars | ${
 			chalk.bold(`${resolvePath(config!.hackmudPath!, users[0]!, `scripts`, getPathBaseName(file, getPathFileExtension(file)))}.js`)
 		}`
 	)

@@ -12,7 +12,6 @@ export { watch } from "./watch"
 export type Info = {
 	file: string
 	users: string[]
-	srcLength: number
 	minLength: number
 	error: Error | undefined
 }
