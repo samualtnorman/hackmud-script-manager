@@ -214,6 +214,10 @@ export async function minify(file: File, autocomplete?: string, {
 				})
 
 				path.traverse({
+					TaggedTemplateExpression(path) {
+						path.skip()
+					},
+
 					TemplateLiteral(path) {
 						const templateLiteral = path.node
 						let replacement: babel.Node = t.stringLiteral(templateLiteral.quasis[0]!.value.cooked!)
