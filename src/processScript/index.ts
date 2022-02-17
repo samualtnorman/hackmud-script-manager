@@ -34,7 +34,7 @@ import { supportedExtensions as extensions } from "../constants.json"
 import minify from "./minify"
 import postprocess from "./postprocess"
 import preprocess from "./preprocess"
-import { includesIllegalString, replaceIllegalStrings } from "./shared"
+import { includesIllegalString, replaceUnsafeStrings } from "./shared"
 import transform from "./transform"
 
 const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
@@ -258,7 +258,7 @@ export async function processScript(
 					memberExpression.computed = true
 
 					memberExpression.property = t.stringLiteral(
-						replaceIllegalStrings(uniqueID, memberExpression.property.name)
+						replaceUnsafeStrings(uniqueID, memberExpression.property.name)
 					)
 				}
 			},
@@ -295,19 +295,19 @@ export async function processScript(
 
 			ObjectProperty({ node: objectProperty }) {
 				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
-					objectProperty.key = t.stringLiteral(replaceIllegalStrings(uniqueID, objectProperty.key.name))
+					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
 					objectProperty.shorthand = false
 				}
 			},
 
 			StringLiteral({ node }) {
-				node.value = replaceIllegalStrings(uniqueID, node.value)
+				node.value = replaceUnsafeStrings(uniqueID, node.value)
 			},
 
 			TemplateLiteral({ node }) {
 				for (const templateElement of node.quasis) {
 					if (templateElement.value.cooked) {
-						templateElement.value.cooked = replaceIllegalStrings(uniqueID, templateElement.value.cooked)
+						templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
 
 						templateElement.value.raw = templateElement.value.cooked
 							.replace(/\\/g, `\\\\`)
@@ -315,7 +315,7 @@ export async function processScript(
 							// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
 							.replace(/\$\{/g, `$\\{`)
 					} else
-						templateElement.value.raw = replaceIllegalStrings(uniqueID, templateElement.value.raw)
+						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
 				}
 			}
 		})

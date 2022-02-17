@@ -12,6 +12,11 @@ export function postprocess(code: string, seclevel: number, uniqueID: string) {
 		.replace(new RegExp(`\\$${uniqueID}\\$GLOBAL`, `g`), `#G`)
 		.replace(new RegExp(`\\$${uniqueID}\\$DB\\$(\\w+)`, `g`), `#db.$1`)
 		.replace(new RegExp(`\\$${uniqueID}\\$SLASH_SLASH\\$`, `g`), `/\\/`)
+		.replace(new RegExp(`\\$${uniqueID}\\$NOT_A_SUBSCRIPT\\$(#[\\w\\.]+)\\(\\$`, `g`), `$1\\(`)
+		.replace(new RegExp(`\\$${uniqueID}\\$NOT_A_DB_CALL\\$(\\w+)\\$`, `g`), `#db.$1\\(`)
+		.replace(new RegExp(`\\$${uniqueID}\\$NOT_A_DEBUG_CALL\\$`, `g`), `#D\\(`)
+		.replace(new RegExp(`\\$${uniqueID}\\$NOT_FMCL\\$`, `g`), `#FMC\\L`)
+		.replace(new RegExp(`\\$${uniqueID}\\$NOT_G\\$`, `g`), `#\\G`)
 }
 
 export default postprocess

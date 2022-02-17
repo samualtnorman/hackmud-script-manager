@@ -4,7 +4,7 @@ import t, { Expression, File, FunctionDeclaration, Program } from "@babel/types"
 import { assert, countHackmudCharacters, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
-import { getReferencePathsToGlobal, includesIllegalString, replaceIllegalStrings } from "./shared"
+import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings } from "./shared"
 
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -125,26 +125,26 @@ export async function minify(file: File, autocomplete?: string, {
 				memberExpression.computed = true
 
 				memberExpression.property = t.stringLiteral(
-					replaceIllegalStrings(uniqueID, memberExpression.property.name)
+					replaceUnsafeStrings(uniqueID, memberExpression.property.name)
 				)
 			}
 		},
 
 		ObjectProperty({ node: objectProperty }) {
 			if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
-				objectProperty.key = t.stringLiteral(replaceIllegalStrings(uniqueID, objectProperty.key.name))
+				objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
 				objectProperty.shorthand = false
 			}
 		},
 
 		StringLiteral({ node }) {
-			node.value = replaceIllegalStrings(uniqueID, node.value)
+			node.value = replaceUnsafeStrings(uniqueID, node.value)
 		},
 
 		TemplateLiteral({ node }) {
 			for (const templateElement of node.quasis) {
 				if (templateElement.value.cooked) {
-					templateElement.value.cooked = replaceIllegalStrings(uniqueID, templateElement.value.cooked)
+					templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
 
 					templateElement.value.raw = templateElement.value.cooked
 						.replace(/\\/g, `\\\\`)
@@ -152,7 +152,7 @@ export async function minify(file: File, autocomplete?: string, {
 						// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
 						.replace(/\$\{/g, `$\\{`)
 				} else
-					templateElement.value.raw = replaceIllegalStrings(uniqueID, templateElement.value.raw)
+					templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
 			}
 		}
 	})
@@ -323,7 +323,7 @@ export async function minify(file: File, autocomplete?: string, {
 					},
 
 					StringLiteral(path) {
-						path.node.value = replaceIllegalStrings(uniqueID, path.node.value)
+						path.node.value = replaceUnsafeStrings(uniqueID, path.node.value)
 
 						// eslint-disable-next-line @typescript-eslint/no-base-to-string -- the `NodePath`'s `.toString()` method compiles and returns the contained `Node`
 						if (JSON.stringify(path.node.value).includes(`\\u00`) || path.toString().length < 4)
