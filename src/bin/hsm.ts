@@ -96,7 +96,15 @@ for (const argument of process.argv.slice(2)) {
 				break
 			}
 
-			const sourcePath = commands[1] || `.`
+			const sourcePath = commands[1]
+
+			if (!sourcePath) {
+				console.error(`specify the directory to watch`)
+				help()
+
+				break
+			}
+
 			const hackmudPath = config.hackmudPath
 			const scripts = commands.slice(2)
 
@@ -425,7 +433,7 @@ function help() {
 		} break
 
 		case `push`: {
-			console.log(`hsm push [<dir> [..."<script user>.<script name>"]]`)
+			console.log(`hsm push <dir> [..."<script user>.<script name>"]`)
 		} break
 
 		case `dev`:
