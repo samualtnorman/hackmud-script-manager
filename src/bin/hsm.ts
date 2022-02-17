@@ -5,7 +5,7 @@ import { watch as watchFile } from "chokidar"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
 import { basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
-import { generateTypings, Info, processScript, pull, push, syncMacros, watch } from ".."
+import { generateTypings, Info, pull, syncMacros } from ".."
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants.json"
 
@@ -87,6 +87,7 @@ for (const argument of process.argv.slice(2)) {
 
 	switch (commands[0]) {
 		case `push`: {
+			const { push } = await import(`../push`)
 			const config = await getConfig()
 
 			if (!config.hackmudPath) {
@@ -120,6 +121,8 @@ for (const argument of process.argv.slice(2)) {
 
 		case `dev`:
 		case `watch`: {
+			const { watch } = await import(`../watch`)
+
 			if (!commands[1]) {
 				console.error(`specify the directory to watch`)
 				help()
@@ -325,6 +328,8 @@ for (const argument of process.argv.slice(2)) {
 	updateConfig()
 
 	async function golfFile(target: string, fileExtension: string) {
+		const { processScript } = await import(`../processScript`)
+
 		await readFile(target, { encoding: `utf-8` }).then(
 			async source => {
 				const fileBaseName = getPathBaseName(target, fileExtension)
