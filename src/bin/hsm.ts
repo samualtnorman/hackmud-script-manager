@@ -111,13 +111,17 @@ for (const argument of process.argv.slice(2)) {
 			if (!scripts.length)
 				scripts.push(`*.*`)
 
+			if (options.has(`skip-minify`) && options.has(`mangle-names`))
+				console.warn(`pointless specifying both --skip-minify and --mangle-names`)
+
 			const infos = await push(
 				sourcePath,
 				hackmudPath,
 				{
 					scripts,
 					onPush: onPushLogger,
-					minify: !options.get(`skip-minify`)
+					minify: !options.get(`skip-minify`),
+					mangleNames: Boolean(options.get(`mangle-names`))
 				}
 			)
 
@@ -433,7 +437,7 @@ function help() {
 		} break
 
 		case `push`: {
-			console.log(`hsm push <dir> [..."<script user>.<script name>"]`)
+			console.log(`hsm push <dir> [..."<script user>.<script name>"] [--skip-minify] [--mangle-names]`)
 		} break
 
 		case `dev`:
