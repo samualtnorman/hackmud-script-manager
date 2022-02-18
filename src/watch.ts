@@ -165,8 +165,8 @@ export function watch(
 			await Promise.all(usersToPushTo.map(user => writeFilePersistent(
 				resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`),
 				minifiedCode
-					.replace(new RegExp(`$${uniqueID}$SCRIPT_USER$`, `g`), user)
-					.replace(new RegExp(`$${uniqueID}$FULL_SCRIPT_NAME$`, `g`), `${user}.${scriptName}`)
+					.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
+					.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
 			)))
 
 			onPush?.({
