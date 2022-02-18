@@ -59,7 +59,7 @@ export async function minify(file: File, autocomplete?: string, {
 	}
 
 	for (const global in (program.scope as any).globals as Record<string, any>) {
-		if (global == `arguments` || global.startsWith(`$${uniqueID}`))
+		if (global == `arguments` || global.startsWith(`$${uniqueID}$`))
 			continue
 
 		const referencePaths = getReferencePathsToGlobal(global, program)
@@ -68,14 +68,14 @@ export async function minify(file: File, autocomplete?: string, {
 			continue
 
 		for (const path of referencePaths)
-			path.replaceWith(t.identifier(`_GLOBAL_${global}_${uniqueID}_`))
+			path.replaceWith(t.identifier(`_${uniqueID}_GLOBAL_${global}_`))
 
 		mainFunctionPath.node.body.body.unshift(
 			t.variableDeclaration(
 				`let`,
 				[
 					t.variableDeclarator(
-						t.identifier(`_GLOBAL_${global}_${uniqueID}_`),
+						t.identifier(`_${uniqueID}_GLOBAL_${global}_`),
 						t.identifier(global)
 					)
 				]
@@ -83,19 +83,19 @@ export async function minify(file: File, autocomplete?: string, {
 		)
 	}
 
-	const hashGReferencePaths = getReferencePathsToGlobal(`$${uniqueID}$GLOBAL`, program)
+	const hashGReferencePaths = getReferencePathsToGlobal(`$${uniqueID}$GLOBAL$`, program)
 
 	if (hashGReferencePaths.length > 3) {
 		for (const path of hashGReferencePaths)
-			path.replaceWith(t.identifier(`_G_${uniqueID}_`))
+			path.replaceWith(t.identifier(`_${uniqueID}_G_`))
 
 		mainFunctionPath.node.body.body.unshift(
 			t.variableDeclaration(
 				`let`,
 				[
 					t.variableDeclarator(
-						t.identifier(`_G_${uniqueID}_`),
-						t.identifier(`$${uniqueID}$GLOBAL`)
+						t.identifier(`_${uniqueID}_G_`),
+						t.identifier(`$${uniqueID}$GLOBAL$`)
 					)
 				]
 			)
@@ -117,10 +117,10 @@ export async function minify(file: File, autocomplete?: string, {
 
 			if (memberExpression.property.name == `prototype`) {
 				memberExpression.computed = true
-				memberExpression.property = t.identifier(`_PROTOTYPE_PROPERTY_${uniqueID}_`)
+				memberExpression.property = t.identifier(`_${uniqueID}_PROTOTYPE_PROPERTY_`)
 			} else if (memberExpression.property.name == `__proto__`) {
 				memberExpression.computed = true
-				memberExpression.property = t.identifier(`_PROTO_PROPERTY_${uniqueID}_`)
+				memberExpression.property = t.identifier(`_${uniqueID}_PROTO_PROPERTY_`)
 			} else if (includesIllegalString(memberExpression.property.name)) {
 				memberExpression.computed = true
 
@@ -181,8 +181,8 @@ export async function minify(file: File, autocomplete?: string, {
 		keep_classnames: !mangleNames,
 		keep_fnames: !mangleNames
 	})).code!
-		.replace(new RegExp(`_PROTOTYPE_PROPERTY_${uniqueID}_`, `g`), `"prototype"`)
-		.replace(new RegExp(`_PROTO_PROPERTY_${uniqueID}_`, `g`), `"__proto__"`)
+		.replace(new RegExp(`_${uniqueID}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
+		.replace(new RegExp(`_${uniqueID}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
 
 	let comment: string | undefined
 	let hasComment = false
@@ -207,14 +207,14 @@ export async function minify(file: File, autocomplete?: string, {
 						const o: Record<string, unknown> = {}
 
 						if (parseObjectExpression(path.node, o))
-							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${uniqueID}_`))
+							path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValues.push(o) - 1}_`))
 					},
 
 					ArrayExpression(path) {
 						const o: unknown[] = []
 
 						if (parseArrayExpression(path.node, o))
-							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValues.push(o) - 1}_${uniqueID}_`))
+							path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValues.push(o) - 1}_`))
 					}
 				})
 
@@ -265,7 +265,7 @@ export async function minify(file: File, autocomplete?: string, {
 					UnaryExpression(path) {
 						if (path.node.operator == `void`) {
 							if (path.node.argument.type == `NumericLiteral` && !path.node.argument.value) {
-								path.replaceWith(t.identifier(`_UNDEFINED_${uniqueID}_`))
+								path.replaceWith(t.identifier(`_${uniqueID}_UNDEFINED_`))
 								undefinedIsReferenced = true
 							}
 						} else if (path.node.operator == `-` && path.node.argument.type == `NumericLiteral`) {
@@ -283,7 +283,7 @@ export async function minify(file: File, autocomplete?: string, {
 								if (jsonValueIndex == -1)
 									jsonValueIndex += jsonValues.push(value)
 
-								path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+								path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
 							})())
 
 							path.skip()
@@ -297,7 +297,7 @@ export async function minify(file: File, autocomplete?: string, {
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(null)
 
-						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+						path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
 						/* eslint-enable unicorn/no-null */
 					},
 
@@ -307,7 +307,7 @@ export async function minify(file: File, autocomplete?: string, {
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(path.node.value)
 
-						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+						path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
 					},
 
 					NumericLiteral(path) {
@@ -323,7 +323,7 @@ export async function minify(file: File, autocomplete?: string, {
 							if (jsonValueIndex == -1)
 								jsonValueIndex += jsonValues.push(path.node.value)
 
-							path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+							path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
 						})())
 					},
 
@@ -342,7 +342,7 @@ export async function minify(file: File, autocomplete?: string, {
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(path.node.value)
 
-						path.replaceWith(t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`))
+						path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
 					},
 
 					ObjectProperty({ node }) {
@@ -355,7 +355,7 @@ export async function minify(file: File, autocomplete?: string, {
 							jsonValueIndex += jsonValues.push(node.key.name)
 
 						node.computed = true
-						node.key = t.identifier(`_JSON_VALUE_${jsonValueIndex}_${uniqueID}_`)
+						node.key = t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`)
 					},
 
 					RegExpLiteral(path) {
@@ -383,16 +383,16 @@ export async function minify(file: File, autocomplete?: string, {
 						`let`,
 						[
 							t.variableDeclarator(
-								t.identifier(`_JSON_VALUE_0_${uniqueID}_`),
+								t.identifier(`_${uniqueID}_JSON_VALUE_0_`),
 								t.memberExpression(
 									t.taggedTemplateExpression(
 										t.memberExpression(
-											t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine`), []),
+											t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine$`), []),
 											t.identifier(`split`)
 										),
 										t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
 									),
-									t.identifier(`$${uniqueID}$SPLIT_INDEX`),
+									t.identifier(`$${uniqueID}$SPLIT_INDEX$`),
 									true
 								)
 							)
@@ -400,7 +400,7 @@ export async function minify(file: File, autocomplete?: string, {
 					)
 
 					if (undefinedIsReferenced)
-						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)))
+						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)))
 
 					functionDeclaration.body.body.unshift(variableDeclaration)
 					comment = jsonValues[0]
@@ -409,7 +409,7 @@ export async function minify(file: File, autocomplete?: string, {
 						`let`,
 						[
 							t.variableDeclarator(
-								t.identifier(`_JSON_VALUE_0_${uniqueID}_`),
+								t.identifier(`_${uniqueID}_JSON_VALUE_0_`),
 								t.callExpression(
 									t.memberExpression(
 										t.identifier(`JSON`),
@@ -419,12 +419,12 @@ export async function minify(file: File, autocomplete?: string, {
 										t.memberExpression(
 											t.taggedTemplateExpression(
 												t.memberExpression(
-													t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine`), []),
+													t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine$`), []),
 													t.identifier(`split`)
 												),
 												t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
 											),
-											t.identifier(`$${uniqueID}$SPLIT_INDEX`),
+											t.identifier(`$${uniqueID}$SPLIT_INDEX$`),
 											true
 										)
 									]
@@ -434,7 +434,7 @@ export async function minify(file: File, autocomplete?: string, {
 					)
 
 					if (undefinedIsReferenced)
-						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)))
+						variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)))
 
 					functionDeclaration.body.body.unshift(variableDeclaration)
 					comment = JSON.stringify(jsonValues[0])
@@ -444,7 +444,7 @@ export async function minify(file: File, autocomplete?: string, {
 					`let`,
 					[
 						t.variableDeclarator(
-							t.arrayPattern(jsonValues.map((_, index) => t.identifier(`_JSON_VALUE_${index}_${uniqueID}_`))),
+							t.arrayPattern(jsonValues.map((_, index) => t.identifier(`_${uniqueID}_JSON_VALUE_${index}_`))),
 							t.callExpression(
 								t.memberExpression(
 									t.identifier(`JSON`),
@@ -454,12 +454,12 @@ export async function minify(file: File, autocomplete?: string, {
 									t.memberExpression(
 										t.taggedTemplateExpression(
 											t.memberExpression(
-												t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine`), []),
+												t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine$`), []),
 												t.identifier(`split`)
 											),
 											t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
 										),
-										t.identifier(`$${uniqueID}$SPLIT_INDEX`),
+										t.identifier(`$${uniqueID}$SPLIT_INDEX$`),
 										true
 									)
 								]
@@ -469,7 +469,7 @@ export async function minify(file: File, autocomplete?: string, {
 				)
 
 				if (undefinedIsReferenced)
-					variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)))
+					variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)))
 
 				functionDeclaration.body.body.unshift(variableDeclaration)
 				comment = JSON.stringify(jsonValues)
@@ -478,7 +478,7 @@ export async function minify(file: File, autocomplete?: string, {
 			functionDeclaration.body.body.unshift(
 				t.variableDeclaration(
 					`let`,
-					[ t.variableDeclarator(t.identifier(`_UNDEFINED_${uniqueID}_`)) ]
+					[ t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)) ]
 				)
 			)
 		}
@@ -508,7 +508,7 @@ export async function minify(file: File, autocomplete?: string, {
 	// this step affects the character count and can't happen after the count comparison
 	if (comment != undefined) {
 		code = spliceString(code, `${autocomplete ? `//${autocomplete}\n` : ``}\n//\t${comment}\t\n`, getFunctionBodyStart(code) + 1)
-		code = code.replace(`$${uniqueID}$SPLIT_INDEX`, await minifyNumber(code.split(`\t`).findIndex(part => part == comment)))
+		code = code.replace(`$${uniqueID}$SPLIT_INDEX$`, await minifyNumber(code.split(`\t`).findIndex(part => part == comment)))
 	}
 
 	// if the script has a comment, it's gonna contain `SC$scripts$quine()`

@@ -49,7 +49,7 @@ export function transform(file: File, sourceCode: string, {
 	scriptName = `UNKNOWN`,
 	seclevel = 4
 }: Partial<TransformOptions> = {}) {
-	const topFunctionName = `_SCRIPT_${uniqueID}_`
+	const topFunctionName = `_${uniqueID}_SCRIPT_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
 	let program!: NodePath<t.Program>
@@ -84,7 +84,7 @@ export function transform(file: File, sourceCode: string, {
 	if (program.scope.hasGlobal(`_SCRIPT_USER`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program)) {
 			if (scriptUser == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_USER`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_USER$`))
 			else
 				referencePath.replaceWith(t.stringLiteral(scriptUser))
 		}
@@ -93,7 +93,7 @@ export function transform(file: File, sourceCode: string, {
 	if (program.scope.hasGlobal(`_SCRIPT_NAME`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_NAME`, program)) {
 			if (scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_NAME`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_NAME$`))
 			else
 				referencePath.replaceWith(t.stringLiteral(scriptName))
 		}
@@ -102,7 +102,7 @@ export function transform(file: File, sourceCode: string, {
 	if (program.scope.hasGlobal(`_FULL_SCRIPT_NAME`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_FULL_SCRIPT_NAME`, program)) {
 			if (scriptUser == true || scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME$`))
 			else
 				referencePath.replaceWith(t.stringLiteral(`${scriptUser}.${scriptName}`))
 		}
@@ -128,7 +128,7 @@ export function transform(file: File, sourceCode: string, {
 				functionDotPrototypeIsReferencedMultipleTimes = true
 
 				referencePath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$FUNCTION_DOT_PROTOTYPE`)
+					t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`)
 				)
 			}
 
@@ -183,13 +183,13 @@ export function transform(file: File, sourceCode: string, {
 			assert(validDBMethods.includes(databaseOpMethodName), `invalid db method "${databaseOpMethodName}", valid db methods are "${validDBMethods.join(`", "`)}"`)
 
 			if (referencePath.parentPath.parentPath?.type == `CallExpression`)
-				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`))
+				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`))
 			else if (databaseOpMethodName == `ObjectId`) {
 				referencePath.parentPath.replaceWith(
 					t.arrowFunctionExpression(
 						[],
 						t.callExpression(
-							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`),
+							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`),
 							[]
 						)
 					)
@@ -199,7 +199,7 @@ export function transform(file: File, sourceCode: string, {
 					t.arrowFunctionExpression(
 						[ t.identifier(`a`) ],
 						t.callExpression(
-							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`),
+							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`),
 							[ t.identifier(`a`) ]
 						)
 					)
@@ -209,7 +209,7 @@ export function transform(file: File, sourceCode: string, {
 					t.arrowFunctionExpression(
 						[ t.identifier(`a`), t.identifier(`b`) ],
 						t.callExpression(
-							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}`),
+							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`),
 							[ t.identifier(`a`), t.identifier(`b`) ]
 						)
 					)
@@ -222,13 +222,13 @@ export function transform(file: File, sourceCode: string, {
 	if (program.scope.hasGlobal(`$D`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$D`, program)) {
 			if (referencePath.parentPath.type == `CallExpression`)
-				referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG`))
+				referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG$`))
 			else {
 				referencePath.replaceWith(
 					t.arrowFunctionExpression(
 						[ t.identifier(`a`) ],
 						t.callExpression(
-							t.identifier(`$${uniqueID}$DEBUG`),
+							t.identifier(`$${uniqueID}$DEBUG$`),
 							[ t.identifier(`a`) ]
 						)
 					)
@@ -239,12 +239,12 @@ export function transform(file: File, sourceCode: string, {
 
 	if (program.scope.hasGlobal(`$FMCL`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$FMCL`, program))
-			referencePath.replaceWith(t.identifier(`$${uniqueID}$FMCL`))
+			referencePath.replaceWith(t.identifier(`$${uniqueID}$FMCL$`))
 	}
 
 	if (program.scope.hasGlobal(`$G`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$G`, program))
-			referencePath.replaceWith(t.identifier(`$${uniqueID}$GLOBAL`))
+			referencePath.replaceWith(t.identifier(`$${uniqueID}$GLOBAL$`))
 	}
 
 	if (program.scope.hasGlobal(`_SECLEVEL`)) {
@@ -263,10 +263,10 @@ export function transform(file: File, sourceCode: string, {
 			assert(referencePath.parent.property.type == `Identifier`)
 
 			if (referencePath.parent.property.name == `getPrototypeOf`) {
-				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$GET_PROTOTYPE_OF`))
+				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`))
 				needGetPrototypeOf = true
 			} else if (referencePath.parent.property.name == `setPrototypeOf`) {
-				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$SET_PROTOTYPE_OF`))
+				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_SET_PROTOTYPE_OF_`))
 				needSetPrototypeOf = true
 			}
 		}
@@ -453,7 +453,7 @@ export function transform(file: File, sourceCode: string, {
 
 							referencePath.replaceWith(
 								t.memberExpression(
-									t.identifier(`$${uniqueID}$GLOBAL`),
+									t.identifier(`$${uniqueID}$GLOBAL$`),
 									t.identifier(referencePath.node.name)
 								)
 							)
@@ -470,7 +470,7 @@ export function transform(file: File, sourceCode: string, {
 									Object.assign(
 										node,
 										t.memberExpression(
-											t.identifier(`$${uniqueID}$GLOBAL`),
+											t.identifier(`$${uniqueID}$GLOBAL$`),
 											t.identifier(name)
 										)
 									)
@@ -489,7 +489,7 @@ export function transform(file: File, sourceCode: string, {
 									t.assignmentExpression(
 										`=`,
 										t.memberExpression(
-											t.identifier(`$${uniqueID}$GLOBAL`),
+											t.identifier(`$${uniqueID}$GLOBAL$`),
 											t.identifier(declarator.id.name)
 										),
 										declarator.init
@@ -536,7 +536,7 @@ export function transform(file: File, sourceCode: string, {
 
 						referencePath.replaceWith(
 							t.memberExpression(
-								t.identifier(`$${uniqueID}$GLOBAL`),
+								t.identifier(`$${uniqueID}$GLOBAL$`),
 								t.identifier(referencePath.node.name)
 							)
 						)
@@ -552,7 +552,7 @@ export function transform(file: File, sourceCode: string, {
 							t.assignmentExpression(
 								`=`,
 								t.memberExpression(
-									t.identifier(`$${uniqueID}$GLOBAL`),
+									t.identifier(`$${uniqueID}$GLOBAL$`),
 									t.identifier(globalBlockStatement.id.name)
 								),
 								t.classExpression(
@@ -586,7 +586,7 @@ export function transform(file: File, sourceCode: string, {
 				t.ifStatement(
 					t.unaryExpression(
 						`!`,
-						t.identifier(`$${uniqueID}$FMCL`)
+						t.identifier(`$${uniqueID}$FMCL$`)
 					),
 					globalBlock
 				)
@@ -597,7 +597,7 @@ export function transform(file: File, sourceCode: string, {
 	if (functionDotPrototypeIsReferencedMultipleTimes) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
-				t.identifier(`$${uniqueID}$FUNCTION_DOT_PROTOTYPE`),
+				t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`),
 				createGetFunctionPrototypeNode()
 			)
 		]))
@@ -606,7 +606,7 @@ export function transform(file: File, sourceCode: string, {
 	if (needSetPrototypeOf) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
-				t.identifier(`$${uniqueID}$SET_PROTOTYPE_OF`),
+				t.identifier(`_${uniqueID}_SET_PROTOTYPE_OF_`),
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
@@ -615,7 +615,7 @@ export function transform(file: File, sourceCode: string, {
 						),
 						t.identifier(`bind`)
 					),
-					[ t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`) ]
+					[ t.identifier(`_${uniqueID}_DUNDER_PROTO_SETTER_`) ]
 				)
 			)
 		]))
@@ -624,7 +624,7 @@ export function transform(file: File, sourceCode: string, {
 	if (needGetPrototypeOf) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
-				t.identifier(`$${uniqueID}$GET_PROTOTYPE_OF`),
+				t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`),
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
@@ -633,7 +633,7 @@ export function transform(file: File, sourceCode: string, {
 						),
 						t.identifier(`bind`)
 					),
-					[ t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`) ]
+					[ t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`) ]
 				)
 			)
 		]))
@@ -647,23 +647,23 @@ export function transform(file: File, sourceCode: string, {
 						? [
 							t.objectProperty(
 								t.identifier(`get`),
-								t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`)
+								t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`)
 							),
 							t.objectProperty(
 								t.identifier(`set`),
-								t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`)
+								t.identifier(`_${uniqueID}_DUNDER_PROTO_SETTER_`)
 							)
 						]
 						: [
 							t.objectProperty(
 								t.identifier(`get`),
-								t.identifier(`$${uniqueID}$DUNDER_PROTO_GETTER`)
+								t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`)
 							)
 						]
 					) : [
 						t.objectProperty(
 							t.identifier(`set`),
-							t.identifier(`$${uniqueID}$DUNDER_PROTO_SETTER`)
+							t.identifier(`_${uniqueID}_DUNDER_PROTO_SETTER_`)
 						)
 					]
 				),
@@ -725,7 +725,7 @@ export function transform(file: File, sourceCode: string, {
 					ThisExpression(path) {
 						methodReferencesThis = true
 						thisIsReferenced = true
-						path.replaceWith(t.identifier(`_THIS_${uniqueID}_`))
+						path.replaceWith(t.identifier(`_${uniqueID}_THIS_`))
 					},
 
 					Function(path) {
@@ -752,7 +752,7 @@ export function transform(file: File, sourceCode: string, {
 								`let`,
 								[
 									t.variableDeclarator(
-										t.identifier(`_THIS_${uniqueID}_`),
+										t.identifier(`_${uniqueID}_THIS_`),
 										t.callExpression(t.super(), [])
 									)
 								]
@@ -764,7 +764,7 @@ export function transform(file: File, sourceCode: string, {
 								`let`,
 								[
 									t.variableDeclarator(
-										t.identifier(`_THIS_${uniqueID}_`),
+										t.identifier(`_${uniqueID}_THIS_`),
 										superCalls[0]!.node
 									)
 								]
@@ -775,7 +775,7 @@ export function transform(file: File, sourceCode: string, {
 							path.replaceWith(
 								t.assignmentExpression(
 									`=`,
-									t.identifier(`_THIS_${uniqueID}_`),
+									t.identifier(`_${uniqueID}_THIS_`),
 									path.node
 								)
 							)
@@ -786,7 +786,7 @@ export function transform(file: File, sourceCode: string, {
 								`let`,
 								[
 									t.variableDeclarator(
-										t.identifier(`_THIS_${uniqueID}_`)
+										t.identifier(`_${uniqueID}_THIS_`)
 									)
 								]
 							)
@@ -805,7 +805,7 @@ export function transform(file: File, sourceCode: string, {
 					`let`,
 					[
 						t.variableDeclarator(
-							t.identifier(`_THIS_${uniqueID}_`),
+							t.identifier(`_${uniqueID}_THIS_`),
 							t.callExpression(
 								t.memberExpression(
 									t.super(),
@@ -866,7 +866,7 @@ export function transform(file: File, sourceCode: string, {
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
 				// BUG this is causing typescript to be slow
 				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`)
+					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`)
 				)
 			} else {
 				// BUG this is causing typescript to be slow
@@ -874,7 +874,7 @@ export function transform(file: File, sourceCode: string, {
 					t.arrowFunctionExpression(
 						[ t.restElement(t.identifier(`args`)) ],
 						t.callExpression(
-							t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`),
+							t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`),
 							[ t.spreadElement(t.identifier(`args`)) ]
 						)
 					)

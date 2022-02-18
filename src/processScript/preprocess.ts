@@ -91,9 +91,9 @@ export async function preprocess(code: string, { uniqueID = `00000000000` }: Par
 		else if ((match = /^#D[^\w$]/.exec(codeSlice)))
 			code = spliceString(code, `$`, error.pos, 1)
 		else if ((match = /^#FMCL/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueID}$FMCL`, error.pos, match[0]!.length)
+			code = spliceString(code, `$${uniqueID}$FMCL$`, error.pos, match[0]!.length)
 		else if ((match = /^#G/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueID}$GLOBAL`, error.pos, match[0]!.length)
+			code = spliceString(code, `$${uniqueID}$GLOBAL$`, error.pos, match[0]!.length)
 		else if ((match = /^#db\./.exec(codeSlice)))
 			code = spliceString(code, `$`, error.pos, 1)
 		else
