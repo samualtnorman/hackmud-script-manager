@@ -87,7 +87,6 @@ for (const argument of process.argv.slice(2)) {
 
 	switch (commands[0]) {
 		case `push`: {
-			const { push } = await import(`../push`)
 			const config = await getConfig()
 
 			if (!config.hackmudPath) {
@@ -104,6 +103,8 @@ for (const argument of process.argv.slice(2)) {
 
 				break
 			}
+
+			const { push } = await import(`../push`)
 
 			const hackmudPath = config.hackmudPath
 			const scripts = commands.slice(2)
@@ -133,8 +134,6 @@ for (const argument of process.argv.slice(2)) {
 
 		case `dev`:
 		case `watch`: {
-			const { watch } = await import(`../watch`)
-
 			if (!commands[1]) {
 				console.error(`specify the directory to watch`)
 				help()
@@ -149,6 +148,8 @@ for (const argument of process.argv.slice(2)) {
 
 				break
 			}
+
+			const { watch } = await import(`../watch`)
 
 			const scripts = commands.slice(2)
 
