@@ -41,6 +41,16 @@ export async function minify(file: File, autocomplete?: string, {
 		}
 	})
 
+	if (program.scope.hasGlobal(`_START`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_START`, program))
+			referencePath.replaceWith(t.identifier(`_ST`))
+	}
+
+	if (program.scope.hasGlobal(`_TIMEOUT`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_TIMEOUT`, program))
+			referencePath.replaceWith(t.identifier(`_TO`))
+	}
+
 	// typescript does not like NodePath#get() and becomes slow so I have to dance around it
 	const mainFunctionPath = program.get(`body.0` as string) as NodePath<FunctionDeclaration>
 
