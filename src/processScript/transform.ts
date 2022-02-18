@@ -67,7 +67,7 @@ export function transform(file: File, sourceCode: string, {
 	}
 
 	if (program.scope.hasGlobal(`_TIMEOUT`)) {
-		for (const referencePath of getReferencePathsToGlobal(`_START`, program))
+		for (const referencePath of getReferencePathsToGlobal(`_TIMEOUT`, program))
 			referencePath.replaceWith(t.identifier(`_TO`))
 	}
 
