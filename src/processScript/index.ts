@@ -1,11 +1,9 @@
+import { PluginItem } from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
 import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
-import babelPluginProposalDoExpressions from "@babel/plugin-proposal-do-expressions"
-import babelPluginProposalFunctionBind from "@babel/plugin-proposal-function-bind"
-import babelPluginProposalFunctionSent from "@babel/plugin-proposal-function-sent"
 import babelPluginProposalJSONStrings from "@babel/plugin-proposal-json-strings"
 import babelPluginProposalLogicalAssignmentOperators from "@babel/plugin-proposal-logical-assignment-operators"
 import babelPluginProposalNullishCoalescingOperator from "@babel/plugin-proposal-nullish-coalescing-operator"
@@ -13,13 +11,8 @@ import babelPluginProposalNumericSeparator from "@babel/plugin-proposal-numeric-
 import babelPluginProposalObjectRestSpread from "@babel/plugin-proposal-object-rest-spread"
 import babelPluginProposalOptionalCatchBinding from "@babel/plugin-proposal-optional-catch-binding"
 import babelPluginProposalOptionalChaining from "@babel/plugin-proposal-optional-chaining"
-import babelPluginProposalPartialApplication from "@babel/plugin-proposal-partial-application"
-import babelPluginProposalPipelineOperator from "@babel/plugin-proposal-pipeline-operator"
 import babelPluginProposalPrivatePropertyInObject from "@babel/plugin-proposal-private-property-in-object"
-import babelPluginProposalRecordAndTuple from "@babel/plugin-proposal-record-and-tuple"
-import babelPluginProposalThrowExpressions from "@babel/plugin-proposal-throw-expressions"
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
-import babelPluginTransformTypescript from "@babel/plugin-transform-typescript"
 import babelTraverse from "@babel/traverse"
 import t, { LVal } from "@babel/types"
 import rollupPluginBabel_ from "@rollup/plugin-babel"
@@ -169,9 +162,91 @@ export async function processScript(
 
 	assert(/^\w{11}$/.exec(uniqueID))
 
-	const filePathResolved = filePath
-		? resolvePath(filePath)
-		: `${uniqueID}.ts`
+	const plugins: PluginItem[] = [
+		[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
+		[ babelPluginProposalClassProperties.default ],
+		[ babelPluginProposalClassStaticBlock.default ],
+		[ babelPluginProposalPrivatePropertyInObject.default ],
+		[ babelPluginProposalLogicalAssignmentOperators.default ],
+		[ babelPluginProposalNumericSeparator.default ],
+		[ babelPluginProposalNullishCoalescingOperator.default ],
+		[ babelPluginProposalOptionalChaining.default ],
+		[ babelPluginProposalOptionalCatchBinding.default ],
+		[ babelPluginProposalJSONStrings.default ],
+		[ babelPluginProposalObjectRestSpread.default ],
+		[ babelPluginTransformExponentiationOperator.default ]
+	]
+
+	let filePathResolved
+
+	if (filePath) {
+		filePathResolved = resolvePath(filePath)
+
+		if (filePath.endsWith(`.ts`))
+			plugins.push([ (await import(`@babel/plugin-transform-typescript`)).default, { allowDeclareFields: true, optimizeConstEnums: true } ])
+		else {
+			const [
+				babelPluginProposalDoExpressions,
+				babelPluginProposalFunctionBind,
+				babelPluginProposalFunctionSent,
+				babelPluginProposalPartialApplication,
+				babelPluginProposalPipelineOperator,
+				babelPluginProposalThrowExpressions,
+				babelPluginProposalRecordAndTuple
+			] = await Promise.all([
+				import(`@babel/plugin-proposal-do-expressions`),
+				import(`@babel/plugin-proposal-function-bind`),
+				import(`@babel/plugin-proposal-function-sent`),
+				import(`@babel/plugin-proposal-partial-application`),
+				import(`@babel/plugin-proposal-pipeline-operator`),
+				import(`@babel/plugin-proposal-throw-expressions`),
+				import(`@babel/plugin-proposal-record-and-tuple`)
+			])
+
+			plugins.push(
+				[ babelPluginProposalDoExpressions.default ],
+				[ babelPluginProposalFunctionBind.default ],
+				[ babelPluginProposalFunctionSent.default ],
+				[ babelPluginProposalPartialApplication.default ],
+				[ babelPluginProposalPipelineOperator.default, { proposal: `hack`, topicToken: `%` } ],
+				[ babelPluginProposalThrowExpressions.default ],
+				[ babelPluginProposalRecordAndTuple.default, { syntaxType: `hash`, importPolyfill: true } ]
+			)
+		}
+	} else {
+		filePathResolved = `${uniqueID}.ts`
+
+		const [
+			babelPluginTransformTypescript,
+			babelPluginProposalDoExpressions,
+			babelPluginProposalFunctionBind,
+			babelPluginProposalFunctionSent,
+			babelPluginProposalPartialApplication,
+			babelPluginProposalPipelineOperator,
+			babelPluginProposalThrowExpressions,
+			babelPluginProposalRecordAndTuple
+		] = await Promise.all([
+			import(`@babel/plugin-transform-typescript`),
+			import(`@babel/plugin-proposal-do-expressions`),
+			import(`@babel/plugin-proposal-function-bind`),
+			import(`@babel/plugin-proposal-function-sent`),
+			import(`@babel/plugin-proposal-partial-application`),
+			import(`@babel/plugin-proposal-pipeline-operator`),
+			import(`@babel/plugin-proposal-throw-expressions`),
+			import(`@babel/plugin-proposal-record-and-tuple`)
+		])
+
+		plugins.push(
+			[ babelPluginTransformTypescript.default, { allowDeclareFields: true, optimizeConstEnums: true } ],
+			[ babelPluginProposalDoExpressions.default ],
+			[ babelPluginProposalFunctionBind.default ],
+			[ babelPluginProposalFunctionSent.default ],
+			[ babelPluginProposalPartialApplication.default ],
+			[ babelPluginProposalPipelineOperator.default, { proposal: `hack`, topicToken: `%` } ],
+			[ babelPluginProposalThrowExpressions.default ],
+			[ babelPluginProposalRecordAndTuple.default, { syntaxType: `hash`, importPolyfill: true } ]
+		)
+	}
 
 	const bundle = await rollup({
 		input: filePathResolved,
@@ -182,28 +257,7 @@ export async function processScript(
 			},
 			rollupPluginBabel({
 				babelHelpers: `bundled`,
-				plugins: [
-					[ babelPluginTransformTypescript.default, { allowDeclareFields: true, optimizeConstEnums: true } ],
-					[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
-					[ babelPluginProposalDoExpressions.default ],
-					[ babelPluginProposalFunctionBind.default ],
-					[ babelPluginProposalFunctionSent.default ],
-					[ babelPluginProposalPartialApplication.default ],
-					[ babelPluginProposalPipelineOperator.default, { proposal: `hack`, topicToken: `%` } ],
-					[ babelPluginProposalThrowExpressions.default ],
-					[ babelPluginProposalRecordAndTuple.default, { syntaxType: `hash`, importPolyfill: true } ],
-					[ babelPluginProposalClassProperties.default ],
-					[ babelPluginProposalClassStaticBlock.default ],
-					[ babelPluginProposalPrivatePropertyInObject.default ],
-					[ babelPluginProposalLogicalAssignmentOperators.default ],
-					[ babelPluginProposalNumericSeparator.default ],
-					[ babelPluginProposalNullishCoalescingOperator.default ],
-					[ babelPluginProposalOptionalChaining.default ],
-					[ babelPluginProposalOptionalCatchBinding.default ],
-					[ babelPluginProposalJSONStrings.default ],
-					[ babelPluginProposalObjectRestSpread.default ],
-					[ babelPluginTransformExponentiationOperator.default ]
-				],
+				plugins,
 				configFile: false,
 				extensions
 			}),
