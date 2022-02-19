@@ -1,3 +1,5 @@
 declare module "@babel/plugin-*" {
-	export default { default: (...arguments_: any[]) => any }
+	const value: { default: (...arguments_: any[]) => any }
+
+	export default value
 }
