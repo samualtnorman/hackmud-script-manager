@@ -3,11 +3,11 @@ import { watch as watchDirectory } from "chokidar"
 import fs from "fs"
 import { basename as getPathBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { supportedExtensions } from "./constants.json"
-import generateTypings from "./generateTypings"
+import generateTypeDeclaration from "./generateTypeDeclaration"
 import processScript from "./processScript"
 import { PushOptions } from "./push"
 
-const { readFile, readdir: readDirectory } = fs.promises
+const { readFile, readdir: readDirectory, writeFile } = fs.promises
 
 export type WatchOptions = PushOptions & {
 	/**
@@ -29,7 +29,7 @@ export type WatchOptions = PushOptions & {
  * @param scripts to push from (pushes from all if empty)
  * @param onPush function that's called on each script push
  */
-export function watch(
+export async function watch(
 	sourceDirectory: string,
 	hackmudDirectory: string,
 	{
@@ -37,7 +37,7 @@ export function watch(
 		onPush,
 		minify = true,
 		mangleNames = false,
-		typeDeclarationPath,
+		typeDeclarationPath: typeDeclarationPath_,
 		onReady
 	}: LaxPartial<WatchOptions> = {}
 ) {
@@ -63,7 +63,12 @@ export function watch(
 			scriptNamesToUsers.get(scriptName).add(user)
 	}
 
-	const watcher = watchDirectory(``, { depth: 1, cwd: sourceDirectory, awaitWriteFinish: { stabilityThreshold: 100 } }).on(`change`, async path => {
+	const watcher = watchDirectory([ `*.ts`, `*.js` ], {
+		depth: 1,
+		cwd: sourceDirectory,
+		awaitWriteFinish: { stabilityThreshold: 100 },
+		ignored: `*.d.ts`
+	}).on(`change`, async path => {
 		if (path.endsWith(`.d.ts`))
 			return
 
@@ -225,8 +230,10 @@ export function watch(
 	if (onReady)
 		watcher.on(`ready`, onReady)
 
-	if (!typeDeclarationPath)
+	if (!typeDeclarationPath_)
 		return
+
+	let typeDeclarationPath = typeDeclarationPath_
 
 	/*
 		this currently works because the generated type declaration effectively
@@ -237,9 +244,25 @@ export function watch(
 		grab their types, this will need to change
 	*/
 
-	generateTypings(sourceDirectory, resolvePath(sourceDirectory, typeDeclarationPath), hackmudDirectory)
-	watcher.on(`add`, () => generateTypings(sourceDirectory, resolvePath(sourceDirectory, typeDeclarationPath), hackmudDirectory))
-	watcher.on(`unlink`, () => generateTypings(sourceDirectory, resolvePath(sourceDirectory, typeDeclarationPath), hackmudDirectory))
+	await writeTypeDeclaration()
+	watcher.on(`add`, writeTypeDeclaration)
+	watcher.on(`unlink`, writeTypeDeclaration)
+
+	async function writeTypeDeclaration() {
+		const typeDeclaration = await generateTypeDeclaration(sourceDirectory, hackmudDirectory)
+
+		try {
+			await writeFile(typeDeclarationPath, typeDeclaration)
+		} catch (error) {
+			assert(error instanceof Error)
+
+			if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
+				throw error
+
+			typeDeclarationPath = resolvePath(typeDeclarationPath, `player.d.ts`)
+			await writeFile(typeDeclarationPath, typeDeclaration)
+		}
+	}
 }
 
 export default watch

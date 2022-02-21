@@ -1,5 +1,5 @@
 export { supportedExtensions } from "./constants.json"
-export { generateTypings } from "./generateTypings"
+export { generateTypeDeclaration } from "./generateTypeDeclaration"
 export { processScript } from "./processScript"
 export { pull } from "./pull"
 export { push } from "./push"

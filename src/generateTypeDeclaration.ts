@@ -1,9 +1,9 @@
 import fs from "fs"
-import { basename as getBaseName, relative as getRelativePath, resolve as resolvePath } from "path"
+import { basename as getBaseName, resolve as resolvePath } from "path"
 
-const { readdir: readDirectory, writeFile } = fs.promises
+const { readdir: readDirectory } = fs.promises
 
-export async function generateTypings(sourceDirectory: string, target: string, hackmudPath?: string) {
+export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string) {
 	const users = new Set<string>()
 
 	if (hackmudPath) {
@@ -45,12 +45,12 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 		}
 	}))
 
-	sourceDirectory = getRelativePath(`.`, sourceDirectory)
+	sourceDirectory = resolvePath(sourceDirectory)
 
 	let o = ``
 
 	for (const script of wildScripts)
-		o += `import $${script}$ from "./${sourceDirectory}/${script}"\n`
+		o += `import $${script}$ from "${sourceDirectory}/${script}"\n`
 
 	o += `\n`
 
@@ -58,7 +58,7 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 		const scripts = allScripts[user]!
 
 		for (const script of scripts)
-			o += `import $${user}$${script}$ from "./${sourceDirectory}/${user}/${script}"\n`
+			o += `import $${user}$${script}$ from "${sourceDirectory}/${user}/${script}"\n`
 	}
 
 	// TODO detect security level and generate apropriate code
@@ -118,7 +118,8 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 	}
 
 	o += `}\n`
-	await writeFile(target, o)
+
+	return o
 }
 
-export default generateTypings
+export default generateTypeDeclaration

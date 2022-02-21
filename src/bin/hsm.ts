@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
+import { assert, countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
 import chalk from "chalk"
 import { watch as watchFile } from "chokidar"
 import fs from "fs"
 import { homedir as getHomeDirectory } from "os"
 import { basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
-import { generateTypings, Info, pull, syncMacros } from ".."
+import { generateTypeDeclaration, Info, pull, syncMacros } from ".."
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants.json"
 
@@ -212,14 +212,22 @@ for (const argument of process.argv.slice(2)) {
 
 		case `gen-types`: {
 			const sourcePath = resolvePath(commands[1] || `.`)
+			const typeDeclaration = generateTypeDeclaration(sourcePath, (await getConfig()).hackmudPath)
+			let typeDeclarationPath = resolvePath(commands[2] || `./player.d.ts`)
 
-			generateTypings(
-				sourcePath,
-				commands[2]
-					? resolvePath(commands[2])
-					: resolvePath(sourcePath, `../player.d.ts`),
-				(await getConfig()).hackmudPath
-			)
+			try {
+				await writeFile(typeDeclarationPath, typeDeclaration)
+			} catch (error) {
+				assert(error instanceof Error)
+
+				if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
+					throw error
+
+				typeDeclarationPath = resolvePath(typeDeclarationPath, `player.d.ts`)
+				await writeFile(typeDeclarationPath, typeDeclaration)
+			}
+
+			console.log(`wrote type declaration to ${chalk.bold(typeDeclarationPath)}`)
 		} break
 
 		case `config`: {
