@@ -162,7 +162,7 @@ for (const argument of process.argv.slice(2)) {
 			watch(commands[1], config.hackmudPath, {
 				scripts,
 				onPush: onPushLogger,
-				typeDeclarationPath: options.get(`type-declaration-path`)?.toString(),
+				typeDeclarationPath: (options.get(`type-declaration-path`) || options.get(`type-declaration`) || options.get(`dts`) || options.get(`gen-types`))?.toString(),
 				minify: !options.get(`skip-minify`),
 				mangleNames: Boolean(options.get(`mangle-names`)),
 				onReady: () => console.log(`watching`)
