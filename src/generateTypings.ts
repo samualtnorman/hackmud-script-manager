@@ -20,9 +20,10 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 
 	await Promise.all((await readDirectory(sourceDirectory, { withFileTypes: true })).map(async dirent => {
 		if (dirent.isFile()) {
-			if (getFileExtension(dirent.name) == `.ts`)
-				wildScripts.push(getBaseName(dirent.name, `.ts`))
-			else if (getFileExtension(dirent.name) == `.js`)
+			if (getFileExtension(dirent.name) == `.ts`) {
+				if (!dirent.name.endsWith(`.d.ts`))
+					wildScripts.push(getBaseName(dirent.name, `.ts`))
+			} else if (getFileExtension(dirent.name) == `.js`)
 				wildAnyScripts.push(getBaseName(dirent.name, `.js`))
 		} else if (dirent.isDirectory()) {
 			const scripts: string[] = []
@@ -34,9 +35,10 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 
 			for (const file of await readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true })) {
 				if (file.isFile()) {
-					if (getFileExtension(file.name) == `.ts`)
-						scripts.push(getBaseName(file.name, `.ts`))
-					else if (getFileExtension(file.name) == `.js`)
+					if (getFileExtension(file.name) == `.ts`) {
+						if (!dirent.name.endsWith(`.d.ts`))
+							scripts.push(getBaseName(file.name, `.ts`))
+					} else if (getFileExtension(file.name) == `.js`)
 						anyScripts.push(getBaseName(file.name, `.js`))
 				}
 			}

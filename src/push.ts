@@ -105,6 +105,9 @@ export async function push(
 	await Promise.all([ ...wildScriptUsers ].map(async user => {
 		await readDirectory(resolvePath(sourceDirectory, user), { withFileTypes: true }).then(async dirents => {
 			await Promise.all(dirents.map(async dirent => {
+				if (dirent.name.endsWith(`.d.ts`))
+					return
+
 				const extension = getFileExtension(dirent.name)
 
 				if (dirent.isFile() && supportedExtensions.includes(extension)) {
@@ -192,6 +195,9 @@ export async function push(
 	// foo.* (global)
 	await (wildScriptUsers.size
 		? Promise.all((sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true })).map(async dirent => {
+			if (dirent.name.endsWith(`.d.ts`))
+					return
+
 			const extension = getFileExtension(dirent.name)
 
 			if (!dirent.isFile() || !supportedExtensions.includes(extension))

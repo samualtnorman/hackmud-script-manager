@@ -64,6 +64,9 @@ export function watch(
 	}
 
 	const watcher = watchDirectory(``, { depth: 1, cwd: sourceDirectory, awaitWriteFinish: { stabilityThreshold: 100 } }).on(`change`, async path => {
+		if (path.endsWith(`.d.ts`))
+			return
+
 		const extension = getFileExtension(path)
 
 		if (!supportedExtensions.includes(extension))
