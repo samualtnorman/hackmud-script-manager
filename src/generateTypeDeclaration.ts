@@ -50,7 +50,7 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 	let o = ``
 
 	for (const script of wildScripts)
-		o += `import $${script}$ from "${sourceDirectory}/${script}"\n`
+		o += `type $${script}$ = typeof import("${sourceDirectory}/${script}").default\n`
 
 	o += `\n`
 
@@ -58,7 +58,7 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 		const scripts = allScripts[user]!
 
 		for (const script of scripts)
-			o += `import $${user}$${script}$ from "${sourceDirectory}/${user}/${script}"\n`
+			o += `type $${user}$${script}$ = typeof import("${sourceDirectory}/${user}/${script}").default\n`
 	}
 
 	// TODO detect security level and generate apropriate code
@@ -77,7 +77,7 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 `
 
 	for (const script of wildScripts)
-		o += `\t${script}: Subscript<typeof $${script}$>\n`
+		o += `\t${script}: Subscript<$${script}$>\n`
 
 	for (const script of wildAnyScripts)
 		o += `\t${script}: (...args: any) => any\n`
@@ -96,7 +96,7 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 
 			if (scripts) {
 				for (const script of scripts)
-					o += `\t\t${script}: Subscript<typeof $${user}$${script}$>\n`
+					o += `\t\t${script}: Subscript<$${user}$${script}$>\n`
 			}
 
 			if (anyScripts) {
