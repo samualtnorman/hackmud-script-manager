@@ -82,7 +82,7 @@ export async function push(
 				.filter(dirent => dirent.isDirectory())
 				.map(dirent => dirent.name),
 			...hackmudDirectoryDirents
-				.filter(dirent => dirent.isFile() && getFileExtension(dirent.name) == `.key`)
+				.filter(dirent => dirent.isFile() && dirent.name.endsWith(`.key`))
 				.map(dirent => dirent.name.slice(0, -4)),
 			...scriptNamesByUser.keys(),
 			...wildScriptUsers

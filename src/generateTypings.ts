@@ -1,5 +1,5 @@
 import fs from "fs"
-import { basename as getBaseName, extname as getFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
+import { basename as getBaseName, relative as getRelativePath, resolve as resolvePath } from "path"
 
 const { readdir: readDirectory, writeFile } = fs.promises
 
@@ -8,7 +8,7 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 
 	if (hackmudPath) {
 		for (const dirent of await readDirectory(hackmudPath, { withFileTypes: true })) {
-			if (dirent.isFile() && getFileExtension(dirent.name) == `.key`)
+			if (dirent.isFile() && dirent.name.endsWith(`.key`))
 				users.add(getBaseName(dirent.name, `.key`))
 		}
 	}
@@ -20,10 +20,10 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 
 	await Promise.all((await readDirectory(sourceDirectory, { withFileTypes: true })).map(async dirent => {
 		if (dirent.isFile()) {
-			if (getFileExtension(dirent.name) == `.ts`) {
+			if (dirent.name.endsWith(`.ts`)) {
 				if (!dirent.name.endsWith(`.d.ts`))
 					wildScripts.push(getBaseName(dirent.name, `.ts`))
-			} else if (getFileExtension(dirent.name) == `.js`)
+			} else if (dirent.name.endsWith(`.js`))
 				wildAnyScripts.push(getBaseName(dirent.name, `.js`))
 		} else if (dirent.isDirectory()) {
 			const scripts: string[] = []
@@ -35,10 +35,10 @@ export async function generateTypings(sourceDirectory: string, target: string, h
 
 			for (const file of await readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true })) {
 				if (file.isFile()) {
-					if (getFileExtension(file.name) == `.ts`) {
+					if (file.name.endsWith(`.ts`)) {
 						if (!dirent.name.endsWith(`.d.ts`))
 							scripts.push(getBaseName(file.name, `.ts`))
-					} else if (getFileExtension(file.name) == `.js`)
+					} else if (file.name.endsWith(`.js`))
 						anyScripts.push(getBaseName(file.name, `.js`))
 				}
 			}
