@@ -210,6 +210,9 @@ for (const argument of process.argv.slice(2)) {
 			console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
 		} break
 
+		case `generate-type-declaration`:
+		case `gen-type-declaration`:
+		case `gen-dts`:
 		case `gen-types`: {
 			const sourcePath = resolvePath(commands[1] || `.`)
 			const typeDeclaration = generateTypeDeclaration(sourcePath, (await getConfig()).hackmudPath)
