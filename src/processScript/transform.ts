@@ -208,7 +208,6 @@ export function transform(file: File, sourceCode: string, {
 		}
 	}
 
-	// TODO turn not calling into a arrow function wrapper
 	if (program.scope.hasGlobal(`$D`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$D`, program)) {
 			if (referencePath.parentPath.type == `CallExpression`)

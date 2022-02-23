@@ -18,7 +18,6 @@ type MinifyOptions = {
 }
 
 // TODO move autocomplete code outside this function
-// TODO allow not mangling class and function names
 // TODO replace references to `arguments`
 
 /**
@@ -172,7 +171,6 @@ export async function minify(file: File, autocomplete?: string, {
 		}
 	})
 
-	// BUG the source char count is off for this version of the script
 	const scriptBeforeJSONValueReplacement = (await terser.minify(generate(fileBeforeJSONValueReplacement!).code, {
 		ecma: 2015,
 		compress: {
