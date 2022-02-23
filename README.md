@@ -13,9 +13,9 @@ Install with `npm install hackmud-script-manager -g` to make the `hsm` command a
         - Member expressions are converted to index notation so the index string can be quine cheated.
         - And template literals are converted to string concatenation so the strings can be quine cheated.
     - Global variable aliasing.
-    - converting `function foo() { ... }` format to `let foo = () => ...` format.
-    - converting references to `_START` and `_TIMEOUT` to `_ST` and `_TO`.
-    - removing unused parameters from main function expression.
+    - Converting `function foo() { ... }` format to `let foo = () => ...` format.
+    - Converting references to `_START` and `_TIMEOUT` to `_ST` and `_TO`.
+    - Removing unused parameters from main function expression.
 - Modern Javascript Syntax and Features
     - [Exponentiation Operator](https://babeljs.io/docs/en/babel-plugin-transform-exponentiation-operator), [Object Rest Spread](https://babeljs.io/docs/en/babel-plugin-proposal-object-rest-spread), [Optional Catch Binding](https://babeljs.io/docs/en/babel-plugin-proposal-optional-catch-binding), [JSON strings](https://babeljs.io/docs/en/babel-plugin-proposal-json-strings), [Nullish Coalescing Operator](https://babeljs.io/docs/en/babel-plugin-proposal-nullish-coalescing-operator), [Optional Chaining](https://babeljs.io/docs/en/babel-plugin-proposal-optional-chaining), [Logical Assignment Operators](https://babeljs.io/docs/en/babel-plugin-proposal-logical-assignment-operators), [Numeric Seperators](https://babeljs.io/docs/en/babel-plugin-proposal-numeric-separator), [Class Properties](https://babeljs.io/docs/en/babel-plugin-proposal-class-properties), [Class Static Block](https://babeljs.io/docs/en/babel-plugin-proposal-class-static-block), [Private Property `in` Object](https://babeljs.io/docs/en/babel-plugin-proposal-private-property-in-object).
     - And bigint literals (hackmud has `BigInt()`).
@@ -42,7 +42,7 @@ Install with `npm install hackmud-script-manager -g` to make the `hsm` command a
     - Subscript names and db methods are verified.
     - All references to preprocessor syntax functions not being called are turned into arrow function wrappers e.g. `let debug = #D;` -> `let debug = v => #D(v);`.
     - `_SECLEVEL` is replaced with a number (`0` to `4`) representing the seclevel of the script.
-    - when `export`s are present in the script, it becomes a script that returns an object of the `export`ed values.
+    - When `export`s are present in the script, it becomes a script that returns an object of the `export`ed values.
         - `_EXPORTS` becomes an array of the names of the exported values.
 - And Other Weird Fixes
     - Like `.__proto__` and `.prototype` are converted to `["__proto__"]` and `["prototype"]`.
