@@ -1,6 +1,6 @@
 {
 	"name": "hackmud-script-manager",
-	"version": "0.16.0",
+	"version": "0.16.1",
 	"description": "Script manager for game hackmud, with minification, TypeScript support, and player script type definition generation.",
 	"keywords": [
 		"api",
