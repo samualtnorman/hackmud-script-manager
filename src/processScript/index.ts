@@ -291,7 +291,7 @@ export async function processScript(
 	code = generate(file).code
 
 	if (shouldMinify)
-		code = await minify(file, autocomplete, { uniqueID, mangleNames, forceQuineCheats })
+		code = await minify(file, { uniqueID, mangleNames, forceQuineCheats, autocomplete })
 	else {
 		traverse(file, {
 			MemberExpression({ node: memberExpression }) {

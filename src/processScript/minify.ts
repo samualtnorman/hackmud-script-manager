@@ -24,6 +24,9 @@ type MinifyOptions = {
 	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
 	 */
 	forceQuineCheats: boolean
+
+	/** the comment inserted after the function signature */
+	autocomplete: string
 }
 
 // TODO move autocomplete code outside this function
@@ -31,13 +34,13 @@ type MinifyOptions = {
 
 /**
  * @param code compiled code and/or hackmud compatible code
- * @param autocomplete the comment inserted after the function signature
  * @param options {@link MinifyOptions details}
  */
-export async function minify(file: File, autocomplete?: string, {
+export async function minify(file: File, {
 	uniqueID = `00000000000`,
 	mangleNames = false,
-	forceQuineCheats
+	forceQuineCheats,
+	autocomplete
 }: LaxPartial<MinifyOptions> = {}) {
 	assert(/^\w{11}$/.exec(uniqueID))
 
