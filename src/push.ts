@@ -25,6 +25,15 @@ export type PushOptions = {
 
 	/** callback called on script push */
 	onPush: (info: Info) => void
+
+	/**
+	 * when set to `true` forces use of quine cheats
+	 *
+	 * when set to `false` forces quine cheats not to be used
+	 *
+	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	 */
+	forceQuineCheats: boolean
 }
 
 /**
@@ -43,7 +52,8 @@ export async function push(
 		scripts = [ `*.*` ],
 		onPush = () => {},
 		minify = true,
-		mangleNames = false
+		mangleNames = false,
+		forceQuineCheats
 	}: LaxPartial<PushOptions> = {}
 ) {
 	const scriptNamesByUser = new DynamicMap((_user: string) => new Set<string>())
@@ -121,7 +131,8 @@ export async function push(
 							scriptUser: user,
 							scriptName,
 							filePath,
-							mangleNames
+							mangleNames,
+							forceQuineCheats
 						}
 					)
 
@@ -173,7 +184,8 @@ export async function push(
 						scriptUser: user,
 						scriptName,
 						filePath,
-						mangleNames
+						mangleNames,
+						forceQuineCheats
 					}
 				)
 
@@ -220,7 +232,8 @@ export async function push(
 					scriptName,
 					uniqueID,
 					filePath,
-					mangleNames
+					mangleNames,
+					forceQuineCheats
 				}
 			)
 
@@ -273,7 +286,8 @@ export async function push(
 						scriptName,
 						uniqueID,
 						filePath,
-						mangleNames
+						mangleNames,
+						forceQuineCheats
 					}
 				)
 

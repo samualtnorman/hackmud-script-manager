@@ -19,7 +19,7 @@ import rollupPluginBabel_ from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
-import { assert } from "@samual/lib"
+import { assert, LaxPartial } from "@samual/lib"
 import { resolve as resolvePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
@@ -57,6 +57,15 @@ export type ProcessOptions = {
 
 	/** whether to mangle function and class names (defaults to `false`) */
 	mangleNames: boolean
+
+	/**
+	 * when set to `true` forces use of quine cheats
+	 *
+	 * when set to `false` forces quine cheats not to be used
+	 *
+	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	 */
+	forceQuineCheats: boolean
 }
 
 /**
@@ -73,8 +82,9 @@ export async function processScript(
 		scriptUser = `UNKNOWN`,
 		scriptName = `UNKNOWN`,
 		filePath,
-		mangleNames = false
-	}: Partial<ProcessOptions> = {}
+		mangleNames = false,
+		forceQuineCheats
+	}: LaxPartial<ProcessOptions> = {}
 ): Promise<{
 	script: string
 	warnings: { message: string, line: number }[]
@@ -281,7 +291,7 @@ export async function processScript(
 	code = generate(file).code
 
 	if (shouldMinify)
-		code = await minify(file, autocomplete, { uniqueID, mangleNames })
+		code = await minify(file, autocomplete, { uniqueID, mangleNames, forceQuineCheats })
 	else {
 		traverse(file, {
 			MemberExpression({ node: memberExpression }) {

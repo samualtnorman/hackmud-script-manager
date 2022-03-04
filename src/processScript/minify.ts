@@ -1,7 +1,7 @@
 import babelGenerator from "@babel/generator"
 import babelTraverse, { NodePath } from "@babel/traverse"
 import t, { Expression, File, FunctionDeclaration, Program } from "@babel/types"
-import { assert, countHackmudCharacters, spliceString } from "@samual/lib"
+import { assert, countHackmudCharacters, LaxPartial, spliceString } from "@samual/lib"
 import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
 import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings } from "./shared"
@@ -15,6 +15,15 @@ type MinifyOptions = {
 
 	/** whether to mangle function and class names (defaults to `false`) */
 	mangleNames: boolean
+
+	/**
+	 * when set to `true` forces use of quine cheats
+	 *
+	 * when set to `false` forces quine cheats not to be used
+	 *
+	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	 */
+	forceQuineCheats: boolean
 }
 
 // TODO move autocomplete code outside this function
@@ -27,8 +36,9 @@ type MinifyOptions = {
  */
 export async function minify(file: File, autocomplete?: string, {
 	uniqueID = `00000000000`,
-	mangleNames = false
-}: Partial<MinifyOptions> = {}) {
+	mangleNames = false,
+	forceQuineCheats
+}: LaxPartial<MinifyOptions> = {}) {
 	assert(/^\w{11}$/.exec(uniqueID))
 
 	let program!: NodePath<Program>
@@ -114,83 +124,92 @@ export async function minify(file: File, autocomplete?: string, {
 	const jsonValues: any[] = []
 	// this needs `as boolean` because typescript is dumb
 	let undefinedIsReferenced = false as boolean
+	let scriptBeforeJSONValueReplacement
 
-	const fileBeforeJSONValueReplacement = t.cloneNode(file)
+	if (forceQuineCheats != true) {
+		const fileBeforeJSONValueReplacement = t.cloneNode(file)
 
-	traverse(fileBeforeJSONValueReplacement, {
-		MemberExpression({ node: memberExpression }) {
-			if (memberExpression.computed)
-				return
+		traverse(fileBeforeJSONValueReplacement, {
+			MemberExpression({ node: memberExpression }) {
+				if (memberExpression.computed)
+					return
 
-			assert(memberExpression.property.type == `Identifier`)
+				assert(memberExpression.property.type == `Identifier`)
 
-			if (memberExpression.property.name == `prototype`) {
-				memberExpression.computed = true
-				memberExpression.property = t.identifier(`_${uniqueID}_PROTOTYPE_PROPERTY_`)
-			} else if (memberExpression.property.name == `__proto__`) {
-				memberExpression.computed = true
-				memberExpression.property = t.identifier(`_${uniqueID}_PROTO_PROPERTY_`)
-			} else if (includesIllegalString(memberExpression.property.name)) {
-				memberExpression.computed = true
+				if (memberExpression.property.name == `prototype`) {
+					memberExpression.computed = true
+					memberExpression.property = t.identifier(`_${uniqueID}_PROTOTYPE_PROPERTY_`)
+				} else if (memberExpression.property.name == `__proto__`) {
+					memberExpression.computed = true
+					memberExpression.property = t.identifier(`_${uniqueID}_PROTO_PROPERTY_`)
+				} else if (includesIllegalString(memberExpression.property.name)) {
+					memberExpression.computed = true
 
-				memberExpression.property = t.stringLiteral(
-					replaceUnsafeStrings(uniqueID, memberExpression.property.name)
-				)
+					memberExpression.property = t.stringLiteral(
+						replaceUnsafeStrings(uniqueID, memberExpression.property.name)
+					)
+				}
+			},
+
+			ObjectProperty({ node: objectProperty }) {
+				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
+					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
+					objectProperty.shorthand = false
+				}
+			},
+
+			StringLiteral({ node }) {
+				node.value = replaceUnsafeStrings(uniqueID, node.value)
+			},
+
+			TemplateLiteral({ node }) {
+				for (const templateElement of node.quasis) {
+					if (templateElement.value.cooked) {
+						templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
+
+						templateElement.value.raw = templateElement.value.cooked
+							.replace(/\\/g, `\\\\`)
+							.replace(/`/g, `\\\``)
+							// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
+							.replace(/\$\{/g, `$\\{`)
+					} else
+						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
+				}
+			},
+
+			RegExpLiteral(path) {
+				path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+				delete path.node.extra
 			}
-		},
+		})
 
-		ObjectProperty({ node: objectProperty }) {
-			if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
-				objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
-				objectProperty.shorthand = false
-			}
-		},
+		scriptBeforeJSONValueReplacement = (await terser.minify(generate(fileBeforeJSONValueReplacement!).code, {
+			ecma: 2015,
+			compress: {
+				passes: Infinity,
+				unsafe: true,
+				unsafe_arrows: true,
+				unsafe_comps: true,
+				unsafe_symbols: true,
+				unsafe_methods: true,
+				unsafe_proto: true,
+				unsafe_regexp: true,
+				unsafe_undefined: true,
+				sequences: false
+			},
+			format: { semicolons: false },
+			keep_classnames: !mangleNames,
+			keep_fnames: !mangleNames
+		})).code!
+			.replace(new RegExp(`_${uniqueID}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
+			.replace(new RegExp(`_${uniqueID}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
 
-		StringLiteral({ node }) {
-			node.value = replaceUnsafeStrings(uniqueID, node.value)
-		},
+		if (autocomplete)
+			scriptBeforeJSONValueReplacement = spliceString(scriptBeforeJSONValueReplacement, `//${autocomplete}\n`, getFunctionBodyStart(scriptBeforeJSONValueReplacement) + 1)
 
-		TemplateLiteral({ node }) {
-			for (const templateElement of node.quasis) {
-				if (templateElement.value.cooked) {
-					templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
-
-					templateElement.value.raw = templateElement.value.cooked
-						.replace(/\\/g, `\\\\`)
-						.replace(/`/g, `\\\``)
-						// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
-						.replace(/\$\{/g, `$\\{`)
-				} else
-					templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
-			}
-		},
-
-		RegExpLiteral(path) {
-			path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
-			delete path.node.extra
-		}
-	})
-
-	const scriptBeforeJSONValueReplacement = (await terser.minify(generate(fileBeforeJSONValueReplacement!).code, {
-		ecma: 2015,
-		compress: {
-			passes: Infinity,
-			unsafe: true,
-			unsafe_arrows: true,
-			unsafe_comps: true,
-			unsafe_symbols: true,
-			unsafe_methods: true,
-			unsafe_proto: true,
-			unsafe_regexp: true,
-			unsafe_undefined: true,
-			sequences: false
-		},
-		format: { semicolons: false },
-		keep_classnames: !mangleNames,
-		keep_fnames: !mangleNames
-	})).code!
-		.replace(new RegExp(`_${uniqueID}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
-		.replace(new RegExp(`_${uniqueID}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
+		if (forceQuineCheats == false)
+			return scriptBeforeJSONValueReplacement
+	}
 
 	let comment: string | undefined
 	let hasComment = false
@@ -519,15 +538,16 @@ export async function minify(file: File, autocomplete?: string, {
 		code = code.replace(`$${uniqueID}$SPLIT_INDEX$`, await minifyNumber(code.split(`\t`).findIndex(part => part == comment)))
 	}
 
+	if (forceQuineCheats == true)
+		return code
+
+	assert(scriptBeforeJSONValueReplacement)
+
 	// if the script has a comment, it's gonna contain `SC$scripts$quine()`
 	// which is gonna compile to `#fs.scripts.quine()` which contains
 	// an extra character so we have to account for that
-	if (countHackmudCharacters(scriptBeforeJSONValueReplacement) <= (countHackmudCharacters(code) + Number(hasComment))) {
-		code = scriptBeforeJSONValueReplacement
-
-		if (autocomplete)
-			code = spliceString(code, `//${autocomplete}\n`, getFunctionBodyStart(code) + 1)
-	}
+	if (countHackmudCharacters(scriptBeforeJSONValueReplacement) <= (countHackmudCharacters(code) + Number(hasComment)))
+		return scriptBeforeJSONValueReplacement
 
 	return code
 }

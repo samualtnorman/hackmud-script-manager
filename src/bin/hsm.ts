@@ -115,6 +115,13 @@ for (const argument of process.argv.slice(2)) {
 			if (options.has(`skip-minify`) && options.has(`mangle-names`))
 				console.warn(`pointless specifying both --skip-minify and --mangle-names`)
 
+			let forceQuineCheats = options.get(`force-quine-cheats`)
+
+			if (forceQuineCheats != undefined && typeof forceQuineCheats != `boolean`) {
+				console.warn(`warning: \`--force-quine-cheats\` should be \`true\` or \`false\``)
+				forceQuineCheats = Boolean(forceQuineCheats)
+			}
+
 			const infos = await push(
 				sourcePath,
 				hackmudPath,
@@ -122,7 +129,8 @@ for (const argument of process.argv.slice(2)) {
 					scripts,
 					onPush: onPushLogger,
 					minify: !options.get(`skip-minify`),
-					mangleNames: Boolean(options.get(`mangle-names`))
+					mangleNames: Boolean(options.get(`mangle-names`)),
+					forceQuineCheats
 				}
 			)
 
@@ -159,13 +167,21 @@ for (const argument of process.argv.slice(2)) {
 			if (options.has(`skip-minify`) && options.has(`mangle-names`))
 				console.warn(`pointless specifying both --skip-minify and --mangle-names`)
 
+			let forceQuineCheats = options.get(`force-quine-cheats`)
+
+			if (forceQuineCheats != undefined && typeof forceQuineCheats != `boolean`) {
+				console.warn(`warning: \`--force-quine-cheats\` should be \`true\` or \`false\``)
+				forceQuineCheats = Boolean(forceQuineCheats)
+			}
+
 			watch(commands[1], config.hackmudPath, {
 				scripts,
 				onPush: onPushLogger,
 				typeDeclarationPath: (options.get(`type-declaration-path`) || options.get(`type-declaration`) || options.get(`dts`) || options.get(`gen-types`))?.toString(),
 				minify: !options.get(`skip-minify`),
 				mangleNames: Boolean(options.get(`mangle-names`)),
-				onReady: () => console.log(`watching`)
+				onReady: () => console.log(`watching`),
+				forceQuineCheats
 			})
 		} break
 
@@ -375,6 +391,13 @@ for (const argument of process.argv.slice(2)) {
 				if (!minify && mangleNames)
 					console.warn(`warning: \`--mangle-names\` has no effect while \`--skip-minify\` is active`)
 
+				let forceQuineCheats = options.get(`force-quine-cheats`)
+
+				if (forceQuineCheats != undefined && typeof forceQuineCheats != `boolean`) {
+					console.warn(`warning: \`--force-quine-cheats\` should be \`true\` or \`false\``)
+					forceQuineCheats = Boolean(forceQuineCheats)
+				}
+
 				const timeStart = performance.now()
 
 				const { script, warnings } = await processScript(
@@ -384,7 +407,8 @@ for (const argument of process.argv.slice(2)) {
 						scriptUser,
 						scriptName,
 						filePath: target,
-						mangleNames
+						mangleNames,
+						forceQuineCheats
 					}
 				)
 

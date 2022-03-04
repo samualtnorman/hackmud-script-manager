@@ -38,7 +38,8 @@ export async function watch(
 		minify = true,
 		mangleNames = false,
 		typeDeclarationPath: typeDeclarationPath_,
-		onReady
+		onReady,
+		forceQuineCheats
 	}: LaxPartial<WatchOptions> = {}
 ) {
 	if (!scripts.length)
@@ -154,7 +155,8 @@ export async function watch(
 						scriptName,
 						uniqueID,
 						filePath,
-						mangleNames
+						mangleNames,
+						forceQuineCheats
 					}
 				))
 			} catch (error) {
@@ -202,7 +204,8 @@ export async function watch(
 				scriptUser: user,
 				scriptName,
 				filePath,
-				mangleNames
+				mangleNames,
+				forceQuineCheats
 			}))
 		} catch (error) {
 			assert(error instanceof Error)
