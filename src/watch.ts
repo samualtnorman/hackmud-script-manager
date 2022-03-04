@@ -25,9 +25,7 @@ export type WatchOptions = PushOptions & {
  *
  * @param sourceDirectory path to folder containing source files
  * @param hackmudDirectory path to hackmud directory
- * @param users to push to (pushes to all if empty)
- * @param scripts to push from (pushes from all if empty)
- * @param onPush function that's called on each script push
+ * @param options {@link WatchOptions details} and {@link PushOptions more details}
  */
 export async function watch(
 	sourceDirectory: string,

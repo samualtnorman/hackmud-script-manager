@@ -41,6 +41,8 @@ const globalFunctionsUnder7Characters = [
  *
  * (returned File will need `postprocess()`ing)
  *
+ * @param file babel ast node representing a file containing preprocessed code
+ * @param sourceCode the original untouched source code
  * @param options {@link TransformOptions details}
  */
 export function transform(file: File, sourceCode: string, {

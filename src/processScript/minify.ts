@@ -33,7 +33,7 @@ type MinifyOptions = {
 // TODO replace references to `arguments`
 
 /**
- * @param code compiled code and/or hackmud compatible code
+ * @param file babel ast node representing a file containing transformed code
  * @param options {@link MinifyOptions details}
  */
 export async function minify(file: File, {
