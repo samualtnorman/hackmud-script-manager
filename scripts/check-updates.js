@@ -37,5 +37,5 @@ const blacklist = new Set([
 	console.timeEnd(`time took`)
 
 	if (packagesWithUpdateAvailable.length)
-		console.log(`\nyou should run this:\nnpm i ${packagesWithUpdateAvailable.map(name => `${name}@latest`).join(` `)}`)
+		console.log(`\nyou should run this:\npnpm i ${packagesWithUpdateAvailable.map(name => `${name}@latest`).join(` `)}`)
 })()
