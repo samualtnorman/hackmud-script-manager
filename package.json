@@ -32,7 +32,7 @@
 		"lint": "eslint .; tsc --noEmit --emitDeclarationOnly false; tsc --project src --noEmit --emitDeclarationOnly false",
 		"test": "node --experimental-vm-modules node_modules/jest/bin/jest",
 		"generate-type-declarations": "tsc --project src",
-		"package": "rm -rf dist && rollup --config && tsc --project src && node scripts/build-package-json && cp LICENSE package-lock.json README.md dist"
+		"package": "rm -rf dist && rollup --config && tsc --project src && node scripts/build-package-json && cp LICENSE README.md dist"
 	},
 	"dependencies": {
 		"@babel/core": "^7.16.0",
