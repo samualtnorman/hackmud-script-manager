@@ -331,15 +331,6 @@ export async function minify(file: File, {
 						/* eslint-enable unicorn/no-null */
 					},
 
-					BooleanLiteral(path) {
-						let jsonValueIndex = jsonValues.indexOf(path.node.value)
-
-						if (jsonValueIndex == -1)
-							jsonValueIndex += jsonValues.push(path.node.value)
-
-						path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
-					},
-
 					NumericLiteral(path) {
 						promises.push((async () => {
 							if ((await minifyNumber(path.node.value)).length <= 3)
