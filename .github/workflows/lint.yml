@@ -14,12 +14,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.4.2
 
-    - name: Setup Node
-      uses: actions/setup-node@v1
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3.1.1
       with:
         node-version: ^12.20 || >=14
 
-    - run: npm ci
-    - run: npm run lint
+    - name: Setup PNPM
+      uses: pnpm/action-setup@v2.2.1
+      with:
+        version: 7.0.0-rc.9
+        run_install: true
+
+    - run: pnpm lint
