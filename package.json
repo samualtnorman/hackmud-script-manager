@@ -79,6 +79,8 @@
 		"@babel/preset-typescript": "^7.16.0",
 		"@samual/lib": "^0.3.0",
 		"@types/babel__core": "^7.1.16",
+		"@types/babel__generator": "^7.6.4",
+		"@types/babel__traverse": "^7.17.1",
 		"@types/node": "^12.20.37",
 		"@types/prettier": "^2.4.2",
 		"@types/semver": "^7.3.9",
