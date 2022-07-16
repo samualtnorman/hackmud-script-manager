@@ -231,7 +231,7 @@ for (const argument of process.argv.slice(2)) {
 		case `gen-dts`:
 		case `gen-types`: {
 			const sourcePath = resolvePath(commands[1] || `.`)
-			const typeDeclaration = generateTypeDeclaration(sourcePath, (await getConfig()).hackmudPath)
+			const typeDeclaration = await generateTypeDeclaration(sourcePath, (await getConfig()).hackmudPath)
 			let typeDeclarationPath = resolvePath(commands[2] || `./player.d.ts`)
 
 			try {
