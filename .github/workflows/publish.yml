@@ -24,7 +24,7 @@ jobs:
     - name: Setup Node.js environment
       uses: actions/setup-node@v3.1.1
       with:
-        node-version: ^12.20 || >=14
+        node-version: ">=14"
 
     - name: Setup PNPM
       uses: pnpm/action-setup@v2.2.1
