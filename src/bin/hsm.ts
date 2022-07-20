@@ -387,6 +387,8 @@ if (options.get(`help`) || options.get(`h`)) {
 	process.exit()
 }
 
+let autoExit = true
+
 switch (commands[0]) {
 	case `push`: {
 		const { hackmudPath } = await configPromise
@@ -558,6 +560,8 @@ switch (commands[0]) {
 			onReady: () => log(`Watching`),
 			forceQuineCheats: shouldforceQuineCheats
 		})
+
+		autoExit = false
 	} break
 
 	case `pull`: {
@@ -714,7 +718,7 @@ switch (commands[0]) {
 				}
 
 				console.log(config)
-				updateConfig(config)
+				await updateConfig(config)
 			} break
 
 			default: {
@@ -835,8 +839,10 @@ switch (commands[0]) {
 			watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
 				.on(`ready`, () => log(`Watching ${target}`))
 				.on(`change`, golfFile)
+
+			autoExit = false
 		} else
-			golfFile()
+			await golfFile()
 	} break
 
 	default: {
@@ -846,3 +852,6 @@ switch (commands[0]) {
 		logHelp()
 	}
 }
+
+if (autoExit)
+	process.exit()
