@@ -45,12 +45,12 @@ const globalFunctionsUnder7Characters = [
  * @param sourceCode the original untouched source code
  * @param options {@link TransformOptions details}
  */
-export function transform(file: File, sourceCode: string, {
+export const transform = (file: File, sourceCode: string, {
 	uniqueID = `00000000000`,
 	scriptUser = `UNKNOWN`,
 	scriptName = `UNKNOWN`,
 	seclevel = 4
-}: Partial<TransformOptions> = {}) {
+}: Partial<TransformOptions> = {}) => {
 	const topFunctionName = `_${uniqueID}_SCRIPT_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
@@ -102,6 +102,32 @@ export function transform(file: File, sourceCode: string, {
 
 	let functionDotPrototypeIsReferencedMultipleTimes = false
 
+	const createGetFunctionPrototypeNode = () => {
+		for (const globalFunction of globalFunctionsUnder7Characters) {
+			if (program.scope.hasOwnBinding(globalFunction))
+				continue
+
+			return t.memberExpression(
+				t.memberExpression(
+					t.identifier(globalFunction),
+					t.identifier(`constructor`)
+				),
+				t.identifier(`prototype`)
+			)
+		}
+
+		return t.memberExpression(
+			t.memberExpression(
+				t.arrowFunctionExpression(
+					[ t.identifier(`_`) ],
+					t.identifier(`_`)
+				),
+				t.identifier(`constructor`)
+			),
+			t.identifier(`prototype`)
+		)
+	}
+
 	if (program.scope.hasGlobal(`Function`)) {
 		const FunctionReferencePaths = getReferencePathsToGlobal(`Function`, program)
 
@@ -129,6 +155,35 @@ export function transform(file: File, sourceCode: string, {
 	}
 
 	let detectedSeclevel = 4
+
+	const processFakeSubscriptObject = (fakeSubscriptObjectName: string) => {
+		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
+			assert(referencePath.parent.type == `MemberExpression`)
+			assert(referencePath.parent.property.type == `Identifier`)
+			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
+			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parent.property.name), `invalid user "${referencePath.parent.property.name}" in subscript`)
+			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parentPath.parentPath.node.property.name), `invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`)
+
+			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
+				// BUG this is causing typescript to be slow
+				referencePath.parentPath.parentPath.replaceWith(
+					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`)
+				)
+			} else {
+				// BUG this is causing typescript to be slow
+				referencePath.parentPath.parentPath.replaceWith(
+					t.arrowFunctionExpression(
+						[ t.restElement(t.identifier(`args`)) ],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`),
+							[ t.spreadElement(t.identifier(`args`)) ]
+						)
+					)
+				)
+			}
+		}
+	}
 
 	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName))
@@ -844,61 +899,6 @@ export function transform(file: File, sourceCode: string, {
 	})
 
 	return { file, seclevel }
-
-	function processFakeSubscriptObject(fakeSubscriptObjectName: string) {
-		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-			assert(referencePath.parent.type == `MemberExpression`)
-			assert(referencePath.parent.property.type == `Identifier`)
-			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parent.property.name), `invalid user "${referencePath.parent.property.name}" in subscript`)
-			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parentPath.parentPath.node.property.name), `invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`)
-
-			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`)
-				)
-			} else {
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.arrowFunctionExpression(
-						[ t.restElement(t.identifier(`args`)) ],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`),
-							[ t.spreadElement(t.identifier(`args`)) ]
-						)
-					)
-				)
-			}
-		}
-	}
-
-	function createGetFunctionPrototypeNode() {
-		for (const globalFunction of globalFunctionsUnder7Characters) {
-			if (program.scope.hasOwnBinding(globalFunction))
-				continue
-
-			return t.memberExpression(
-				t.memberExpression(
-					t.identifier(globalFunction),
-					t.identifier(`constructor`)
-				),
-				t.identifier(`prototype`)
-			)
-		}
-
-		return t.memberExpression(
-			t.memberExpression(
-				t.arrowFunctionExpression(
-					[ t.identifier(`_`) ],
-					t.identifier(`_`)
-				),
-				t.identifier(`constructor`)
-			),
-			t.identifier(`prototype`)
-		)
-	}
 }
 
 export default transform

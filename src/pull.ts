@@ -8,7 +8,7 @@ import { resolve as resolvePath } from "path"
  * @param hackmudPath path to hackmud directory
  * @param script to pull in `user.name` format
  */
-export async function pull(sourceFolderPath: string, hackmudPath: string, script: string) {
+export const pull = async (sourceFolderPath: string, hackmudPath: string, script: string) => {
 	const [ user, name ] = script.split(`.`)
 
 	if (!user || !name)

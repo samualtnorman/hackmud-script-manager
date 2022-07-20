@@ -1,38 +1,29 @@
 #!/usr/bin/env node
 import { assert, countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
-import chalk from "chalk"
-import { watch as watchFile } from "chokidar"
-import fs from "fs"
+import { mkdir as makeDirectory, readFile, rmdir as removeDirectory, writeFile } from "fs/promises"
 import { homedir as getHomeDirectory } from "os"
-import { basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension, relative as getRelativePath, resolve as resolvePath } from "path"
-import { generateTypeDeclaration, Info, pull, syncMacros } from ".."
+import { Info } from ".."
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants.json"
+import generateTypeDeclaration from "../generateTypeDeclaration"
+import pull from "../pull"
+import syncMacros from "../syncMacros"
 
-const { readFile, rmdir: removeDirectory, writeFile, mkdir: makeDirectory } = fs.promises
+import {
+	basename as getPathBaseName,
+	dirname as getPathDirectory,
+	extname as getPathFileExtension,
+	relative as getRelativePath,
+	resolve as resolvePath
+} from "path"
 
 type ArgumentValue = boolean | number | string/* | ArgValue[]*/
+type Config = Partial<{ hackmudPath: string }> & Record<string, unknown>
 
 const configDirectoryPath = resolvePath(getHomeDirectory(), `.config`)
 const configFilePath = resolvePath(configDirectoryPath, `hsm.json`)
-
 const options = new Map<string, ArgumentValue>()
 const commands: string[] = []
-
-let config: Record<string, any> & Partial<{
-	hackmudPath: string
-	defaultUser: string
-	users: Record<string, {
-		colour: string
-	}>
-}> | undefined
-
-const colourJ = chalk.rgb(0xFF, 0xF4, 0x04)
-const colourK = chalk.rgb(0xF3, 0xF9, 0x98)
-const colourM = chalk.rgb(0xB3, 0xFF, 0x9B)
-const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
-const colourL = chalk.rgb(0x1E, 0xFF, 0x00)
-const colourB = chalk.rgb(0xCA, 0xCA, 0xCA)
 
 const userColours = new DynamicMap<string, string>(user => {
 	let hash = 0
@@ -42,6 +33,265 @@ const userColours = new DynamicMap<string, string>(user => {
 
 	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6]!(user)
 })
+
+const logNeedHackmudPathMessage = () => console.error(colourS(`\
+${colourD(`You need to set hackmudPath in config before you can use this command`)}
+
+${colourA(`To fix this:`)}
+Open hackmud and run "${colourC(`#dir`)}"
+This will open a file browser and print your hackmud user's script directory
+Go up 2 directories and then copy the path
+Then in a terminal run "${colourC(`hsm`)} ${colourL(`config set`)} ${colourV(`hackmudPath`)} ${colourB(`<the path you copied>`)}"`
+))
+
+const logHelp = () => {
+	const pushCommandDescription = `Push scripts from a directory to hackmud user's scripts directories`
+	const watchCommandDescription = `Watch a directory and push a script when modified`
+	const minifyCommandDescription = `Minify a script file on the spot`
+	const generateTypeDeclarationCommandDescription = `Generate a type declaration file for a directory of scripts`
+	const syncMacrosCommandDescription = `Sync macros across all hackmud users`
+	const configCommandDescription = `Modify and view the config file`
+	const configGetCommandDescription = `Retrieve a value from the config file`
+	const configSetCommandDescription = `Assign a value to the config file`
+	const configDeleteCommandDescription = `Remove a key and value from the config file`
+	const pullCommandDescription = `Pull a script a from a hackmud user's script directory`
+
+	const skipMinifyOptionDescription = `Skip minification to produce a readable script`
+	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
+	const forceQuineCheatsOptionDescription = `Force quine cheats even if the character count is higher`
+
+	console.log(colourN(`Version`) + colourS(`: `) + colourV(moduleVersion))
+
+	switch (commands[0]) {
+		case `config`: {
+			switch (commands[1]) {
+				case `get`: {
+					console.log(`
+${colourJ(configGetCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(`${commands[0]} ${commands[1]}`)} ${colourB(`<key>`)}`
+					)
+				} break
+
+				case `set`: {
+					console.log(`
+${colourJ(configSetCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(`${commands[0]} ${commands[1]}`)} ${colourB(`<key> <value>`)}`
+					)
+				} break
+
+				case `delete`: {
+					console.log(`
+${colourJ(configDeleteCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(`${commands[0]} ${commands[1]}`)} ${colourB(`<key>`)}`
+					)
+				} break
+
+				default: {
+					console.log(colourS(`\
+${colourN(`Config path`)}: ${colourV(configFilePath)}
+
+${colourJ(`Modify the config file`)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(`${commands[0]} get`)} ${colourB(`<key>`)}
+    ${configGetCommandDescription}
+${colourC(`hsm`)} ${colourL(`${commands[0]} set`)} ${colourB(`<key> <value>`)}
+    ${configSetCommandDescription}
+${colourC(`hsm`)} ${colourL(`${commands[0]} delete`)} ${colourB(`<key>`)}
+    ${configDeleteCommandDescription}`
+					))
+				}
+			}
+		} break
+
+		case `push`: {
+			console.log(colourS(`
+${colourJ(pushCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [<script user>.<script name>...]`)}
+
+${colourA(`Options:`)}
+${colourN(`--skip-minify`)}
+    ${skipMinifyOptionDescription}
+${colourN(`--mangle-names`)}
+    ${mangleNamesOptionDescription}
+${colourN(`--force-quine-cheats`)}
+    ${forceQuineCheatsOptionDescription}`
+			))
+		} break
+
+		case `dev`:
+		case `watch`: {
+			console.log(colourS(`\
+${colourN(`Aliases`)}: ${colourV(`watch, dev`)}
+
+${colourJ(watchCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [<script user>.<script name>...]`)}
+
+${colourA(`Options:`)}
+${colourN(`--skip-minify`)}
+    ${skipMinifyOptionDescription}
+${colourN(`--mangle-names`)}
+    ${mangleNamesOptionDescription}
+${colourN(`--type-declaration-path`)}=${colourB(`<path>`)}
+    Path to generate a type declaration file for the scripts
+${colourN(`--force-quine-cheats`)}
+    ${forceQuineCheatsOptionDescription}`
+			))
+		} break
+
+		case `pull`: {
+			console.log(colourS(`
+${colourJ(pullCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<script user>`)}${colourV(`.`)}${colourB(`<script name>`)}`
+			))
+		} break
+
+		case `minify`:
+		case `golf`: {
+			console.log(colourS(`\
+${colourN(`Aliases`)}: ${colourV(`minify, golf`)}
+
+${colourJ(minifyCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<target> [output path]`)}
+
+${colourA(`Options:`)}
+${colourN(`--skip-minify`)}
+    ${skipMinifyOptionDescription}
+${colourN(`--mangle-names`)}
+    ${mangleNamesOptionDescription}
+${colourN(`--force-quine-cheats`)}
+    ${forceQuineCheatsOptionDescription}
+${colourN(`--watch`)}
+    Watch for changes`
+			))
+		} break
+
+		case `generate-type-declaration`:
+		case `gen-type-declaration`:
+		case `gen-dts`:
+		case `gen-types`: {
+			console.log(colourS(`\
+${colourN(`Aliases`)}: ${colourV(`generate-type-declaration, gen-type-declaration, gen-types, gen-dts`)}
+
+${colourJ(generateTypeDeclarationCommandDescription)}
+
+${colourA(`Usage:`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [output path]`)}`
+			))
+		} break
+
+		case `sync-macros`: {
+			console.log(`\n${colourJ(syncMacrosCommandDescription)}`)
+		} break
+
+		default: {
+			console.log(colourS(`
+${colourJ(`Hackmud Script Manager`)}
+
+${colourA(`Commands:`)}
+${colourL(`push`)}
+    ${pushCommandDescription}
+${colourL(`watch`)}, ${colourL(`dev`)}
+    ${watchCommandDescription}
+${colourL(`minify`)}, ${colourL(`golf`)}
+    ${minifyCommandDescription}
+${colourL(`generate-type-declaration`)}, ${colourL(`gen-type-declaration`)}, ${colourL(`gen-types`)}, ${colourL(`gen-dts`)}
+    ${generateTypeDeclarationCommandDescription}
+${colourL(`sync-macros`)}
+    ${syncMacrosCommandDescription}
+${colourL(`config`)}
+    ${configCommandDescription}
+${colourL(`pull`)}
+    ${pullCommandDescription}`
+			))
+		}
+	}
+}
+
+const exploreObject = (object: any, keys: string[], createPath = false) => {
+	for (const key of keys) {
+		if (createPath)
+			object = typeof object[key] == `object` ? object[key] : object[key] = {}
+		else
+			object = object?.[key]
+	}
+
+	return object
+}
+
+const updateConfig = async (config: Config) => {
+	const json = JSON.stringify(config, undefined, `\t`)
+
+	if (configDidNotExist)
+		log(`Creating config file at ${configFilePath}`)
+
+	await writeFile(configFilePath, json).catch(async error => {
+		switch (error.code) {
+			case `EISDIR`: {
+				await removeDirectory(configFilePath)
+			} break
+
+			case `ENOENT`: {
+				await makeDirectory(configDirectoryPath)
+			} break
+
+			default:
+				throw error
+		}
+
+		await writeFile(configFilePath, json)
+	})
+}
+
+const logInfo = ({ file, users, minLength, error }: Info, hackmudPath: string) => {
+	if (error) {
+		logError(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
+
+		return
+	}
+
+	console.log(
+		`pushed ${
+			chalk.bold(file)
+		} to ${
+			users.map(user => chalk.bold(userColours.get(user))).join(`, `)
+		} | ${
+			chalk.bold(String(minLength))
+		} chars | ${
+			chalk.bold(
+				`${resolvePath(
+					hackmudPath!,
+					users[0]!,
+					`scripts`,
+					getPathBaseName(file, getPathFileExtension(file))
+				)}.js`
+			)
+		}`
+	)
+}
+
+const log = (message: string) => {
+	console.log(colourS(message))
+}
+
+const logError = (message: string) => {
+	console.error(colourD(message))
+	process.exitCode = 1
+}
 
 for (const argument of process.argv.slice(2)) {
 	if (argument[0] == `-`) {
@@ -72,365 +322,496 @@ for (const argument of process.argv.slice(2)) {
 		commands.push(argument)
 }
 
-(async () => {
-	if (options.get(`version`) || options.get(`v`)) {
-		version()
-
-		return
-	}
-
-	if (options.get(`help`) || options.get(`h`)) {
-		help()
-
-		return
-	}
-
-	switch (commands[0]) {
-		case `push`: {
-			const config = await getConfig()
-
-			if (!config.hackmudPath) {
-				console.log(`you need to set hackmudPath in config before you can use this command`)
-
-				break
-			}
-
-			const sourcePath = commands[1]
-
-			if (!sourcePath) {
-				console.error(`specify the directory to watch`)
-				help()
-
-				break
-			}
-
-			const { push } = await import(`../push`)
-
-			const hackmudPath = config.hackmudPath
-			const scripts = commands.slice(2)
-
-			if (!scripts.length)
-				scripts.push(`*.*`)
-
-			if (options.has(`skip-minify`) && options.has(`mangle-names`))
-				console.warn(`pointless specifying both --skip-minify and --mangle-names`)
-
-			let forceQuineCheats = options.get(`force-quine-cheats`)
-
-			if (forceQuineCheats != undefined && typeof forceQuineCheats != `boolean`) {
-				console.warn(`warning: \`--force-quine-cheats\` should be \`true\` or \`false\``)
-				forceQuineCheats = Boolean(forceQuineCheats)
-			}
-
-			const infos = await push(
-				sourcePath,
-				hackmudPath,
-				{
-					scripts,
-					onPush: onPushLogger,
-					minify: !options.get(`skip-minify`),
-					mangleNames: Boolean(options.get(`mangle-names`)),
-					forceQuineCheats
-				}
-			)
-
-			if (!infos.length)
-				console.warn(`couldn't find any scripts to push`)
-
-			updateConfig()
-		} break
-
-		case `dev`:
-		case `watch`: {
-			if (!commands[1]) {
-				console.error(`specify the directory to watch`)
-				help()
-
-				break
-			}
-
-			const config = await getConfig()
-
-			if (!config.hackmudPath) {
-				console.log(`you need to set hackmudPath in config before you can use this command`)
-
-				break
-			}
-
-			const { watch } = await import(`../watch`)
-
-			const scripts = commands.slice(2)
-
-			if (!scripts.length)
-				scripts.push(`*.*`)
-
-			if (options.has(`skip-minify`) && options.has(`mangle-names`))
-				console.warn(`pointless specifying both --skip-minify and --mangle-names`)
-
-			let forceQuineCheats = options.get(`force-quine-cheats`)
-
-			if (forceQuineCheats != undefined && typeof forceQuineCheats != `boolean`) {
-				console.warn(`warning: \`--force-quine-cheats\` should be \`true\` or \`false\``)
-				forceQuineCheats = Boolean(forceQuineCheats)
-			}
-
-			watch(commands[1], config.hackmudPath, {
-				scripts,
-				onPush: onPushLogger,
-				typeDeclarationPath: (options.get(`type-declaration-path`) || options.get(`type-declaration`) || options.get(`dts`) || options.get(`gen-types`))?.toString(),
-				minify: !options.get(`skip-minify`),
-				mangleNames: Boolean(options.get(`mangle-names`)),
-				onReady: () => console.log(`watching`),
-				forceQuineCheats
-			})
-		} break
-
-		case `pull`: {
-			const config = await getConfig()
-
-			if (!config.hackmudPath) {
-				console.log(`you need to set hackmudPath in config before you can use this command`)
-
-				break
-			}
-
-			const script = commands[1]
-
-			if (!script) {
-				help()
-
-				break
-			}
-
-			const sourcePath = commands[2] || `.`
-			const hackmudPath = config.hackmudPath
-
-			try {
-				await pull(sourcePath, hackmudPath, script)
-			} catch {
-				console.log(`something went wrong, did you forget to #down the script?`)
-			}
-		} break
-
-		case `sync-macros`: {
-			const { hackmudPath } = await getConfig()
-
-			if (!hackmudPath) {
-				console.log(`you need to set hackmudPath in config before you can use this command`)
-
-				break
-			}
-
-			const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
-
-			console.log(`synced ${macrosSynced} macros to ${usersSynced} users`)
-		} break
-
-		case `generate-type-declaration`:
-		case `gen-type-declaration`:
-		case `gen-dts`:
-		case `gen-types`: {
-			const sourcePath = resolvePath(commands[1] || `.`)
-			const typeDeclaration = await generateTypeDeclaration(sourcePath, (await getConfig()).hackmudPath)
-			let typeDeclarationPath = resolvePath(commands[2] || `./player.d.ts`)
-
-			try {
-				await writeFile(typeDeclarationPath, typeDeclaration)
-			} catch (error) {
-				assert(error instanceof Error)
-
-				if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
-					throw error
-
-				typeDeclarationPath = resolvePath(typeDeclarationPath, `player.d.ts`)
-				await writeFile(typeDeclarationPath, typeDeclaration)
-			}
-
-			console.log(`wrote type declaration to ${chalk.bold(typeDeclarationPath)}`)
-		} break
-
-		case `config`: {
-			switch (commands[1]) {
-				case `get`: {
-					if (commands[2])
-						console.log(exploreObject(await getConfig(), commands[2].split(`.`)))
-					else
-						console.log(await getConfig())
-				} break
-
-				case `delete`: {
-					if (commands[2]) {
-						const keys = commands[2].split(`.`)
-						const lastKey = keys.pop()!
-
-						if (!keys.length) {
-							help()
-
-							break
-						}
-
-						const config = await getConfig()
-
-						delete exploreObject(config, keys)?.[lastKey]
-						console.log(config)
-					} else
-						console.log(`Usage:\nhsm config delete <key>`)
-				} break
-
-				case `set`: {
-					if (commands[2] && commands[3]) {
-						const keys = commands[2].split(`.`)
-
-						if (!keys.length) {
-							help()
-
-							break
-						}
-
-						const lastKey = keys.pop()!
-						const config = await getConfig()
-
-						if (!keys.length && lastKey == `hackmudPath`)
-							config.hackmudPath = resolvePath(commands[3])
-						else {
-							let object = config
-
-							for (const key of keys) {
-								if (typeof object[key] == `object`)
-									object = object[key]
-								else {
-									object[key] = {}
-									object = object[key]
-								}
-							}
-
-							object[lastKey] = commands[3]
-						}
-
-						console.log(config)
-					} else
-						console.log(`Usage:\nhsm config set <key> <value>`)
-				} break
-
-				default: {
-					if (commands[1])
-						console.log(`unknown command`)
-
-					help()
-				}
-			}
-		} break
-
-		case `help`:
-		case `h`: {
-			help()
-		} break
-
-		case `version`:
-		case `v`: {
-			version()
-		} break
-
-		case `golf`:
-		case `minify`: {
-			const target = commands[1]
-
-			if (!target) {
-				console.log(`Target required\nUsage: ${getPathBaseName(process.argv[1]!)} ${commands[0]} <target> [output]`)
-
-				break
-			}
-
-			const fileExtension = getPathFileExtension(target)
-
-			if (!supportedExtensions.includes(fileExtension)) {
-				console.log(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(extension => chalk.bold(extension)).join(`", "`)}"`)
-
-				break
-			}
-
-			if (options.get(`watch`)) {
-				watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
-					.on(`ready`, () => console.log(`watching ${target}`))
-					.on(`change`, () => golfFile(target, fileExtension))
-			} else
-				await golfFile(target, fileExtension)
-		} break
-
-		default: {
-			if (commands[0])
-				console.log(`unknown command`)
-
-			help()
+if (commands[0] == `v` || commands[0] == `version` || options.get(`version`) || options.get(`v`)) {
+	console.log(moduleVersion)
+	process.exit()
+}
+
+let configDidNotExist = false
+
+const configPromise: Promise<Config> = readFile(configFilePath, { encoding: `utf-8` }).then(
+	configFile => {
+		let temporaryConfig
+
+		try {
+			temporaryConfig = JSON.parse(configFile)
+		} catch {
+			// TODO log to error log file
+			log(`Config file was corrupted, resetting`)
+
+			return {}
 		}
+
+		if (!temporaryConfig || typeof temporaryConfig != `object`) {
+			log(`Config file was corrupted, resetting`)
+
+			return {}
+		}
+
+		if (`hackmudPath` in temporaryConfig && typeof temporaryConfig.hackmudPath != `string`) {
+			log(`Property "hackmudPath" of config file was corrupted, removing`)
+			delete temporaryConfig.hackmudPath
+		}
+
+		return temporaryConfig
+	},
+	() => {
+		configDidNotExist = true
+
+		return {}
 	}
+)
 
-	updateConfig()
+const pushModule = import(`../push`)
+const processScriptModule = import(`../processScript`)
+const watchModule = import(`../watch`)
+const chokidarModule = import(`chokidar`)
 
-	async function golfFile(target: string, fileExtension: string) {
-		const { processScript } = await import(`../processScript`)
+const { default: chalk } = await import(`chalk`)
 
-		await readFile(target, { encoding: `utf-8` }).then(
-			async source => {
-				const fileBaseName = getPathBaseName(target, fileExtension)
-				// eslint-disable-next-line unicorn/prevent-abbreviations -- the file extension is `src` not `source`
-				const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
+const colourA = chalk.rgb(0xFF, 0xFF, 0xFF)
+const colourB = chalk.rgb(0xCA, 0xCA, 0xCA)
+const colourC = chalk.rgb(0x9B, 0x9B, 0x9B)
+const colourD = chalk.rgb(0xFF, 0x00, 0x00)
+const colourJ = chalk.rgb(0xFF, 0xF4, 0x04)
+const colourK = chalk.rgb(0xF3, 0xF9, 0x98)
+const colourL = chalk.rgb(0x1E, 0xFF, 0x00)
+const colourM = chalk.rgb(0xB3, 0xFF, 0x9B)
+const colourN = chalk.rgb(0x00, 0xFF, 0xFF)
+const colourS = chalk.rgb(0x7A, 0xB2, 0xF4)
+const colourV = chalk.rgb(0xFF, 0x00, 0xEC)
+const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
 
-				const scriptName = fileBaseNameEndsWithDotSrc
-					? fileBaseName.slice(0, -4)
-					: fileBaseName
+if (options.get(`help`) || options.get(`h`)) {
+	logHelp()
+	process.exit()
+}
 
-				let scriptUser = `UNKNOWN`
+switch (commands[0]) {
+	case `push`: {
+		const { hackmudPath } = await configPromise
 
-				if (getPathBaseName(resolvePath(target, `..`)) == `scripts` && getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`)
-					scriptUser = getPathBaseName(resolvePath(target, `../..`))
+		if (!hackmudPath) {
+			logNeedHackmudPathMessage()
 
-				const minify = !options.get(`skip-minify`)
-				const mangleNames = Boolean(options.get(`mangle-names`))
+			break
+		}
 
-				if (!minify && mangleNames)
-					console.warn(`warning: \`--mangle-names\` has no effect while \`--skip-minify\` is active`)
+		const sourcePath = commands[1]
 
-				let forceQuineCheats = options.get(`force-quine-cheats`)
+		if (!sourcePath) {
+			logError(`Must provide the directory to push from\n`)
+			logHelp()
 
-				if (forceQuineCheats != undefined && typeof forceQuineCheats != `boolean`) {
-					console.warn(`warning: \`--force-quine-cheats\` should be \`true\` or \`false\``)
-					forceQuineCheats = Boolean(forceQuineCheats)
+			break
+		}
+
+		const scripts = commands.slice(2)
+
+		if (scripts.length) {
+			const invalidScript = scripts
+				.find(script => !/^(?:[a-z_][a-z\d_]{0,24}|\*)\.(?:[a-z_][a-z\d_]{0,24}|\*)$/.test(script))
+
+			if (invalidScript) {
+				logError(`Invalid script name: ${JSON.stringify(invalidScript)}\n`)
+				logHelp()
+
+				break
+			}
+		} else
+			scripts.push(`*.*`)
+
+		if (options.has(`skip-minify`) && options.has(`mangle-names`)) {
+			logError(`Option ${colourN(`--mangle-names`)} is not compatible with ${colourN(`--skip-minify`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const shouldSkipMinify = options.get(`skip-minify`)
+		let shouldMinify
+
+		if (shouldSkipMinify != undefined) {
+			if (typeof shouldSkipMinify != `boolean`) {
+				logError(`The value for ${colourN(`--skip-minify`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+				logHelp()
+
+				break
+			}
+
+			shouldMinify = !shouldSkipMinify
+		}
+
+		const shouldMangleNames = options.get(`mangle-names`)
+
+		if (shouldMangleNames != undefined && typeof shouldMangleNames != `boolean`) {
+			logError(`The value for ${colourN(`--mangle-names`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const shouldforceQuineCheats = options.get(`force-quine-cheats`)
+
+		if (shouldforceQuineCheats != undefined && typeof shouldforceQuineCheats != `boolean`) {
+			logError(`The value for ${colourN(`--force-quine-cheats`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const { push } = await pushModule
+
+		const infos = await push(sourcePath, hackmudPath, {
+			scripts,
+			onPush: info => logInfo(info, hackmudPath),
+			minify: shouldMinify,
+			mangleNames: shouldMangleNames,
+			forceQuineCheats: shouldforceQuineCheats
+		})
+
+		if (!infos.length)
+			logError(`Could not find any scripts to push`)
+	} break
+
+	case `dev`:
+	case `watch`: {
+		const { hackmudPath } = await configPromise
+
+		if (!hackmudPath) {
+			logNeedHackmudPathMessage()
+
+			break
+		}
+
+		const sourcePath = commands[1]
+
+		if (!sourcePath) {
+			logError(`Must provide the directory to watch\n`)
+			logHelp()
+
+			break
+		}
+
+		const scripts = commands.slice(2)
+
+		if (scripts.length) {
+			const invalidScript = scripts
+				.find(script => !/^(?:[a-z_][a-z\d_]{0,24}|\*)\.(?:[a-z_][a-z\d_]{0,24}|\*)$/.test(script))
+
+			if (invalidScript) {
+				logError(`Invalid script name: ${JSON.stringify(invalidScript)}\n`)
+				logHelp()
+
+				break
+			}
+		} else
+			scripts.push(`*.*`)
+
+		if (options.has(`skip-minify`) && options.has(`mangle-names`)) {
+			logError(`Option ${colourN(`--mangle-names`)} is not compatible with ${colourN(`--skip-minify`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const shouldSkipMinify = options.get(`skip-minify`)
+		let shouldMinify
+
+		if (shouldSkipMinify != undefined) {
+			if (typeof shouldSkipMinify != `boolean`) {
+				logError(`The value for ${colourN(`--skip-minify`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+				logHelp()
+
+				break
+			}
+
+			shouldMinify = !shouldSkipMinify
+		}
+
+		const shouldMangleNames = options.get(`mangle-names`)
+
+		if (shouldMangleNames != undefined && typeof shouldMangleNames != `boolean`) {
+			logError(`The value for ${colourN(`--mangle-names`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const shouldforceQuineCheats = options.get(`force-quine-cheats`)
+
+		if (shouldforceQuineCheats != undefined && typeof shouldforceQuineCheats != `boolean`) {
+			logError(`The value for ${colourN(`--force-quine-cheats`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const { watch } = await watchModule
+
+		watch(sourcePath, hackmudPath, {
+			scripts,
+			onPush: info => logInfo(info, hackmudPath),
+			typeDeclarationPath: (options.get(`type-declaration-path`) || options.get(`type-declaration`) || options.get(`dts`) || options.get(`gen-types`))?.toString(),
+			minify: shouldMinify,
+			mangleNames: shouldMangleNames,
+			onReady: () => log(`Watching`),
+			forceQuineCheats: shouldforceQuineCheats
+		})
+	} break
+
+	case `pull`: {
+		const { hackmudPath } = await configPromise
+
+		if (!hackmudPath) {
+			logNeedHackmudPathMessage()
+
+			break
+		}
+
+		const script = commands[1]
+
+		if (!script) {
+			logError(`Must provide the script to pull\n`)
+			logHelp()
+
+			break
+		}
+
+		const sourcePath = commands[2] || `.`
+
+		try {
+			await pull(sourcePath, hackmudPath, script)
+		} catch (error) {
+			console.error(error)
+			logError(`Something went wrong, did you forget to ${colourC(`#down`)} the script?`)
+		}
+	} break
+
+	case `sync-macros`: {
+		const { hackmudPath } = await configPromise
+
+		if (!hackmudPath) {
+			logNeedHackmudPathMessage()
+
+			break
+		}
+
+		const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
+
+		log(`Synced ${macrosSynced} macros to ${usersSynced} users`)
+	} break
+
+	case `generate-type-declaration`:
+	case `gen-type-declaration`:
+	case `gen-dts`:
+	case `gen-types`: {
+		const target = commands[1]
+
+		if (!target) {
+			logError(`Must provide target directory\n`)
+			logHelp()
+
+			break
+		}
+
+		const sourcePath = resolvePath(target)
+		const outputPath = commands[2] || `./player.d.ts`
+		const typeDeclaration = await generateTypeDeclaration(sourcePath, (await configPromise).hackmudPath)
+		let typeDeclarationPath = resolvePath(outputPath)
+
+		try {
+			await writeFile(typeDeclarationPath, typeDeclaration)
+		} catch (error) {
+			assert(error instanceof Error)
+
+			if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
+				throw error
+
+			typeDeclarationPath = resolvePath(typeDeclarationPath, `player.d.ts`)
+			await writeFile(typeDeclarationPath, typeDeclaration)
+		}
+
+		log(`Wrote type declaration to ${chalk.bold(typeDeclarationPath)}`)
+	} break
+
+	case `config`: {
+		switch (commands[1]) {
+			case `get`: {
+				const key = commands[2]
+
+				if (key)
+					log(exploreObject(await configPromise, key.split(`.`)))
+				else
+					console.log(await configPromise)
+			} break
+
+			case `delete`: {
+				const key = commands[2]
+
+				if (!key) {
+					logError(`Must provide a key to delete\n`)
+					logHelp()
+
+					break
 				}
 
+				const keyParts = key.split(`.`)
+
+				const pathName = keyParts
+					.map(name => /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name))
+					.join(`.`)
+
+				const lastKey = keyParts.pop()!
+				const config = await configPromise
+
+				delete exploreObject(config, keyParts)?.[lastKey]
+				log(`Removed ${colourV(pathName)} from config file`)
+			} break
+
+			case `set`: {
+				const key = commands[2]
+				const value = commands[3]
+
+				if (!key) {
+					logError(`Must provide a key and value\n`)
+					logHelp()
+
+					break
+				}
+
+				const keys = key.split(`.`)
+
+				const pathName = keys
+					.map(name => /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name))
+					.join(`.`)
+
+				if (!value) {
+					logError(`Must provide a value for the key ${pathName}\n`)
+					logHelp()
+
+					break
+				}
+
+				const lastKey = keys.pop()!
+				const config = await configPromise
+
+				if (!keys.length && lastKey == `hackmudPath`)
+					config.hackmudPath = resolvePath(value.startsWith(`~/`) ? getHomeDirectory() + value.slice(1) : value)
+				else {
+					let object: any = config
+
+					for (const key of keys) {
+						if (typeof object[key] == `object`)
+							object = object[key]
+						else {
+							object[key] = {}
+							object = object[key]
+						}
+					}
+
+					object[lastKey] = value
+				}
+
+				console.log(config)
+				updateConfig(config)
+			} break
+
+			default: {
+				if (commands[1])
+					logError(`Unknown command: ${JSON.stringify(commands[1])}\n`)
+
+				logHelp()
+			}
+		}
+	} break
+
+	case `help`:
+	case `h`: {
+		logHelp()
+	} break
+
+	case `golf`:
+	case `minify`: {
+		const target = commands[1]
+
+		if (!target) {
+			logError(`Must provide target\n`)
+			logHelp()
+
+			break
+		}
+
+		const fileExtension = getPathFileExtension(target)
+
+		if (!supportedExtensions.includes(fileExtension)) {
+			logError(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${supportedExtensions.map(extension => chalk.bold(extension)).join(`", "`)}"`)
+
+			break
+		}
+
+		const { processScript } = await processScriptModule
+		const fileBaseName = getPathBaseName(target, fileExtension)
+		// eslint-disable-next-line unicorn/prevent-abbreviations -- the file extension is `src` not `source`
+		const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
+		const scriptName = fileBaseNameEndsWithDotSrc ? fileBaseName.slice(0, -4) : fileBaseName
+
+		const scriptUser = (
+			getPathBaseName(resolvePath(target, `..`)) == `scripts`
+			&& getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
+		) ? getPathBaseName(resolvePath(target, `../..`)) : `UNKNOWN`
+
+		const minify = !options.get(`skip-minify`)
+
+		if (options.has(`skip-minify`) && options.has(`mangle-names`)) {
+			logError(`Option ${colourN(`--mangle-names`)} would have no effect if minification is skipped\n`)
+			logHelp()
+
+			break
+		}
+
+		const mangleNames_ = options.get(`mangle-names`)
+
+		if (mangleNames_ != undefined && typeof mangleNames_ != `boolean`) {
+			logError(`The value for ${colourN(`--mangle-names`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const mangleNames = mangleNames_
+
+		const forceQuineCheats_ = options.get(`force-quine-cheats`)
+
+		if (forceQuineCheats_ != undefined && typeof forceQuineCheats_ != `boolean`) {
+			logError(`the value for ${colourN(`--force-quine-cheats`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+			logHelp()
+
+			break
+		}
+
+		const forceQuineCheats = forceQuineCheats_
+
+		let outputPath = commands[2] || resolvePath(
+			getPathDirectory(target),
+			fileBaseNameEndsWithDotSrc
+				? `${scriptName}.js`
+				: (fileExtension == `.js` ? `${fileBaseName}.min.js` : `${fileBaseName}.js`)
+		)
+
+		const golfFile = () => readFile(target, { encoding: `utf-8` }).then(
+			async source => {
 				const timeStart = performance.now()
 
 				const { script, warnings } = await processScript(
 					source,
-					{
-						minify,
-						scriptUser,
-						scriptName,
-						filePath: target,
-						mangleNames,
-						forceQuineCheats
-					}
+					{ minify, scriptUser, scriptName, filePath: target, mangleNames, forceQuineCheats }
 				)
 
 				const timeTook = performance.now() - timeStart
 
 				for (const { message, line } of warnings)
-					console.log(`warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
-
-				let outputPath: string
-
-				outputPath = commands[2] ? commands[2] : resolvePath(
-					getPathDirectory(target),
-
-					fileBaseNameEndsWithDotSrc
-						? `${scriptName}.js`
-						: (fileExtension == `.js`
-							? `${fileBaseName}.min.js`
-							: `${fileBaseName}.js`
-						)
-				)
-
-				const scriptLength = countHackmudCharacters(script)
+					log(`Warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
 
 				await writeFilePersistent(outputPath, script)
 					.catch(async (error: NodeJS.ErrnoException) => {
@@ -441,147 +822,27 @@ for (const argument of process.argv.slice(2)) {
 						await writeFilePersistent(outputPath, script)
 					})
 					.then(
-						() => console.log(`wrote ${chalk.bold(scriptLength)} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | took ${Math.round(timeTook * 100) / 100}ms`),
-						(error: NodeJS.ErrnoException) => console.log(error.message)
+						() => log(`Wrote ${chalk.bold(countHackmudCharacters(script))} chars to ${chalk.bold(getRelativePath(`.`, outputPath))} | took ${Math.round(timeTook * 100) / 100}ms`),
+						(error: NodeJS.ErrnoException) => logError(error.message)
 					)
 			},
-			(error: NodeJS.ErrnoException) => console.log(error.message)
+			(error: NodeJS.ErrnoException) => logError(error.message)
 		)
+
+		if (options.get(`watch`)) {
+			const { watch: watchFile } = await chokidarModule
+
+			watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
+				.on(`ready`, () => log(`Watching ${target}`))
+				.on(`change`, golfFile)
+		} else
+			golfFile()
+	} break
+
+	default: {
+		if (commands[0])
+			logError(`Unknown command: ${JSON.stringify(commands[0])}\n`)
+
+		logHelp()
 	}
-})()
-
-function help() {
-	switch (commands[0]) {
-		case `config`: {
-			switch (commands[1]) {
-				case `get`: {
-					console.log(`hsm config get <key>`)
-				} break
-
-				case `set`: {
-					console.log(`hsm config set <key> <value>`)
-				} break
-
-				case `delete`: {
-					console.log(`hsm config delete <key>`)
-				} break
-
-				default: {
-					console.log(`hsm config <get, delete, set>`)
-				}
-			}
-		} break
-
-		case `push`: {
-			console.log(`hsm push <dir> [..."<script user>.<script name>"] [--skip-minify] [--mangle-names]`)
-		} break
-
-		case `dev`:
-		case `watch`: {
-			console.log(`hsm ${commands[0]} <dir> [..."<script user>.<script name>"] [--skip-minify] [--mangle-names]`)
-		} break
-
-		case `pull`: {
-			console.log(`hsm pull <script user>.<script name>`)
-		} break
-
-		case `minify`:
-		case `golf`: {
-			console.log(`${getPathBaseName(process.argv[1]!)} ${commands[0]} <target> [output]`)
-		} break
-
-		default: {
-			console.log(`hsm <push, watch, pull, config, golf>`)
-		}
-	}
-}
-
-function version() {
-	console.log(moduleVersion)
-}
-
-async function getConfig() {
-	if (config)
-		return config
-
-	return config = await readFile(configFilePath, { encoding: `utf-8` })
-		.then(configFile => {
-			let temporaryConfig
-
-			try {
-				temporaryConfig = JSON.parse(configFile)
-			} catch {
-				// TODO log to error log file
-				console.log(`config file was corrupted, resetting`)
-
-				return {}
-			}
-
-			if (!temporaryConfig || typeof temporaryConfig != `object`) {
-				console.log(`config file was corrupted, resetting`)
-
-				return {}
-			}
-
-			return temporaryConfig
-		}, () => {
-			console.log(`creating config file at ${configFilePath}`)
-
-			return {}
-		})
-}
-
-function exploreObject(object: any, keys: string[], createPath = false) {
-	for (const key of keys) {
-		if (createPath)
-			object = typeof object[key] == `object` ? object[key] : object[key] = {}
-		else
-			object = object?.[key]
-	}
-
-	return object
-}
-
-function updateConfig() {
-	if (config) {
-		const json = JSON.stringify(config, undefined, `\t`)
-
-		writeFile(configFilePath, json).catch(async error => {
-			switch (error.code) {
-				case `EISDIR`: {
-					await removeDirectory(configFilePath)
-				} break
-
-				case `ENOENT`: {
-					await makeDirectory(configDirectoryPath)
-				} break
-
-				default: {
-					throw error
-				}
-			}
-
-			writeFile(configFilePath, json)
-		})
-	}
-}
-
-function onPushLogger({ file, users, minLength, error }: Info) {
-	if (error) {
-		console.log(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
-
-		return
-	}
-
-	console.log(
-		`pushed ${
-			chalk.bold(file)
-		} to ${
-			users.map(user => chalk.bold(userColours.get(user))).join(`, `)
-		} | ${
-			chalk.bold(String(minLength))
-		} chars | ${
-			chalk.bold(`${resolvePath(config!.hackmudPath!, users[0]!, `scripts`, getPathBaseName(file, getPathFileExtension(file)))}.js`)
-		}`
-	)
 }

@@ -1,9 +1,7 @@
-import fs from "fs"
+import { readdir as readDirectory } from "fs/promises"
 import { basename as getBaseName, resolve as resolvePath } from "path"
 
-const { readdir: readDirectory } = fs.promises
-
-export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string) {
+export const generateTypeDeclaration = async (sourceDirectory: string, hackmudPath?: string) => {
 	const users = new Set<string>()
 
 	if (hackmudPath) {

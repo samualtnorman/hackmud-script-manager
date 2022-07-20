@@ -36,12 +36,12 @@ type MinifyOptions = {
  * @param file babel ast node representing a file containing transformed code
  * @param options {@link MinifyOptions details}
  */
-export async function minify(file: File, {
+export const minify = async (file: File, {
 	uniqueID = `00000000000`,
 	mangleNames = false,
 	forceQuineCheats,
 	autocomplete
-}: LaxPartial<MinifyOptions> = {}) {
+}: LaxPartial<MinifyOptions> = {}) => {
 	assert(/^\w{11}$/.exec(uniqueID))
 
 	let program!: NodePath<Program>
@@ -173,7 +173,6 @@ export async function minify(file: File, {
 						templateElement.value.raw = templateElement.value.cooked
 							.replace(/\\/g, `\\\\`)
 							.replace(/`/g, `\\\``)
-							// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
 							.replace(/\$\{/g, `$\\{`)
 					} else
 						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
@@ -548,7 +547,7 @@ export async function minify(file: File, {
 
 export default minify
 
-function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<string, unknown>) {
+const parseObjectExpression = (node: babel.types.ObjectExpression, o: Record<string, unknown>) => {
 	if (!node.properties.length)
 		return false
 
@@ -586,7 +585,7 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 	return true
 }
 
-function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
+const parseArrayExpression = (node: babel.types.ArrayExpression, o: unknown[]) => {
 	if (!node.elements.length)
 		return false
 
@@ -622,11 +621,10 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 	return true
 }
 
-async function minifyNumber(number: number) {
-	return /\$\((?<number>.+)\)/.exec(((await terser.minify(`$(${number})`, { ecma: 2015 })).code!))!.groups!.number!
-}
+const minifyNumber = async (number: number) =>
+	/\$\((?<number>.+)\)/.exec(((await terser.minify(`$(${number})`, { ecma: 2015 })).code!))!.groups!.number!
 
-function getFunctionBodyStart(code: string) {
+const getFunctionBodyStart = (code: string) => {
 	const tokens = tokenize(code, { ecmaVersion: 2015 })
 
 	tokens.getToken() // function

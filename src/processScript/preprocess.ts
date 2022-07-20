@@ -17,7 +17,7 @@ export type PreprocessOptions = {
  * @param code source code for preprocessing
  * @param options {@link PreprocessOptions details}
  */
-export async function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
+export const preprocess = async (code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) => {
 	assert(/^\w{11}$/.test(uniqueID))
 
 	const sourceCode = code

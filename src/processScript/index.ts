@@ -74,7 +74,7 @@ export type ProcessOptions = {
  * @param code JavaScript or TypeScript code
  * @param options {@link ProcessOptions details}
  */
-export async function processScript(
+export const processScript = async (
 	code: string,
 	{
 		minify: shouldMinify = true,
@@ -85,10 +85,7 @@ export async function processScript(
 		mangleNames = false,
 		forceQuineCheats
 	}: LaxPartial<ProcessOptions> = {}
-): Promise<{
-	script: string
-	warnings: { message: string, line: number }[]
-}> {
+): Promise<{ script: string, warnings: { message: string, line: number }[] }> => {
 	assert(/^\w{11}$/.exec(uniqueID))
 
 	const sourceCode = code
@@ -316,9 +313,7 @@ export async function processScript(
 			},
 
 			VariableDeclarator(path) {
-				renameVariables(path.node.id)
-
-				function renameVariables(lValue: LVal) {
+				const renameVariables = (lValue: LVal) => {
 					switch (lValue.type) {
 						case `Identifier`: {
 							if (includesIllegalString(lValue.name))
@@ -343,6 +338,8 @@ export async function processScript(
 							throw new Error(`unknown lValue type "${lValue.type}"`)
 					}
 				}
+
+				renameVariables(path.node.id)
 			},
 
 			ObjectProperty({ node: objectProperty }) {
@@ -364,7 +361,6 @@ export async function processScript(
 						templateElement.value.raw = templateElement.value.cooked
 							.replace(/\\/g, `\\\\`)
 							.replace(/`/g, `\\\``)
-							// eslint-disable-next-line unicorn/better-regex, optimize-regex/optimize-regex
 							.replace(/\$\{/g, `$\\{`)
 					} else
 						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)

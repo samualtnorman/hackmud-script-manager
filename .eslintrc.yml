@@ -19,7 +19,6 @@ plugins:
   - eslint-comments
   - array-func
   - regexp
-  - optimize-regex
 
 extends:
   - eslint:recommended
@@ -158,6 +157,9 @@ rules:
   eslint-comments/disable-enable-pair: off
   "@typescript-eslint/no-unnecessary-condition": off
   unicorn/no-useless-undefined: off
+  no-inner-declarations: off
+  unicorn/better-regex: off
+  unicorn/prefer-top-level-await: off
 
   no-constant-condition:
     - warn
@@ -193,7 +195,6 @@ rules:
 
   func-style:
     - warn
-    - declaration
 
   grouped-accessor-pairs:
     - warn
@@ -270,7 +271,7 @@ rules:
       prev: "*"
       next: "*"
 
-    - blankLine: never
+    - blankLine: any
       prev: import
       next: import
 
@@ -350,6 +351,10 @@ rules:
       prev: export
       next: export
 
+    - blankLine: any
+      prev: type
+      next: type
+
   rest-spread-spacing:
     - warn
     - never
@@ -395,19 +400,16 @@ rules:
     - warn
     - ignoreStringArrays: true
 
-  unicorn/better-regex:
-    - warn
-    - sortCharacterClasses: false
-
   unicorn/prevent-abbreviations:
     - warn
     - checkFilenames: false
 
-  optimize-regex/optimize-regex:
-    - warn
-    - blacklist:
-      - charClassClassrangesMerge
-
   "@typescript-eslint/lines-between-class-members":
     - warn
     - allowSingleLine: true
+
+  unicorn/prefer-ternary:
+    - warn
+
+  regexp/prefer-d:
+    - warn

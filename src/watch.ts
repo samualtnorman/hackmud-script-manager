@@ -1,13 +1,11 @@
 import { assert, countHackmudCharacters, DynamicMap, LaxPartial, writeFilePersistent } from "@samual/lib"
 import { watch as watchDirectory } from "chokidar"
-import fs from "fs"
+import { readdir as readDirectory, readFile, writeFile } from "fs/promises"
 import { basename as getPathBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { supportedExtensions } from "./constants.json"
 import generateTypeDeclaration from "./generateTypeDeclaration"
 import processScript from "./processScript"
 import { PushOptions } from "./push"
-
-const { readFile, readdir: readDirectory, writeFile } = fs.promises
 
 export type WatchOptions = PushOptions & {
 	/**
@@ -27,7 +25,7 @@ export type WatchOptions = PushOptions & {
  * @param hackmudDirectory path to hackmud directory
  * @param options {@link WatchOptions details} and {@link PushOptions more details}
  */
-export async function watch(
+export const watch = async (
 	sourceDirectory: string,
 	hackmudDirectory: string,
 	{
@@ -39,7 +37,7 @@ export async function watch(
 		onReady,
 		forceQuineCheats
 	}: LaxPartial<WatchOptions> = {}
-) {
+) => {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
 
@@ -245,11 +243,7 @@ export async function watch(
 		grab their types, this will need to change
 	*/
 
-	await writeTypeDeclaration()
-	watcher.on(`add`, writeTypeDeclaration)
-	watcher.on(`unlink`, writeTypeDeclaration)
-
-	async function writeTypeDeclaration() {
+	const writeTypeDeclaration = async () => {
 		const typeDeclaration = await generateTypeDeclaration(sourceDirectory, hackmudDirectory)
 
 		try {
@@ -264,6 +258,10 @@ export async function watch(
 			await writeFile(typeDeclarationPath, typeDeclaration)
 		}
 	}
+
+	await writeTypeDeclaration()
+	watcher.on(`add`, writeTypeDeclaration)
+	watcher.on(`unlink`, writeTypeDeclaration)
 }
 
 export default watch

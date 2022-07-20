@@ -1,4 +1,4 @@
-export function postprocess(code: string, seclevel: number, uniqueID: string) {
+export const postprocess = (code: string, seclevel: number, uniqueID: string) => {
 	return code
 		.replace(/^function\s*\w+\(/, `function(`)
 		.replace(new RegExp(`\\$${uniqueID}\\$\\\\(?:\\\\)?\\$SC_DOLLAR\\$`, `g`), `S\\C$`)

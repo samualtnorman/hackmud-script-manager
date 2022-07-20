@@ -1,11 +1,9 @@
 import { countHackmudCharacters, DynamicMap, LaxPartial, writeFilePersistent } from "@samual/lib"
-import fs from "fs"
+import { readdir as readDirectory, readFile } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import { Info } from "."
 import { supportedExtensions } from "./constants.json"
 import processScript from "./processScript"
-
-const { readFile, readdir: readDirectory } = fs.promises
 
 export type PushOptions = {
 	/** whether to do the minify step (defaults to `true`) */
@@ -45,7 +43,7 @@ export type PushOptions = {
  * @param options {@link PushOptions details}
  * @returns array of info on pushed scripts
  */
-export async function push(
+export const push = async (
 	sourceDirectory: string,
 	hackmudDirectory: string,
 	{
@@ -55,7 +53,7 @@ export async function push(
 		mangleNames = false,
 		forceQuineCheats
 	}: LaxPartial<PushOptions> = {}
-) {
+) => {
 	const scriptNamesByUser = new DynamicMap((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
