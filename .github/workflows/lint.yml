@@ -24,7 +24,7 @@ jobs:
     - name: Setup PNPM
       uses: pnpm/action-setup@v2.2.1
       with:
-        version: 7.0.0-rc.9
+        version: 7
         run_install: true
 
     - run: pnpm lint
