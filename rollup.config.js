@@ -2,9 +2,9 @@ import babel from "@rollup/plugin-babel"
 import commonJS from "@rollup/plugin-commonjs"
 import json from "@rollup/plugin-json"
 import nodeResolve from "@rollup/plugin-node-resolve"
+import terser from "@rollup/plugin-terser"
 import { readdir as readDirectory } from "fs/promises"
 import preserveShebang from "rollup-plugin-preserve-shebang"
-import { terser } from "rollup-plugin-terser"
 import packageConfig_ from "./package.json"
 
 /** @typedef {import("rollup").RollupOptions} RollupOptions */
