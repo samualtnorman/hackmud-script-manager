@@ -19,7 +19,7 @@
 	],
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
 	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
-	"license": "GPL-3.0-or-later",
+	"license": "MIT",
 	"author": "Samual Norman",
 	"main": "index.js",
 	"repository": {
