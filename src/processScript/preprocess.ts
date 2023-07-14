@@ -1,11 +1,16 @@
 import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
-import babelTraverse, { NodePath } from "@babel/traverse"
-import t, { Program } from "@babel/types"
-import { assert, spliceString } from "@samual/lib"
+import type { NodePath } from "@babel/traverse"
+import babelTraverse from "@babel/traverse"
+import type { Program } from "@babel/types"
+import t from "@babel/types"
+import { assert } from "@samual/lib/assert"
+import { spliceString } from "@samual/lib/spliceString"
 import { resolve as resolveModule } from "import-meta-resolve"
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
 export type PreprocessOptions = {

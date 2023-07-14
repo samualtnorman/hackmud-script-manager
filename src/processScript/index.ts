@@ -1,4 +1,4 @@
-import { PluginItem } from "@babel/core"
+import type { PluginItem } from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
@@ -14,25 +14,28 @@ import babelPluginProposalOptionalChaining from "@babel/plugin-proposal-optional
 import babelPluginProposalPrivatePropertyInObject from "@babel/plugin-proposal-private-property-in-object"
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
 import babelTraverse from "@babel/traverse"
-import t, { LVal } from "@babel/types"
-import rollupPluginBabel_ from "@rollup/plugin-babel"
+import type { LVal } from "@babel/types"
+import t from "@babel/types"
+import { babel as rollupPluginBabel } from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
-import { assert, LaxPartial } from "@samual/lib"
+import type { LaxPartial } from "@samual/lib"
+import { assert } from "@samual/lib/assert"
 import { resolve as resolvePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
-import { supportedExtensions as extensions } from "../constants.json"
+import { supportedExtensions as extensions } from "../constants"
 import minify from "./minify"
 import postprocess from "./postprocess"
 import preprocess from "./preprocess"
 import { includesIllegalString, replaceUnsafeStrings } from "./shared"
 import transform from "./transform"
 
-const { default: rollupPluginBabel } = rollupPluginBabel_ as any as typeof import("@rollup/plugin-babel")
 const { format } = prettier
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export { minify } from "./minify"
@@ -359,9 +362,9 @@ export const processScript = async (
 						templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
 
 						templateElement.value.raw = templateElement.value.cooked
-							.replace(/\\/g, `\\\\`)
-							.replace(/`/g, `\\\``)
-							.replace(/\$\{/g, `$\\{`)
+							.replaceAll(`\\`, `\\\\`)
+							.replaceAll(`\``, `\\\``)
+							.replaceAll(`\${`, `$\\{`)
 					} else
 						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
 				}
@@ -374,7 +377,7 @@ export const processScript = async (
 		})
 
 		// we can't have comments because they may contain illegal strings
-		code = format(generate(file, { comments: false }).code, {
+		code = await format(generate(file, { comments: false }).code, {
 			parser: `babel`,
 			arrowParens: `avoid`,
 			semi: false,

@@ -1,14 +1,16 @@
-#!/usr/bin/env node
-import { assert, countHackmudCharacters, DynamicMap, writeFilePersistent } from "@samual/lib"
+/* eslint-disable unicorn/no-process-exit */
+import { DynamicMap } from "@samual/lib/DynamicMap"
+import { assert } from "@samual/lib/assert"
+import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { mkdir as makeDirectory, readFile, rmdir as removeDirectory, writeFile } from "fs/promises"
 import { homedir as getHomeDirectory } from "os"
-import { Info } from ".."
+import type { Info } from ".."
 import { version as moduleVersion } from "../../package.json"
-import { supportedExtensions } from "../constants.json"
+import { supportedExtensions } from "../constants"
 import generateTypeDeclaration from "../generateTypeDeclaration"
 import pull from "../pull"
 import syncMacros from "../syncMacros"
-
 import {
 	basename as getPathBaseName,
 	dirname as getPathDirectory,
@@ -761,8 +763,8 @@ switch (commands[0]) {
 		const scriptName = fileBaseNameEndsWithDotSrc ? fileBaseName.slice(0, -4) : fileBaseName
 
 		const scriptUser = (
-			getPathBaseName(resolvePath(target, `..`)) == `scripts`
-			&& getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
+			getPathBaseName(resolvePath(target, `..`)) == `scripts` &&
+			getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
 		) ? getPathBaseName(resolvePath(target, `../..`)) : `UNKNOWN`
 
 		const minify = !options.get(`skip-minify`)

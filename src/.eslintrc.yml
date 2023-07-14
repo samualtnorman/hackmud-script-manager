@@ -1,7 +1,6 @@
-extends:
-  - ../.eslintrc.yml
+extends: [ ../.eslintrc.yml ]
 
 rules:
-  "@typescript-eslint/no-unnecessary-condition":
-    - warn
-    - allowConstantLoopConditions: true
+  "@typescript-eslint/no-namespace": [ warn, allowDeclarations: true ]
+  "@typescript-eslint/quotes": [ warn, backtick ]
+  "@typescript-eslint/consistent-type-imports": [ warn, prefer: type-imports ]

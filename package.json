@@ -27,12 +27,12 @@
 		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
 	},
 	"scripts": {
+		"lint": "eslint .; tsc; tsc --project src",
 		"build": "rollup --config",
-		"dev": "rollup --config --watch",
-		"lint": "eslint .; tsc --noEmit --emitDeclarationOnly false; tsc --project src --noEmit --emitDeclarationOnly false",
-		"test": "node --experimental-vm-modules node_modules/jest/bin/jest",
-		"generate-type-declarations": "tsc --project src",
-		"package": "rm -rf dist && rollup --config && tsc --project src && node scripts/build-package-json && cp LICENSE README.md dist"
+		"dev": "pnpm build --watch",
+		"emit-declarations": "tsc --project src --declaration --emitDeclarationOnly --noEmit false --outDir dist",
+		"package": "rm -rf dist && pnpm build && pnpm emit-declarations && scripts/build-package-json.js && cp LICENSE README.md dist",
+		"update": "pnpm update --latest !@types/node && pnpm update @types/node"
 	},
 	"dependencies": {
 		"@babel/core": "^7.22.9",
@@ -65,6 +65,7 @@
 		"@rollup/plugin-commonjs": "^25.0.2",
 		"@rollup/plugin-json": "^6.0.0",
 		"@rollup/plugin-node-resolve": "^15.1.0",
+		"@samual/lib": "^0.8.1",
 		"acorn": "^8.10.0",
 		"chalk": "^5.3.0",
 		"chokidar": "^3.5.3",
@@ -78,7 +79,6 @@
 		"@babel/preset-env": "^7.22.9",
 		"@babel/preset-typescript": "^7.22.5",
 		"@rollup/plugin-terser": "^0.4.3",
-		"@samual/lib": "^0.8.1",
 		"@types/babel__core": "^7.20.1",
 		"@types/babel__generator": "^7.6.4",
 		"@types/babel__traverse": "^7.20.1",
@@ -93,24 +93,19 @@
 		"eslint-plugin-regexp": "^1.15.0",
 		"eslint-plugin-unicorn": "^47.0.0",
 		"latest-version": "^7.0.0",
+		"magic-string": "^0.30.1",
 		"rollup-plugin-preserve-shebang": "^1.0.1",
 		"semver": "^7.5.4",
 		"typescript": "^5.1.6"
 	},
-	"optionalDependencies": {
-		"deasync": "^0.1.28"
-	},
 	"engines": {
-		"node": ">=14"
+		"node": ">=16"
 	},
 	"private": true,
 	"types": "index.d.ts",
 	"type": "module",
 	"exports": {
-		".": {
-			"import": "./index.js",
-			"require": "./index.cjs"
-		},
-		"./*": "./*"
+		"./*": "./*.js",
+		"./*.js": "./*.js"
 	}
 }

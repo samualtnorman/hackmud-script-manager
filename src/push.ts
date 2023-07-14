@@ -1,8 +1,11 @@
-import { countHackmudCharacters, DynamicMap, LaxPartial, writeFilePersistent } from "@samual/lib"
+import type { LaxPartial } from "@samual/lib"
+import { DynamicMap } from "@samual/lib/DynamicMap"
+import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { readdir as readDirectory, readFile } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import { Info } from "."
-import { supportedExtensions } from "./constants.json"
+import type { Info } from "."
+import { supportedExtensions } from "./constants"
 import processScript from "./processScript"
 
 export type PushOptions = {

@@ -1,13 +1,14 @@
-import { exec as execute_, execFileSync as executeFileSync } from "child_process"
-import { readFile } from "fs/promises"
-import semver from "semver"
-import { promisify } from "util"
+#!/usr/bin/env node
+import { spawnSync } from "child_process"
+import * as semver from "semver"
+import packageConfig from "../package.json" assert { type: "json" }
 
-const execute = promisify(execute_)
+const hash = spawnSync("git", [ "rev-parse", "--short", "HEAD" ], { encoding: "utf8" }).stdout.trim()
 
-const [ { version }, gitHash ] = await Promise.all([
-	readFile(`package.json`, { encoding: `utf-8` }).then(JSON.parse),
-	execute(`git rev-parse --short HEAD`).then(({ stdout }) => stdout.trim())
-])
+spawnSync(
+	"pnpm",
+	[ "version", `${semver.inc(/** @type {any} */ (packageConfig).version || "0.0.0", "minor")}-${hash}` ],
+	{ stdio: "inherit" }
+)
 
-executeFileSync(`npm`, [ `version`, `${semver.inc(version, `minor`)}-${gitHash}` ], { stdio: `inherit` })
+process.exit()

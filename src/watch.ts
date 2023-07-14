@@ -1,11 +1,15 @@
-import { assert, countHackmudCharacters, DynamicMap, LaxPartial, writeFilePersistent } from "@samual/lib"
+import type { LaxPartial } from "@samual/lib"
+import { DynamicMap } from "@samual/lib/DynamicMap"
+import { assert } from "@samual/lib/assert"
+import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { watch as watchDirectory } from "chokidar"
 import { readdir as readDirectory, readFile, writeFile } from "fs/promises"
-import { basename as getPathBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
-import { supportedExtensions } from "./constants.json"
+import { extname as getFileExtension, basename as getPathBaseName, resolve as resolvePath } from "path"
+import { supportedExtensions } from "./constants"
 import generateTypeDeclaration from "./generateTypeDeclaration"
 import processScript from "./processScript"
-import { PushOptions } from "./push"
+import type { PushOptions } from "./push"
 
 export type WatchOptions = PushOptions & {
 	/**

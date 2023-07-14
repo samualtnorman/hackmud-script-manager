@@ -1,4 +1,4 @@
-import { copyFilePersistent } from "@samual/lib"
+import { copyFilePersistent } from "@samual/lib/copyFilePersistent"
 import { resolve as resolvePath } from "path"
 
 /**

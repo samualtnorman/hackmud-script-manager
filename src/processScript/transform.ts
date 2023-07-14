@@ -1,9 +1,13 @@
-import babelTraverse, { NodePath } from "@babel/traverse"
-import t, { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
-import { assert, clearObject } from "@samual/lib"
-import { validDBMethods } from "../constants.json"
+import type { NodePath } from "@babel/traverse"
+import babelTraverse from "@babel/traverse"
+import type { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
+import t from "@babel/types"
+import { assert } from "@samual/lib/assert"
+import { clearObject } from "@samual/lib/clearObject"
+import { validDBMethods } from "../constants"
 import { getReferencePathsToGlobal } from "./shared"
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export type TransformOptions = {
@@ -319,7 +323,7 @@ export const transform = (file: File, sourceCode: string, {
 	}
 
 	// rollup removes all the inline exports and places a statement at the end instead
-	const lastStatement = program.node.body[program.node.body.length - 1]
+	const lastStatement = program.node.body.at(-1)
 	let exportDefaultName
 
 	assert(lastStatement, `program is empty`)

@@ -1,4 +1,0 @@
-{
-	"supportedExtensions": [ ".js", ".ts" ],
-	"validDBMethods": [ "i", "r", "f", "u", "u1", "us", "ObjectId" ]
-}

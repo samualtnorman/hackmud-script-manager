@@ -5,12 +5,9 @@
 		"strict": true,
 		"useUnknownInCatchVariables": true,
 		"strictNullChecks": true,
-		"rootDir": ".",
-		"declaration": true,
-		"emitDeclarationOnly": true,
-		"outDir": "../dist"
+		"rootDir": "."
 	},
-	"extends": "../tsconfig.json",
-	"include": [ "**/*", "constants.json" ],
+	"extends": "..",
+	"include": [ "**/*" ],
 	"references": [ { "path": ".." } ]
 }

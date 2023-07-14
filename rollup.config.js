@@ -1,85 +1,108 @@
-import babel from "@rollup/plugin-babel"
-import commonJS from "@rollup/plugin-commonjs"
+#!node_modules/.bin/rollup --config
+import * as t from "@babel/types"
+import { babel } from "@rollup/plugin-babel"
 import json from "@rollup/plugin-json"
-import nodeResolve from "@rollup/plugin-node-resolve"
+import { nodeResolve } from "@rollup/plugin-node-resolve"
 import terser from "@rollup/plugin-terser"
-import { readdir as readDirectory } from "fs/promises"
-import preserveShebang from "rollup-plugin-preserve-shebang"
-import packageConfig_ from "./package.json"
+import MagicString from "magic-string"
+import { cpus } from "os"
+import { relative as getRelativeFilePath } from "path"
+import { findFiles } from "./node_modules/@samual/lib/findFiles.js"
+import packageConfig from "./package.json" assert { type: "json" }
 
-/** @typedef {import("rollup").RollupOptions} RollupOptions */
+const SourceFolder = "src"
+const Minify = false
 
-const /** @type {Record<string, any>} */ packageConfig = packageConfig_
+const externalDependencies = []
 
-const plugins = [
-	babel({
-		babelHelpers: `bundled`,
-		extensions: [ `.ts` ]
-	}),
-	commonJS(),
-	json({ preferConst: true }),
-	nodeResolve({ extensions: [ `.ts` ] }),
-	preserveShebang()
-]
+if ("dependencies" in packageConfig)
+	externalDependencies.push(...Object.keys(packageConfig.dependencies))
 
-const sourceDirectory = `src`
+if ("optionalDependencies" in packageConfig)
+	externalDependencies.push(...Object.keys(packageConfig.optionalDependencies))
 
-/**
- * @param {string} path the directory to start recursively finding files in
- * @param {string[] | ((name: string) => boolean)} filter either a blacklist or a filter function that returns false to ignore file name
- * @param {string[]} paths
- * @returns promise that resolves to array of found files
- */
-const findFiles = async (path, filter = [], paths = []) => {
-	const filterFunction = Array.isArray(filter)
-		? name => !filter.includes(name)
-		: filter
+export default findFiles(SourceFolder).then(foundFiles => /** @type {import("rollup").RollupOptions} */ ({
+	input: Object.fromEntries(
+		foundFiles
+			.filter(path => path.endsWith(".ts") && !path.endsWith(".d.ts"))
+			.map(path => [ path.slice(SourceFolder.length + 1, -3), path ])
+	),
+	output: { dir: "dist", chunkFileNames: "[name]-.js", generatedCode: "es2015", interop: "auto", compact: Minify },
+	plugins: [
+		babel({
+			babelHelpers: "bundled",
+			extensions: [ ".ts" ],
+			presets: [
+				[ "@babel/preset-env", { targets: { node: "14" } } ],
+				[ "@babel/preset-typescript", { allowDeclareFields: true } ]
+			],
+			plugins: [
+				{
+					name: "babel-plugin-here",
+					visitor: {
+						Program(path) {
+							if (!path.scope.hasGlobal("HERE"))
+								return
 
-	await Promise.all((await readDirectory(path, { withFileTypes: true })).map(async dirent => {
-		if (!filterFunction(dirent.name))
-			return
+							const [ variableDeclarationPath ] = path.unshiftContainer(
+								"body",
+								t.variableDeclaration("let", [ t.variableDeclarator(t.identifier("HERE")) ])
+							)
 
-		const direntPath = `${path}/${dirent.name}`
+							path.scope.crawl()
 
-		if (dirent.isDirectory())
-			await findFiles(direntPath, filterFunction, paths)
-		else if (dirent.isFile())
-			paths.push(direntPath)
-	}))
+							const filePath = getRelativeFilePath(".", this.file.opts.filename)
 
-	return paths
-}
+							for (const referencePath of path.scope.getBinding("HERE").referencePaths) {
+								const line = referencePath.node.loc.start.line
+								const column = referencePath.node.loc.start.column + 1
 
-const findFilesPromise = findFiles(sourceDirectory)
-const external = []
+								if (referencePath.parent.type != "TemplateLiteral") {
+									referencePath.replaceWith(t.stringLiteral(`${filePath}:${line}:${column}`))
 
-if (`dependencies` in packageConfig)
-	external.push(...Object.keys(packageConfig.dependencies))
+									continue
+								}
 
-/** @type {(command: Record<string, unknown>) => Promise<RollupOptions>} */
-export default async ({ w }) => {
-	if (!w) {
-		plugins.push(terser({
-			ecma: 2019,
+								const { parent, node } = referencePath
+								const index = parent.expressions.indexOf(/** @type {any} */ (node))
+								const quasi = parent.quasis[index].value.raw
+								const nextQuasi = parent.quasis[index + 1].value.raw
+
+								parent.expressions.splice(index, 1)
+								delete parent.quasis[index].value.cooked
+								parent.quasis[index].value.raw = `${quasi}${filePath}:${line}:${column}${nextQuasi}`
+								parent.quasis[index].tail = parent.quasis[index + 1].tail
+								parent.quasis.splice(index + 1, 1)
+							}
+
+							variableDeclarationPath.remove()
+						}
+					}
+				}
+			]
+		}),
+		nodeResolve({ extensions: [ ".ts" ] }),
+		Minify && terser(/** @type {Parameters<typeof terser>[0] & { maxWorkers: number }} */ ({
 			keep_classnames: true,
-			keep_fnames: true
-		}))
-	} else if (`devDependencies` in packageConfig)
-		external.push(...Object.keys(packageConfig.devDependencies))
+			keep_fnames: true,
+			compress: { passes: Infinity },
+			maxWorkers: Math.floor(cpus().length / 2)
+		})),
+		{
+			name: "rollup-plugin-shebang",
+			renderChunk(code, { fileName }) {
+				if (!fileName.startsWith("bin/"))
+					return undefined
 
-	return {
-		input: Object.fromEntries(
-			(await findFilesPromise)
-				.filter(path => path.endsWith(`.ts`) && !path.endsWith(`.d.ts`))
-				.map(path => [ path.slice(sourceDirectory.length + 1, -3), path ])
-		),
-		output: {
-			dir: `dist`,
-			interop: `auto`
+				const magicString = new MagicString(code).prepend("#!/usr/bin/env node\n")
+
+				return { code: magicString.toString(), map: magicString.generateMap({ hires: true }) }
+			}
 		},
-		plugins,
-		external: external.map(name => new RegExp(`^${name}(?:/|$)`)),
-		preserveEntrySignatures: `allow-extension`,
-		treeshake: { moduleSideEffects: false }
-	}
-}
+		json()
+	],
+	external:
+		source => externalDependencies.some(dependency => source == dependency || source.startsWith(`${dependency}/`)),
+	preserveEntrySignatures: "allow-extension",
+	strictDeprecations: true
+}))

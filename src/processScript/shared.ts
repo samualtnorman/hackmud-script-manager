@@ -1,5 +1,6 @@
-import { NodePath } from "@babel/traverse"
-import t, { Identifier, Program } from "@babel/types"
+import type { NodePath } from "@babel/traverse"
+import type { Identifier, Program } from "@babel/types"
+import t from "@babel/types"
 import { ensure } from "@samual/lib/assert"
 
 export const getReferencePathsToGlobal = (name: string, program: NodePath<Program>) => {
@@ -26,16 +27,15 @@ export const includesIllegalString = (toCheck: string) => {
 
 export const replaceUnsafeStrings = (uniqueID: string, toReplace: string) => {
 	return toReplace
-		.replace(/SC\$/g, `$${uniqueID}$\\$SC_DOLLAR$`)
-		.replace(/DB\$/g, `$${uniqueID}$\\$DB_DOLLAR$`)
-		.replace(/__D_S/g, `$${uniqueID}$\\$D$`)
-		.replace(/__FMCL_/g, `$${uniqueID}$\\$FMCL$`)
-		.replace(/__G_/g, `$${uniqueID}$\\$G$`)
-		.replace(/\/\//g, `$${uniqueID}$SLASH_SLASH$`)
-		// eslint-disable-next-line unicorn/no-unsafe-regex
-		.replace(/#[0-4fhmln]?s(?:\.[_a-z][\d_a-z]{0,24}){2}\(/g, `$${uniqueID}$NOT_A_SUBSCRIPT$$$&$`)
-		.replace(/#db\.(?<methodName>[irfu]|u1|us|ObjectId)\(/g, `$${uniqueID}$NOT_A_DB_CALL$$$1$`)
-		.replace(/#D\(/g, `$${uniqueID}$NOT_A_DEBUG_CALL$`)
-		.replace(/#FMCL/g, `$${uniqueID}$NOT_FMCL$`)
-		.replace(/#G/g, `$${uniqueID}$NOT_G$`)
+		.replaceAll(`SC$`, `$${uniqueID}$\\$SC_DOLLAR$`)
+		.replaceAll(`DB$`, `$${uniqueID}$\\$DB_DOLLAR$`)
+		.replaceAll(`__D_S`, `$${uniqueID}$\\$D$`)
+		.replaceAll(`__FMCL_`, `$${uniqueID}$\\$FMCL$`)
+		.replaceAll(`__G_`, `$${uniqueID}$\\$G$`)
+		.replaceAll(`//`, `$${uniqueID}$SLASH_SLASH$`)
+		.replaceAll(/#[0-4fhmln]?s(?:\.[_a-z][\d_a-z]{0,24}){2}\(/g, `$${uniqueID}$NOT_A_SUBSCRIPT$$$&$`)
+		.replaceAll(/#db\.(?<methodName>[irfu]|u1|us|ObjectId)\(/g, `$${uniqueID}$NOT_A_DB_CALL$$$1$`)
+		.replaceAll(`#D(`, `$${uniqueID}$NOT_A_DEBUG_CALL$`)
+		.replaceAll(`#FMCL`, `$${uniqueID}$NOT_FMCL$`)
+		.replaceAll(`#G`, `$${uniqueID}$NOT_G$`)
 }

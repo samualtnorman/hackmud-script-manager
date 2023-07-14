@@ -1,4 +1,4 @@
-export { supportedExtensions } from "./constants.json"
+export { supportedExtensions } from "./constants"
 export { generateTypeDeclaration } from "./generateTypeDeclaration"
 export { processScript } from "./processScript"
 export { pull } from "./pull"
