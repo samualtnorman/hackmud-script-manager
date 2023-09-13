@@ -160,6 +160,9 @@ devDependencies:
   '@typescript-eslint/parser':
     specifier: ^6.7.0
     version: 6.7.0(eslint@8.49.0)(typescript@5.2.2)
+  babel-plugin-here:
+    specifier: ^0.0.1
+    version: 0.0.1
   eslint:
     specifier: ^8.49.0
     version: 8.49.0
@@ -2015,6 +2018,13 @@ packages:
   /array-union@2.1.0:
     resolution: {integrity: sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==}
     engines: {node: '>=8'}
+    dev: true
+
+  /babel-plugin-here@0.0.1:
+    resolution: {integrity: sha512-7pDq338T+Jr0Ogc+lPOFYYax0dBWMna9cvRLQNPm0mATGYwNcAfXyCnRZlAlsBgFgzSvkCJHGFT8PUn6hBmwYg==}
+    engines: {node: '>=16'}
+    dependencies:
+      '@babel/types': 7.22.17
     dev: true
 
   /babel-plugin-polyfill-corejs2@0.4.5(@babel/core@7.22.17):

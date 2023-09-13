@@ -561,6 +561,7 @@ export const transform = (file: File, sourceCode: string, {
 					globalBlockVariables.add(declarator.id.name)
 			} else if (globalBlockStatement.type == `ClassDeclaration`) {
 				program.scope.crawl()
+				assert(globalBlockStatement.id, HERE)
 
 				if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
 					globalBlock.body.splice(globalBlockIndex, 1)
