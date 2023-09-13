@@ -149,8 +149,8 @@ devDependencies:
     specifier: ^7.20.1
     version: 7.20.1
   '@types/node':
-    specifier: ^16.18.50
-    version: 16.18.50
+    specifier: ^18.17.15
+    version: 18.17.15
   '@types/semver':
     specifier: ^7.5.1
     version: 7.5.1
@@ -1816,8 +1816,8 @@ packages:
     resolution: {integrity: sha512-Hr5Jfhc9eYOQNPYO5WLDq/n4jqijdHNlDXjuAQkkt+mWdQR+XJToOHrsD4cPaMXpn6KO7y2+wM8AZEs8VpBLVA==}
     dev: true
 
-  /@types/node@16.18.50:
-    resolution: {integrity: sha512-OiDU5xRgYTJ203v4cprTs0RwOCd5c5Zjv+K5P8KSqfiCsB1W3LcamTUMcnQarpq5kOYbhHfSOgIEJvdPyb5xyw==}
+  /@types/node@18.17.15:
+    resolution: {integrity: sha512-2yrWpBk32tvV/JAd3HNHWuZn/VDN1P+72hWirHnvsvTGSqbANi+kSeuQR9yAHnbvaBvHDsoTdXV0Fe+iRtHLKA==}
     dev: true
 
   /@types/normalize-package-data@2.4.1:

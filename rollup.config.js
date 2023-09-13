@@ -32,7 +32,7 @@ export default findFiles(SourceFolder).then(foundFiles => /** @type {import("rol
 			babelHelpers: "bundled",
 			extensions: [ ".ts" ],
 			presets: [
-				[ "@babel/preset-env", { targets: { node: "14" } } ],
+				[ "@babel/preset-env", { targets: { node: "18" } } ],
 				[ "@babel/preset-typescript", { allowDeclareFields: true } ]
 			],
 			plugins: [ babelPluginHere() ]

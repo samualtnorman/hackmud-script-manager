@@ -84,7 +84,7 @@
 		"@types/babel__core": "^7.20.1",
 		"@types/babel__generator": "^7.6.4",
 		"@types/babel__traverse": "^7.20.1",
-		"@types/node": "^16.18.50",
+		"@types/node": "^18.17.15",
 		"@types/semver": "^7.5.1",
 		"@typescript-eslint/eslint-plugin": "^6.7.0",
 		"@typescript-eslint/parser": "^6.7.0",
@@ -99,7 +99,7 @@
 		"typescript": "^5.2.2"
 	},
 	"engines": {
-		"node": ">=16"
+		"node": ">=18"
 	},
 	"private": true,
 	"types": "index.d.ts",

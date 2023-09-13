@@ -8,7 +8,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2.4.2
-    - { name: Setup Node.js environment, uses: actions/setup-node@v3.1.1, with: { node-version: ">=16" } }
+    - { name: Setup Node.js environment, uses: actions/setup-node@v3.1.1, with: { node-version: ">=18" } }
     - { name: Setup PNPM, uses: pnpm/action-setup@v2.2.1, with: { version: 8, run_install: true } }
     - run: git config --global user.email github-action@users.noreply.github.com
     - run: git config --global user.name "Github Action"
