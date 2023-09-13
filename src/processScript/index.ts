@@ -1,18 +1,21 @@
 import type { PluginItem } from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
-import babelPluginProposalClassProperties from "@babel/plugin-proposal-class-properties"
-import babelPluginProposalClassStaticBlock from "@babel/plugin-proposal-class-static-block"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
-import babelPluginProposalJSONStrings from "@babel/plugin-proposal-json-strings"
-import babelPluginProposalLogicalAssignmentOperators from "@babel/plugin-proposal-logical-assignment-operators"
-import babelPluginProposalNullishCoalescingOperator from "@babel/plugin-proposal-nullish-coalescing-operator"
-import babelPluginProposalNumericSeparator from "@babel/plugin-proposal-numeric-separator"
-import babelPluginProposalObjectRestSpread from "@babel/plugin-proposal-object-rest-spread"
-import babelPluginProposalOptionalCatchBinding from "@babel/plugin-proposal-optional-catch-binding"
-import babelPluginProposalOptionalChaining from "@babel/plugin-proposal-optional-chaining"
-import babelPluginProposalPrivatePropertyInObject from "@babel/plugin-proposal-private-property-in-object"
+import babelPluginProposalDestructuringPrivate from "@babel/plugin-proposal-destructuring-private"
+import babelPluginProposalExplicitResourceManagement from "@babel/plugin-proposal-explicit-resource-management"
+import babelPluginTransformClassProperties from "@babel/plugin-transform-class-properties"
+import babelPluginTransformClassStaticBlock from "@babel/plugin-transform-class-static-block"
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
+import babelPluginTransformJsonStrings from "@babel/plugin-transform-json-strings"
+import babelPluginTransformLogicalAssignmentOperators from "@babel/plugin-transform-logical-assignment-operators"
+import babelPluginTransformNullishCoalescingOperator from "@babel/plugin-transform-nullish-coalescing-operator"
+import babelPluginTransformNumericSeparator from "@babel/plugin-transform-numeric-separator"
+import babelPluginTransformObjectRestSpread from "@babel/plugin-transform-object-rest-spread"
+import babelPluginTransformOptionalCatchBinding from "@babel/plugin-transform-optional-catch-binding"
+import babelPluginTransformOptionalChaining from "@babel/plugin-transform-optional-chaining"
+import babelPluginTransformPrivatePropertyInObject from "@babel/plugin-transform-private-property-in-object"
+import babelPluginTransformUnicodeSetsRegex from "@babel/plugin-transform-unicode-sets-regex"
 import babelTraverse from "@babel/traverse"
 import type { LVal } from "@babel/types"
 import t from "@babel/types"
@@ -163,7 +166,7 @@ export const processScript = async (
 					} break
 
 					default:
-						// TODO turn into warninig when I get round to those
+						// TODO turn into warning when I get round to those
 						throw new Error(`unrecognised seclevel "${seclevelString}"`)
 				}
 			}
@@ -174,17 +177,20 @@ export const processScript = async (
 
 	const plugins: PluginItem[] = [
 		[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
-		[ babelPluginProposalClassProperties.default ],
-		[ babelPluginProposalClassStaticBlock.default ],
-		[ babelPluginProposalPrivatePropertyInObject.default ],
-		[ babelPluginProposalLogicalAssignmentOperators.default ],
-		[ babelPluginProposalNumericSeparator.default ],
-		[ babelPluginProposalNullishCoalescingOperator.default ],
-		[ babelPluginProposalOptionalChaining.default ],
-		[ babelPluginProposalOptionalCatchBinding.default ],
-		[ babelPluginProposalJSONStrings.default ],
-		[ babelPluginProposalObjectRestSpread.default ],
-		[ babelPluginTransformExponentiationOperator.default ]
+		[ babelPluginTransformClassProperties.default ],
+		[ babelPluginTransformClassStaticBlock.default ],
+		[ babelPluginTransformPrivatePropertyInObject.default ],
+		[ babelPluginTransformLogicalAssignmentOperators.default ],
+		[ babelPluginTransformNumericSeparator.default ],
+		[ babelPluginTransformNullishCoalescingOperator.default ],
+		[ babelPluginTransformOptionalChaining.default ],
+		[ babelPluginTransformOptionalCatchBinding.default ],
+		[ babelPluginTransformJsonStrings.default ],
+		[ babelPluginTransformObjectRestSpread.default ],
+		[ babelPluginTransformExponentiationOperator.default ],
+		[ babelPluginTransformUnicodeSetsRegex.default ],
+		[ babelPluginProposalDestructuringPrivate.default ],
+		[ babelPluginProposalExplicitResourceManagement.default ]
 	]
 
 	let filePathResolved
