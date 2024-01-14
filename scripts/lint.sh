@@ -2,4 +2,4 @@
 set -ex
 eslint .
 tsc
-tsc --project src
+tsc --project src --noEmit --emitDeclarationOnly false
