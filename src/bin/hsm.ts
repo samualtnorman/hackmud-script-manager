@@ -1,4 +1,4 @@
-/* eslint-disable unicorn/no-process-exit */
+#!/usr/bin/env node
 import { DynamicMap } from "@samual/lib/DynamicMap"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"

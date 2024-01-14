@@ -3,7 +3,6 @@ import { writeFileSync, mkdirSync as makeDirectorySync, readdirSync as readDirec
 import packageConfig from "../package.json" assert { type: "json" }
 
 delete packageConfig.private
-delete packageConfig.scripts
 delete packageConfig.devDependencies
 
 try {

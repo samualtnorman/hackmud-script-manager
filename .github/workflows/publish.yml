@@ -7,17 +7,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2.4.2
-    - { name: Setup Node.js environment, uses: actions/setup-node@v3.1.1, with: { node-version: ">=18" } }
-    - { name: Setup PNPM, uses: pnpm/action-setup@v2.2.1, with: { version: 8, run_install: true } }
+    - { name: Checkout, uses: actions/checkout@v4.1.1 }
+    - { name: Setup Node.js environment, uses: actions/setup-node@v4.0.1, with: { node-version: ">=20" } }
+    - { name: Setup pnpm, uses: pnpm/action-setup@v2.4.0, with: { version: "^8.14.1", run_install: true } }
     - run: git config --global user.email github-action@users.noreply.github.com
     - run: git config --global user.name "Github Action"
     - run: pnpm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+    - run: export PATH=$PWD/node_modules/.bin:$PATH
 
     - name: Publish dev
       if: github.event_name == 'push'
-      run: scripts/version-dev.js && pnpm package && cd dist && pnpm publish --tag dev
+      run: scripts/version-dev.js && scripts/package.sh && cd dist && pnpm publish --tag dev
 
     - name: Publish release
       if: github.event_name == 'release'
-      run: pnpm package && cd dist && pnpm publish --no-git-checks
+      run: scripts/package.sh && cd dist && pnpm publish --no-git-checks

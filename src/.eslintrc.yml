@@ -1,6 +1,1 @@
-extends: [ ../.eslintrc.yml ]
-
-rules:
-  "@typescript-eslint/no-namespace": [ warn, allowDeclarations: true ]
-  "@typescript-eslint/quotes": [ warn, backtick ]
-  "@typescript-eslint/consistent-type-imports": [ warn, prefer: type-imports ]
+extends: "@samual/eslint-config/typescript.yml"

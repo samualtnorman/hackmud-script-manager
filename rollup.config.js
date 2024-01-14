@@ -1,64 +1,58 @@
 #!node_modules/.bin/rollup --config
+import babelPresetEnv from "@babel/preset-env"
+import babelPresetTypescript from "@babel/preset-typescript"
 import { babel } from "@rollup/plugin-babel"
 import json from "@rollup/plugin-json"
 import { nodeResolve } from "@rollup/plugin-node-resolve"
 import terser from "@rollup/plugin-terser"
+import { findFiles } from "@samual/lib/findFiles"
 import babelPluginHere from "babel-plugin-here"
-import MagicString from "magic-string"
+import { readFile } from "fs/promises"
 import { cpus } from "os"
-import { findFiles } from "./node_modules/@samual/lib/findFiles.js"
-import packageConfig from "./package.json" assert { type: "json" }
 
-const SourceFolder = "src"
-const Minify = false
+const SOURCE_FOLDER = "src"
+const MINIFY = true
 
-const externalDependencies = []
+/** @type {() => Promise<import("rollup").RollupOptions>} */
+export default async () => {
+	const [ packageJsonString, foundFiles ] =
+		await Promise.all([ readFile("package.json", { encoding: "utf8" }), findFiles(SOURCE_FOLDER) ])
 
-if ("dependencies" in packageConfig)
-	externalDependencies.push(...Object.keys(packageConfig.dependencies))
+	const packageJson = JSON.parse(packageJsonString)
 
-if ("optionalDependencies" in packageConfig)
-	externalDependencies.push(...Object.keys(packageConfig.optionalDependencies))
+	const externalDependencies = [
+		..."dependencies" in packageJson ? Object.keys(packageJson.dependencies) : [],
+		..."optionalDependencies" in packageJson ? Object.keys(packageJson.optionalDependencies) : []
+	]
 
-export default findFiles(SourceFolder).then(foundFiles => /** @type {import("rollup").RollupOptions} */ ({
-	input: Object.fromEntries(
-		foundFiles
-			.filter(path => path.endsWith(".ts") && !path.endsWith(".d.ts"))
-			.map(path => [ path.slice(SourceFolder.length + 1, -3), path ])
-	),
-	output: { dir: "dist", chunkFileNames: "[name]-.js", generatedCode: "es2015", interop: "auto", compact: Minify },
-	plugins: [
-		babel({
-			babelHelpers: "bundled",
-			extensions: [ ".ts" ],
-			presets: [
-				[ "@babel/preset-env", { targets: { node: "18" } } ],
-				[ "@babel/preset-typescript", { allowDeclareFields: true } ]
-			],
-			plugins: [ babelPluginHere() ]
-		}),
-		nodeResolve({ extensions: [ ".ts" ] }),
-		Minify && terser(/** @type {Parameters<typeof terser>[0] & { maxWorkers: number }} */ ({
-			keep_classnames: true,
-			keep_fnames: true,
-			compress: { passes: Infinity },
-			maxWorkers: Math.floor(cpus().length / 2)
-		})),
-		{
-			name: "rollup-plugin-shebang",
-			renderChunk(code, { fileName }) {
-				if (!fileName.startsWith("bin/"))
-					return undefined
-
-				const magicString = new MagicString(code).prepend("#!/usr/bin/env node\n")
-
-				return { code: magicString.toString(), map: magicString.generateMap({ hires: true }) }
-			}
-		},
-		json()
-	],
-	external:
-		source => externalDependencies.some(dependency => source == dependency || source.startsWith(`${dependency}/`)),
-	preserveEntrySignatures: "allow-extension",
-	strictDeprecations: true
-}))
+	return {
+		input: Object.fromEntries(
+			foundFiles.filter(path => path.endsWith(".ts") && !path.endsWith(".d.ts"))
+				.map(path => [ path.slice(SOURCE_FOLDER.length + 1, -3), path ])
+		),
+		output: { dir: "dist", compact: MINIFY, generatedCode: "es2015" },
+		plugins: [
+			babel({
+				babelHelpers: "bundled",
+				extensions: [ ".ts" ],
+				presets: [
+					[ babelPresetEnv, { targets: { node: "20" } } ],
+					[ babelPresetTypescript, { allowDeclareFields: true } ]
+				],
+				plugins: [ babelPluginHere() ]
+			}),
+			nodeResolve({ extensions: [ ".ts" ] }),
+			MINIFY && terser(/** @type {Parameters<typeof terser>[0] & { maxWorkers: number }} */({
+				keep_classnames: true,
+				keep_fnames: true,
+				compress: { passes: Infinity },
+				maxWorkers: Math.floor(cpus().length / 2)
+			})),
+			json({ preferConst: true })
+		],
+		external: source =>
+			externalDependencies.some(dependency => source == dependency || source.startsWith(`${dependency}/`)),
+		strictDeprecations: true,
+		treeshake: { moduleSideEffects: false }
+	}
+}
