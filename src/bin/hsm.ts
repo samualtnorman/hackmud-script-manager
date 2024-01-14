@@ -665,7 +665,7 @@ switch (commands[0]) {
 				const keyParts = key.split(`.`)
 
 				const pathName = keyParts
-					.map(name => /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name))
+					.map(name => /^[a-z_$][\w$]*$/i.test(name) ? name : JSON.stringify(name))
 					.join(`.`)
 
 				const lastKey = keyParts.pop()!
@@ -689,7 +689,7 @@ switch (commands[0]) {
 				const keys = key.split(`.`)
 
 				const pathName = keys
-					.map(name => /^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name))
+					.map(name => /^[a-z_$][\w$]*$/i.test(name) ? name : JSON.stringify(name))
 					.join(`.`)
 
 				if (!value) {
