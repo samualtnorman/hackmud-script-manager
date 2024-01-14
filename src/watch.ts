@@ -64,8 +64,7 @@ export const watch = async (
 			scriptNamesToUsers.get(scriptName).add(user)
 	}
 
-	const watcher = watchDirectory([ `*.ts`, `*.js` ], {
-		depth: 1,
+	const watcher = watchDirectory([ `*/*.ts`, `*/*.js` ], {
 		cwd: sourceDirectory,
 		awaitWriteFinish: { stabilityThreshold: 100 },
 		ignored: `*.d.ts`
