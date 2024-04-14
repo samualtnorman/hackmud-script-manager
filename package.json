@@ -83,7 +83,7 @@
 		"typescript": "^5.3.3"
 	},
 	"engines": {
-		"node": ">=20"
+		"node": "^18 || >=20"
 	},
 	"private": true,
 	"type": "module",
