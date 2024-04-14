@@ -1,5 +1,5 @@
 import type { LaxPartial } from "@samual/lib"
-import { DynamicMap } from "@samual/lib/DynamicMap"
+import { Cache } from "@samual/lib/Cache"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { readdir as readDirectory, readFile } from "fs/promises"
@@ -57,7 +57,7 @@ export const push = async (
 		forceQuineCheats
 	}: LaxPartial<PushOptions> = {}
 ) => {
-	const scriptNamesByUser = new DynamicMap((_user: string) => new Set<string>())
+	const scriptNamesByUser = new Cache((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
 	let pushEverything = false
@@ -76,9 +76,9 @@ export const push = async (
 			scriptNamesByUser.get(user).add(scriptName)
 	}
 
-	const usersByGlobalScriptsToPush = new DynamicMap((_user: string) => new Set<string>())
+	const usersByGlobalScriptsToPush = new Cache((_user: string) => new Set<string>())
 	const allInfo: Info[] = []
-	const scriptNamesAlreadyPushedByUser = new DynamicMap((_user: string) => new Set<string>())
+	const scriptNamesAlreadyPushedByUser = new Cache((_user: string) => new Set<string>())
 	let sourceDirectoryDirents
 
 	// *.bar

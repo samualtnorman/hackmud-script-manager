@@ -1,16 +1,10 @@
 #!/usr/bin/env node
-import { DynamicMap } from "@samual/lib/DynamicMap"
+import { Cache } from "@samual/lib/Cache"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { mkdir as makeDirectory, readFile, rmdir as removeDirectory, writeFile } from "fs/promises"
 import { homedir as getHomeDirectory } from "os"
-import type { Info } from ".."
-import { version as moduleVersion } from "../../package.json"
-import { supportedExtensions } from "../constants"
-import generateTypeDeclaration from "../generateTypeDeclaration"
-import pull from "../pull"
-import syncMacros from "../syncMacros"
 import {
 	basename as getPathBaseName,
 	dirname as getPathDirectory,
@@ -18,6 +12,12 @@ import {
 	relative as getRelativePath,
 	resolve as resolvePath
 } from "path"
+import type { Info } from ".."
+import { version as moduleVersion } from "../../package.json"
+import { supportedExtensions } from "../constants"
+import generateTypeDeclaration from "../generateTypeDeclaration"
+import pull from "../pull"
+import syncMacros from "../syncMacros"
 
 type ArgumentValue = boolean | number | string/* | ArgValue[]*/
 type Config = Partial<{ hackmudPath: string }> & Record<string, unknown>
@@ -27,7 +27,7 @@ const configFilePath = resolvePath(configDirectoryPath, `hsm.json`)
 const options = new Map<string, ArgumentValue>()
 const commands: string[] = []
 
-const userColours = new DynamicMap<string, string>(user => {
+const userColours = new Cache<string, string>(user => {
 	let hash = 0
 
 	for (const char of user)

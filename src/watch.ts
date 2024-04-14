@@ -1,5 +1,5 @@
 import type { LaxPartial } from "@samual/lib"
-import { DynamicMap } from "@samual/lib/DynamicMap"
+import { Cache } from "@samual/lib/Cache"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
@@ -45,7 +45,7 @@ export const watch = async (
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
 
-	const scriptNamesToUsers = new DynamicMap((_scriptName: string) => new Set<string>())
+	const scriptNamesToUsers = new Cache((_scriptName: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
 	let pushEverything = false
@@ -84,7 +84,7 @@ export const watch = async (
 			if (!pushEverything && !wildScriptUsers.size && !wildUserScripts.has(scriptName) && !scriptNamesToUsers.has(scriptName))
 				return
 
-			const scriptNamesToUsersToSkip = new DynamicMap((_scriptName: string): string[] => [])
+			const scriptNamesToUsersToSkip = new Cache((_scriptName: string): string[] => [])
 
 			await Promise.all((await readDirectory(sourceDirectory, { withFileTypes: true })).map(async dirent => {
 				if (!dirent.isDirectory())
