@@ -83,7 +83,8 @@
 		"typescript": "^5.3.3"
 	},
 	"engines": {
-		"node": "^18 || >=20"
+		"node": "^18 || >=20",
+		"pnpm": "^8.15.7"
 	},
 	"private": true,
 	"type": "module",
