@@ -70,10 +70,8 @@
 		"terser": "^5.26.0"
 	},
 	"devDependencies": {
-		"@babel/preset-env": "^7.23.8",
-		"@babel/preset-typescript": "^7.23.3",
-		"@rollup/plugin-terser": "^0.4.4",
 		"@samual/eslint-config": "^0.0.3",
+		"@samual/rollup-config": "0.0.3-f161e35",
 		"@types/babel__core": "^7.20.5",
 		"@types/babel__generator": "^7.6.8",
 		"@types/babel__traverse": "^7.20.5",
