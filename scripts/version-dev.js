@@ -7,7 +7,7 @@ const hash = spawnSync("git", [ "rev-parse", "--short", "HEAD" ], { encoding: "u
 
 spawnSync(
 	"pnpm",
-	[ "version", `${semver.inc(/** @type {any} */ (packageConfig).version || "0.0.0", "minor")}-${hash}` ],
+	[ "version", `${semver.inc(/** @type {any} */ (packageConfig).version || "0.0.0", "patch")}-${hash}` ],
 	{ stdio: "inherit" }
 )
 
