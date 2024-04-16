@@ -131,9 +131,7 @@ ${colourN(`--force-quine-cheats`)}
 
 		case `dev`:
 		case `watch`: {
-			console.log(colourS(`\
-${colourN(`Aliases`)}: ${colourV(`watch, dev`)}
-
+			console.log(colourS(`
 ${colourJ(watchCommandDescription)}
 
 ${colourA(`Usage:`)}
@@ -162,9 +160,7 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<script user>`)}${colourV(`
 
 		case `minify`:
 		case `golf`: {
-			console.log(colourS(`\
-${colourN(`Aliases`)}: ${colourV(`minify, golf`)}
-
+			console.log(colourS(`
 ${colourJ(minifyCommandDescription)}
 
 ${colourA(`Usage:`)}
@@ -187,8 +183,6 @@ ${colourN(`--watch`)}
 		case `gen-dts`:
 		case `gen-types`: {
 			console.log(colourS(`\
-${colourN(`Aliases`)}: ${colourV(`generate-type-declaration, gen-type-declaration, gen-types, gen-dts`)}
-
 ${colourJ(generateTypeDeclarationCommandDescription)}
 
 ${colourA(`Usage:`)}
@@ -207,11 +201,11 @@ ${colourJ(`Hackmud Script Manager`)}
 ${colourA(`Commands:`)}
 ${colourL(`push`)}
     ${pushCommandDescription}
-${colourL(`watch`)}, ${colourL(`dev`)}
+${colourL(`dev`)}
     ${watchCommandDescription}
-${colourL(`minify`)}, ${colourL(`golf`)}
+${colourL(`golf`)}
     ${minifyCommandDescription}
-${colourL(`generate-type-declaration`)}, ${colourL(`gen-type-declaration`)}, ${colourL(`gen-types`)}, ${colourL(`gen-dts`)}
+${colourL(`gen-dts`)}
     ${generateTypeDeclarationCommandDescription}
 ${colourL(`sync-macros`)}
     ${syncMacrosCommandDescription}
