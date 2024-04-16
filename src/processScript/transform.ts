@@ -318,6 +318,23 @@ export const transform = (file: File, sourceCode: string, {
 		}
 	}
 
+	const consoleMethodsReferenced = new Set<string>()
+
+	if (program.scope.hasGlobal(`console`)) {
+		for (const referencePath of getReferencePathsToGlobal(`console`, program)) {
+			if (referencePath.parent.type != `MemberExpression` || referencePath.parent.computed)
+				continue
+
+			assert(referencePath.parent.property.type == `Identifier`)
+
+			referencePath.parentPath.replaceWith(
+				t.identifier(`_${uniqueID}_CONSOLE_METHOD_${referencePath.parent.property.name}_`)
+			)
+
+			consoleMethodsReferenced.add(referencePath.parent.property.name)
+		}
+	}
+
 	// rollup removes all the inline exports and places a statement at the end instead
 	const lastStatement = program.node.body.at(-1)
 	let exportDefaultName
@@ -689,6 +706,24 @@ export const transform = (file: File, sourceCode: string, {
 				)
 			)
 		]))
+	}
+
+	if (consoleMethodsReferenced.size) {
+		mainFunction.body.body.unshift(
+			t.variableDeclaration(
+				`let`,
+				[ ...consoleMethodsReferenced ].map(name => t.variableDeclarator(
+					t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
+					t.arrowFunctionExpression(
+						[ t.restElement(t.identifier(`args`)) ],
+						t.unaryExpression(
+							`void`,
+							t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`args`) ])
+						)
+					)
+				))
+			)
+		)
 	}
 
 	traverse(file, {
