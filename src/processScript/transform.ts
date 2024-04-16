@@ -675,7 +675,12 @@ export const transform = (file: File, sourceCode: string, {
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
-							t.identifier(`Object`),
+							t.identifier(
+								// non-null assertion is safe because this path is only reached if there is no
+								// `let Object` in the script which means we will always find `"Object"` in the worst
+								// case scenario
+								globalFunctionsUnder7Characters.find(name => !program.scope.hasOwnBinding(name))!
+							),
 							t.identifier(`call`)
 						),
 						t.identifier(`bind`)
