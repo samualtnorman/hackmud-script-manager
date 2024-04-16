@@ -58,7 +58,7 @@ const logHelp = () => {
 	const configDeleteCommandDescription = `Remove a key and value from the config file`
 	const pullCommandDescription = `Pull a script a from a hackmud user's script directory`
 
-	const skipMinifyOptionDescription = `Skip minification to produce a readable script`
+	const noMinifyOptionDescription = `Skip minification to produce a "readable" script`
 	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
 	const forceQuineCheatsOptionDescription = `Force quine cheats even if the character count is higher`
 
@@ -120,8 +120,8 @@ ${colourA(`Usage:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [<script user>.<script name>...]`)}
 
 ${colourA(`Options:`)}
-${colourN(`--skip-minify`)}
-    ${skipMinifyOptionDescription}
+${colourN(`--no-minify`)}
+    ${noMinifyOptionDescription}
 ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
 ${colourN(`--force-quine-cheats`)}
@@ -138,8 +138,8 @@ ${colourA(`Usage:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [<script user>.<script name>...]`)}
 
 ${colourA(`Options:`)}
-${colourN(`--skip-minify`)}
-    ${skipMinifyOptionDescription}
+${colourN(`--no-minify`)}
+    ${noMinifyOptionDescription}
 ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
 ${colourN(`--type-declaration-path`)}=${colourB(`<path>`)}
@@ -167,8 +167,8 @@ ${colourA(`Usage:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<target> [output path]`)}
 
 ${colourA(`Options:`)}
-${colourN(`--skip-minify`)}
-    ${skipMinifyOptionDescription}
+${colourN(`--no-minify`)}
+    ${noMinifyOptionDescription}
 ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
 ${colourN(`--force-quine-cheats`)}
@@ -419,19 +419,27 @@ switch (commands[0]) {
 		} else
 			scripts.push(`*.*`)
 
-		if (options.has(`skip-minify`) && options.has(`mangle-names`)) {
-			logError(`Option ${colourN(`--mangle-names`)} is not compatible with ${colourN(`--skip-minify`)}\n`)
+		const optionsHasNoMinify = options.has(`no-minify`)
+
+		if ((optionsHasNoMinify || options.has(`skip-minify`)) && options.has(`mangle-names`)) {
+			logError(`Options ${colourN(`--mangle-names`)} and ${
+				colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)
+			} are incompatible\n`)
+
 			logHelp()
 
 			break
 		}
 
-		const shouldSkipMinify = options.get(`skip-minify`)
+		const shouldSkipMinify = options.get(`no-minify`) || options.get(`skip-minify`)
 		let shouldMinify
 
 		if (shouldSkipMinify != undefined) {
 			if (typeof shouldSkipMinify != `boolean`) {
-				logError(`The value for ${colourN(`--skip-minify`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+				logError(`The value for ${colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)} must be ${
+					colourV(`true`)
+				} or ${colourV(`false`)}\n`)
+
 				logHelp()
 
 				break
@@ -506,19 +514,27 @@ switch (commands[0]) {
 		} else
 			scripts.push(`*.*`)
 
-		if (options.has(`skip-minify`) && options.has(`mangle-names`)) {
-			logError(`Option ${colourN(`--mangle-names`)} is not compatible with ${colourN(`--skip-minify`)}\n`)
+		const optionsHasNoMinify = options.has(`no-minify`)
+
+		if ((optionsHasNoMinify || options.has(`skip-minify`)) && options.has(`mangle-names`)) {
+			logError(`Options ${colourN(`--mangle-names`)} and ${
+				colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)
+			} are incompatible\n`)
+
 			logHelp()
 
 			break
 		}
 
-		const shouldSkipMinify = options.get(`skip-minify`)
+		const shouldSkipMinify = options.get(`no-minify`) || options.get(`skip-minify`)
 		let shouldMinify
 
 		if (shouldSkipMinify != undefined) {
 			if (typeof shouldSkipMinify != `boolean`) {
-				logError(`The value for ${colourN(`--skip-minify`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+				logError(`The value for ${colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)} must be ${
+					colourV(`true`)
+				} or ${colourV(`false`)}\n`)
+
 				logHelp()
 
 				break
@@ -761,10 +777,13 @@ switch (commands[0]) {
 			getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
 		) ? getPathBaseName(resolvePath(target, `../..`)) : `UNKNOWN`
 
-		const minify = !options.get(`skip-minify`)
+		const optionsHasNoMinify = options.has(`no-minify`)
 
-		if (options.has(`skip-minify`) && options.has(`mangle-names`)) {
-			logError(`Option ${colourN(`--mangle-names`)} would have no effect if minification is skipped\n`)
+		if ((optionsHasNoMinify || options.has(`skip-minify`)) && options.has(`mangle-names`)) {
+			logError(`Options ${colourN(`--mangle-names`)} and ${
+				colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)
+			} are incompatible\n`)
+
 			logHelp()
 
 			break
@@ -803,10 +822,14 @@ switch (commands[0]) {
 			async source => {
 				const timeStart = performance.now()
 
-				const { script, warnings } = await processScript(
-					source,
-					{ minify, scriptUser, scriptName, filePath: target, mangleNames, forceQuineCheats }
-				)
+				const { script, warnings } = await processScript(source, {
+					minify: !(options.get(`no-minify`) || options.get(`skip-minify`)),
+					scriptUser,
+					scriptName,
+					filePath: target,
+					mangleNames,
+					forceQuineCheats
+				})
 
 				const timeTook = performance.now() - timeStart
 
