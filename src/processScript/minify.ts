@@ -543,7 +543,7 @@ export const minify = async (file: File, {
 
 	assert(scriptBeforeJSONValueReplacement)
 
-	// if the script has a comment, it's gonna contain `SC$scripts$quine()`
+	// if the script has a comment, it's gonna also contain `SC$scripts$quine()`
 	// which is gonna compile to `#fs.scripts.quine()` which contains
 	// an extra character so we have to account for that
 	if (countHackmudCharacters(scriptBeforeJSONValueReplacement) <= (countHackmudCharacters(code) + Number(hasComment)))
@@ -604,7 +604,7 @@ const parseArrayExpression = (node: babel.types.ArrayExpression, o: unknown[]) =
 			const childArray: unknown[] = []
 
 			if (parseArrayExpression(element, childArray))
-				childArray.push(childArray)
+				o.push(childArray)
 			else
 				return false
 		} else if (element.type == `ObjectExpression`) {
