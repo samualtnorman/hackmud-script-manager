@@ -303,7 +303,6 @@ export const transform = (file: File, sourceCode: string, {
 	}
 
 	let needGetPrototypeOf = false
-	let needSetPrototypeOf = false
 
 	if (program.scope.hasGlobal(`Object`)) {
 		for (const referencePath of getReferencePathsToGlobal(`Object`, program)) {
@@ -315,9 +314,6 @@ export const transform = (file: File, sourceCode: string, {
 			if (referencePath.parent.property.name == `getPrototypeOf`) {
 				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`))
 				needGetPrototypeOf = true
-			} else if (referencePath.parent.property.name == `setPrototypeOf`) {
-				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_SET_PROTOTYPE_OF_`))
-				needSetPrototypeOf = true
 			}
 		}
 	}
@@ -654,70 +650,12 @@ export const transform = (file: File, sourceCode: string, {
 		]))
 	}
 
-	if (needSetPrototypeOf) {
-		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
-			t.variableDeclarator(
-				t.identifier(`_${uniqueID}_SET_PROTOTYPE_OF_`),
-				t.callExpression(
-					t.memberExpression(
-						t.memberExpression(
-							t.identifier(`Object`),
-							t.identifier(`call`)
-						),
-						t.identifier(`bind`)
-					),
-					[ t.identifier(`_${uniqueID}_DUNDER_PROTO_SETTER_`) ]
-				)
-			)
-		]))
-	}
-
 	if (needGetPrototypeOf) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
-				t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`),
-				t.callExpression(
-					t.memberExpression(
-						t.memberExpression(
-							t.identifier(`Object`),
-							t.identifier(`call`)
-						),
-						t.identifier(`bind`)
-					),
-					[ t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`) ]
-				)
-			)
-		]))
-	}
-
-	if (needGetPrototypeOf || needSetPrototypeOf) {
-		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
-			t.variableDeclarator(
-				t.objectPattern(needGetPrototypeOf
-					? (needSetPrototypeOf
-						? [
-							t.objectProperty(
-								t.identifier(`get`),
-								t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`)
-							),
-							t.objectProperty(
-								t.identifier(`set`),
-								t.identifier(`_${uniqueID}_DUNDER_PROTO_SETTER_`)
-							)
-						]
-						: [
-							t.objectProperty(
-								t.identifier(`get`),
-								t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`)
-							)
-						]
-					) : [
-						t.objectProperty(
-							t.identifier(`set`),
-							t.identifier(`_${uniqueID}_DUNDER_PROTO_SETTER_`)
-						)
-					]
-				),
+				t.objectPattern([
+					t.objectProperty(t.identifier(`get`), t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`))
+				]),
 				t.callExpression(
 					t.memberExpression(
 						t.identifier(`Object`),
@@ -730,6 +668,19 @@ export const transform = (file: File, sourceCode: string, {
 						),
 						t.stringLiteral(`__proto__`)
 					]
+				)
+			),
+			t.variableDeclarator(
+				t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`),
+				t.callExpression(
+					t.memberExpression(
+						t.memberExpression(
+							t.identifier(`Object`),
+							t.identifier(`call`)
+						),
+						t.identifier(`bind`)
+					),
+					[ t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`) ]
 				)
 			)
 		]))
