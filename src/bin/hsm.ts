@@ -60,7 +60,7 @@ const logHelp = () => {
 
 	const noMinifyOptionDescription = `Skip minification to produce a "readable" script`
 	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
-	const forceQuineCheatsOptionDescription = `Force quine cheats even if the character count is higher`
+	const forceQuineCheatsOptionDescription = `Force quine cheats on. Use ${colourN(`--force-quine-cheats`)}=${colourV(`false`)} to force off.`
 
 	console.log(colourN(`Version`) + colourS(`: `) + colourV(moduleVersion))
 
