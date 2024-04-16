@@ -160,6 +160,8 @@ export const transform = (file: File, sourceCode: string, {
 
 	let detectedSeclevel = 4
 
+	const neededSubscriptLets = new Set<string>()
+
 	const processFakeSubscriptObject = (fakeSubscriptObjectName: string) => {
 		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
 			assert(referencePath.parent.type == `MemberExpression`)
@@ -175,16 +177,10 @@ export const transform = (file: File, sourceCode: string, {
 					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`)
 				)
 			} else {
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.arrowFunctionExpression(
-						[ t.restElement(t.identifier(`args`)) ],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`),
-							[ t.spreadElement(t.identifier(`args`)) ]
-						)
-					)
-				)
+				const name = `${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
+
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`))
+				neededSubscriptLets.add(name)
 			}
 		}
 	}
@@ -224,6 +220,9 @@ export const transform = (file: File, sourceCode: string, {
 
 	seclevel = Math.min(seclevel, detectedSeclevel)
 
+	// eslint-disable-next-line unicorn/prevent-abbreviations
+	const neededDbMethodLets = new Set<string>()
+
 	if (program.scope.hasGlobal(`$db`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$db`, program)) {
 			assert(referencePath.parentPath.node.type == `MemberExpression`)
@@ -235,54 +234,22 @@ export const transform = (file: File, sourceCode: string, {
 
 			if (referencePath.parentPath.parentPath?.type == `CallExpression`)
 				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`))
-			else if (databaseOpMethodName == `ObjectId`) {
-				referencePath.parentPath.replaceWith(
-					t.arrowFunctionExpression(
-						[],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`),
-							[]
-						)
-					)
-				)
-			} else if (databaseOpMethodName == `i` || databaseOpMethodName == `r`) {
-				referencePath.parentPath.replaceWith(
-					t.arrowFunctionExpression(
-						[ t.identifier(`a`) ],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`),
-							[ t.identifier(`a`) ]
-						)
-					)
-				)
-			} else {
-				referencePath.parentPath.replaceWith(
-					t.arrowFunctionExpression(
-						[ t.identifier(`a`), t.identifier(`b`) ],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`),
-							[ t.identifier(`a`), t.identifier(`b`) ]
-						)
-					)
-				)
+			else {
+				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${databaseOpMethodName}_`))
+				neededDbMethodLets.add(databaseOpMethodName)
 			}
 		}
 	}
+
+	let needDebugLet = false
 
 	if (program.scope.hasGlobal(`$D`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$D`, program)) {
 			if (referencePath.parentPath.type == `CallExpression`)
 				referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG$`))
 			else {
-				referencePath.replaceWith(
-					t.arrowFunctionExpression(
-						[ t.identifier(`a`) ],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$DEBUG$`),
-							[ t.identifier(`a`) ]
-						)
-					)
-				)
+				referencePath.replaceWith(t.identifier(`_${uniqueID}_DEBUG_`))
+				needDebugLet = true
 			}
 		}
 	}
@@ -719,6 +686,65 @@ export const transform = (file: File, sourceCode: string, {
 						t.unaryExpression(
 							`void`,
 							t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`args`) ])
+						)
+					)
+				))
+			)
+		)
+	}
+
+	if (neededDbMethodLets.size) {
+		mainFunction.body.body.unshift(
+			t.variableDeclaration(
+				`let`,
+				[ ...neededDbMethodLets ].map(name => {
+					const getArgs = () => name == `ObjectId`
+						? []
+						: (name == `i` || name == `r`
+							? [ t.identifier(`a`) ]
+							: [ t.identifier(`a`), t.identifier(`b`) ]
+						)
+
+					return t.variableDeclarator(
+						t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
+						t.arrowFunctionExpression(
+							getArgs(),
+							t.callExpression(t.identifier(`$${uniqueID}$DB$${name}$`), getArgs())
+						)
+					)
+				})
+			)
+		)
+	}
+
+	if (needDebugLet) {
+		mainFunction.body.body.unshift(
+			t.variableDeclaration(
+				`let`,
+				[
+					t.variableDeclarator(
+						t.identifier(`_${uniqueID}_DEBUG_`),
+						t.callExpression(
+							t.identifier(`$${uniqueID}$DEBUG$`),
+							[ t.identifier(`a`) ]
+						)
+					)
+				]
+			)
+		)
+	}
+
+	if (neededSubscriptLets.size) {
+		mainFunction.body.body.unshift(
+			t.variableDeclaration(
+				`let`,
+				[ ...neededSubscriptLets ].map(name => t.variableDeclarator(
+					t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`),
+					t.arrowFunctionExpression(
+						[ t.restElement(t.identifier(`args`)) ],
+						t.callExpression(
+							t.identifier(`$${uniqueID}$SUBSCRIPT$${name}$`),
+							[ t.spreadElement(t.identifier(`args`)) ]
 						)
 					)
 				))
