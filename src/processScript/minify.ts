@@ -527,7 +527,7 @@ export const minify = async (file: File, {
 			unsafe_undefined: true,
 			sequences: false
 		},
-		format: { semicolons: false },
+		format: { semicolons: false, wrap_func_args: false },
 		keep_classnames: !mangleNames,
 		keep_fnames: !mangleNames
 	})).code || ``
