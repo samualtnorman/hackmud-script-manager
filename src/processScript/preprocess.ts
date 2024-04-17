@@ -134,7 +134,7 @@ export const preprocess = async (code: string, { uniqueID = `00000000000` }: Par
 	if (program.scope.hasGlobal(`Proxy`)) {
 		file.program.body.unshift(t.importDeclaration([
 			t.importDefaultSpecifier(t.identifier(`Proxy`))
-		], t.stringLiteral((await resolveModule(`proxy-polyfill/src/proxy.js`, import.meta.url)).slice(7))))
+		], t.stringLiteral(resolveModule(`proxy-polyfill/src/proxy.js`, import.meta.url).slice(7))))
 	}
 
 	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`)
