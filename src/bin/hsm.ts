@@ -60,7 +60,7 @@ const logHelp = () => {
 
 	const noMinifyOptionDescription = `Skip minification to produce a "readable" script`
 	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
-	const forceQuineCheatsOptionDescription = `Force quine cheats on. Use ${colourN(`--force-quine-cheats`)}=${colourV(`false`)} to force off.`
+	const forceQuineCheatsOptionDescription = `Force quine cheats on. Use ${colourN(`--force-quine-cheats`)}=${colourV(`false`)} to force off`
 
 	console.log(colourN(`Version`) + colourS(`: `) + colourV(moduleVersion))
 
@@ -112,12 +112,23 @@ ${colourC(`hsm`)} ${colourL(`${commands[0]} delete`)} ${colourB(`<key>`)}
 			}
 		} break
 
+		case `dev`:
+		case `watch`:
 		case `push`: {
 			console.log(colourS(`
-${colourJ(pushCommandDescription)}
+${colourJ(commands[0] == `push` ? pushCommandDescription : watchCommandDescription)}
 
 ${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [<script user>.<script name>...]`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> ["<script user>.<script name>"...]`)}
+
+${colourA(`Arguments:`)}
+${colourB(`<directory>`)}
+    The source directory containing your scripts
+${colourB(`<script user>`)}
+    A user to push script(s) to. Can be set to wild card (${colourV(`*`)}) which will try
+    and discover users to push to
+${colourB(`<script name>`)}
+    Name of a script to push. Can be set to wild card (${colourV(`*`)}) to find all scripts
 
 ${colourA(`Options:`)}
 ${colourN(`--no-minify`)}
@@ -125,27 +136,24 @@ ${colourN(`--no-minify`)}
 ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
 ${colourN(`--force-quine-cheats`)}
-    ${forceQuineCheatsOptionDescription}`
-			))
-		} break
-
-		case `dev`:
-		case `watch`: {
-			console.log(colourS(`
-${colourJ(watchCommandDescription)}
-
-${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [<script user>.<script name>...]`)}
-
-${colourA(`Options:`)}
-${colourN(`--no-minify`)}
-    ${noMinifyOptionDescription}
-${colourN(`--mangle-names`)}
-    ${mangleNamesOptionDescription}
-${colourN(`--type-declaration-path`)}=${colourB(`<path>`)}
+    ${forceQuineCheatsOptionDescription}
+${commands[0] == `push` ? `` : `${colourN(`--type-declaration-path`)}=${colourB(`<path>`)}
     Path to generate a type declaration file for the scripts
-${colourN(`--force-quine-cheats`)}
-    ${forceQuineCheatsOptionDescription}`
+`}\
+
+${colourA(`Examples:`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)}
+	Pushes all scripts found in ${colourV(`src`)} folder to all users
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`bar`)}
+    Pushes a script named ${colourL(`bar`)} found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`bar`)} ${colourC(`baz`)}${colourV(`.`)}${colourL(`qux`)}
+    Multiple can be specified.
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`*`)}
+	Pushes all scripts found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${colourV(`.`)}${colourL(`foo`)}
+	Pushes all scripts named ${colourL(`foo`)} found in ${colourV(`src`)} folder to all user
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${colourV(`.`)}${colourL(`*`)}
+	Pushes all scripts found in ${colourV(`src`)} folder to all users`
 			))
 		} break
 
