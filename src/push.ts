@@ -1,8 +1,9 @@
 import type { LaxPartial } from "@samual/lib"
 import { Cache } from "@samual/lib/Cache"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
-import { readdir as readDirectory, readFile, stat } from "fs/promises"
+import { readFile } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import type { Info } from "."
 import { supportedExtensions } from "./constants"
@@ -36,13 +37,6 @@ export type PushOptions = {
 	 */
 	forceQuineCheats: boolean
 }
-
-const readDirectoryWithStats = async (path: string) =>
-	Promise.all((await readDirectory(path)).map(async name => {
-		const resolvedPath = resolvePath(path, name)
-
-		return ({ path: resolvedPath, name, stats: await stat(resolvedPath) })
-	}))
 
 /**
  * Push scripts from a source directory to the hackmud directory.
