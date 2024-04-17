@@ -1,4 +1,4 @@
-import type { PluginItem } from "@babel/core"
+import type { NodePath, PluginItem } from "@babel/core"
 import babelGenerator from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
@@ -17,7 +17,7 @@ import babelPluginTransformOptionalChaining from "@babel/plugin-transform-option
 import babelPluginTransformPrivatePropertyInObject from "@babel/plugin-transform-private-property-in-object"
 import babelPluginTransformUnicodeSetsRegex from "@babel/plugin-transform-unicode-sets-regex"
 import babelTraverse from "@babel/traverse"
-import type { LVal } from "@babel/types"
+import type { LVal, Program } from "@babel/types"
 import t from "@babel/types"
 import { babel as rollupPluginBabel } from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
@@ -32,7 +32,7 @@ import { supportedExtensions as extensions } from "../constants"
 import minify from "./minify"
 import postprocess from "./postprocess"
 import preprocess from "./preprocess"
-import { includesIllegalString, replaceUnsafeStrings } from "./shared"
+import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings } from "./shared"
 import transform from "./transform"
 
 const { format } = prettier
@@ -269,7 +269,30 @@ export const processScript = async (
 		plugins: [
 			{
 				name: `hackmud-script-manager`,
-				transform: async code => (await preprocess(code, { uniqueID })).code
+				transform: async (code, id) => {
+					if (!id.includes(`/node_modules/`))
+						return (await preprocess(code, { uniqueID })).code
+
+					let program!: NodePath<Program>
+
+					traverse(parse(code, { sourceType: `module` }), {
+						Program(path) {
+							program = path
+							path.skip()
+						}
+					})
+
+					for (const referencePath of getReferencePathsToGlobal(`JSON`, program)) {
+						if (referencePath.parentPath.node.type == `MemberExpression` && referencePath.parentPath.node.property.type == `Identifier`) {
+							if (referencePath.parentPath.node.property.name == `parse`)
+								referencePath.parentPath.node.property.name = `oparse`
+							else if (referencePath.parentPath.node.property.name == `stringify`)
+								referencePath.parentPath.node.property.name = `ostringify`
+						}
+					}
+
+					return generate(program.node).code
+				}
 			},
 			rollupPluginBabel({
 				babelHelpers: `bundled`,
