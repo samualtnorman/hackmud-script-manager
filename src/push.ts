@@ -2,7 +2,7 @@ import type { LaxPartial } from "@samual/lib"
 import { Cache } from "@samual/lib/Cache"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
-import { readdir as readDirectory, readFile } from "fs/promises"
+import { readdir as readDirectory, readFile, stat } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import type { Info } from "."
 import { supportedExtensions } from "./constants"
@@ -36,6 +36,13 @@ export type PushOptions = {
 	 */
 	forceQuineCheats: boolean
 }
+
+const readDirectoryWithStats = async (path: string) =>
+	Promise.all((await readDirectory(path)).map(async name => {
+		const resolvedPath = resolvePath(path, name)
+
+		return ({ path: resolvedPath, name, stats: await stat(resolvedPath) })
+	}))
 
 /**
  * Push scripts from a source directory to the hackmud directory.
@@ -83,18 +90,19 @@ export const push = async (
 
 	// *.bar
 	if (wildUserScripts.size || pushEverything) {
-		const hackmudDirectoryDirents = await readDirectory(resolvePath(hackmudDirectory), { withFileTypes: true })
+		let hackmudDirectoryEntries
+
+		[ hackmudDirectoryEntries, sourceDirectoryDirents ] =
+			await Promise.all([ readDirectoryWithStats(hackmudDirectory), readDirectoryWithStats(sourceDirectory) ])
 
 		const allUsers = new Set([
-			...(sourceDirectoryDirents = await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true }))
-				.filter(dirent => dirent.isDirectory())
-				.map(dirent => dirent.name),
-			...hackmudDirectoryDirents
-				.filter(dirent => dirent.isDirectory())
-				.map(dirent => dirent.name),
-			...hackmudDirectoryDirents
-				.filter(dirent => dirent.isFile() && dirent.name.endsWith(`.key`))
-				.map(dirent => dirent.name.slice(0, -4)),
+			...sourceDirectoryDirents
+				.filter(({ stats }) => stats.isDirectory())
+				.map(({ path }) => getBaseName(path)),
+			...hackmudDirectoryEntries.filter(({ stats }) => stats.isDirectory()).map(({ name }) => name),
+			...hackmudDirectoryEntries
+				.filter(({ name, stats }) => stats.isFile() && name.endsWith(`.key`))
+				.map(({ name }) => name.slice(0, -4)),
 			...scriptNamesByUser.keys(),
 			...wildScriptUsers
 		])
@@ -114,31 +122,30 @@ export const push = async (
 
 	// foo.*
 	await Promise.all([ ...wildScriptUsers ].map(async user => {
-		await readDirectory(resolvePath(sourceDirectory, user), { withFileTypes: true }).then(async dirents => {
-			await Promise.all(dirents.map(async dirent => {
-				if (dirent.name.endsWith(`.d.ts`))
+		await readDirectoryWithStats(resolvePath(sourceDirectory, user)).then(async entries => {
+			await Promise.all(entries.map(async ({ stats, name, path }) => {
+				if (name.endsWith(`.d.ts`))
 					return
 
-				const extension = getFileExtension(dirent.name)
+				const extension = getFileExtension(name)
 
-				if (dirent.isFile() && supportedExtensions.includes(extension)) {
-					const scriptName = getBaseName(dirent.name, extension)
-					const filePath = resolvePath(sourceDirectory, user, dirent.name)
+				if (stats.isFile() && supportedExtensions.includes(extension)) {
+					const scriptName = getBaseName(name, extension)
 
 					const { script: minifiedCode } = await processScript(
-						await readFile(filePath, { encoding: `utf-8` }),
+						await readFile(path, { encoding: `utf-8` }),
 						{
 							minify,
 							scriptUser: user,
 							scriptName,
-							filePath,
+							filePath: path,
 							mangleNames,
 							forceQuineCheats
 						}
 					)
 
 					const info: Info = {
-						file: `${user}/${dirent.name}`,
+						file: `${user}/${name}`,
 						users: [ user ],
 						minLength: countHackmudCharacters(minifiedCode),
 						error: undefined
@@ -207,60 +214,65 @@ export const push = async (
 
 	// foo.* (global)
 	await (wildScriptUsers.size
-		? Promise.all((sourceDirectoryDirents || await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true })).map(async dirent => {
-			if (dirent.name.endsWith(`.d.ts`))
-					return
+		? Promise.all(
+			(sourceDirectoryDirents || await readDirectoryWithStats(sourceDirectory))
+				.map(async ({ path, stats, name }) => {
+					if (name.endsWith(`.d.ts`))
+							return
 
-			const extension = getFileExtension(dirent.name)
+					const extension = getFileExtension(name)
 
-			if (!dirent.isFile() || !supportedExtensions.includes(extension))
-				return
+					if (!stats.isFile() || !supportedExtensions.includes(extension))
+						return
 
-			const scriptName = getBaseName(dirent.name, extension)
-			const usersToPushTo = [ ...wildScriptUsers, ...usersByGlobalScriptsToPush.get(scriptName) ].filter(user => !scriptNamesAlreadyPushedByUser.get(user).has(scriptName))
+					const scriptName = getBaseName(name, extension)
 
-			if (!usersToPushTo.length)
-				return
+					const usersToPushTo = [ ...wildScriptUsers, ...usersByGlobalScriptsToPush.get(scriptName) ]
+						.filter(user => !scriptNamesAlreadyPushedByUser.get(user).has(scriptName))
 
-			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
-			const filePath = resolvePath(sourceDirectory, dirent.name)
+					if (!usersToPushTo.length)
+						return
 
-			const { script: minifiedCode } = await processScript(
-				await readFile(filePath, { encoding: `utf-8` }),
-				{
-					minify,
-					scriptUser: true,
-					scriptName,
-					uniqueID,
-					filePath,
-					mangleNames,
-					forceQuineCheats
-				}
-			)
+					const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
-			const info: Info = {
-				file: dirent.name,
-				users: usersToPushTo,
-				minLength: countHackmudCharacters(minifiedCode),
-				error: undefined
-			}
+					const { script: minifiedCode } = await processScript(
+						await readFile(path, { encoding: `utf-8` }),
+						{
+							minify,
+							scriptUser: true,
+							scriptName,
+							uniqueID,
+							filePath: path,
+							mangleNames,
+							forceQuineCheats
+						}
+					)
 
-			await Promise.all(usersToPushTo.map(user =>
-				writeFilePersistent(
-					resolvePath(
-						hackmudDirectory,
-						user,
-						`scripts/${scriptName}.js`
-					),
-					minifiedCode
-						.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
-						.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
-				)
-			))
+					const info: Info = {
+						file: name,
+						users: usersToPushTo,
+						minLength: countHackmudCharacters(minifiedCode),
+						error: undefined
+					}
 
-			allInfo.push(info)
-			onPush(info)
-		})) : Promise.all([ ...usersByGlobalScriptsToPush ].map(async ([ scriptName, users ]) => {
+					await Promise.all(usersToPushTo.map(user =>
+						writeFilePersistent(
+							resolvePath(
+								hackmudDirectory,
+								user,
+								`scripts/${scriptName}.js`
+							),
+							minifiedCode
+								.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
+								.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
+						)
+					))
+
+					allInfo.push(info)
+					onPush(info)
+				})
+		)
+		: Promise.all([ ...usersByGlobalScriptsToPush ].map(async ([ scriptName, users ]) => {
 			let code
 			let fileName!: string
 			let filePath!: string
