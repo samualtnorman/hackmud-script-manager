@@ -2,9 +2,10 @@ import type { LaxPartial } from "@samual/lib"
 import { Cache } from "@samual/lib/Cache"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { watch as watchDirectory } from "chokidar"
-import { readdir as readDirectory, readFile, writeFile } from "fs/promises"
+import { readFile, writeFile } from "fs/promises"
 import { extname as getFileExtension, basename as getPathBaseName, resolve as resolvePath } from "path"
 import { supportedExtensions } from "./constants"
 import generateTypeDeclaration from "./generateTypeDeclaration"
@@ -86,34 +87,34 @@ export const watch = async (
 
 			const scriptNamesToUsersToSkip = new Cache((_scriptName: string): string[] => [])
 
-			await Promise.all((await readDirectory(sourceDirectory, { withFileTypes: true })).map(async dirent => {
-				if (!dirent.isDirectory())
+			await Promise.all((await readDirectoryWithStats(sourceDirectory)).map(async ({ stats, name, path }) => {
+				if (!stats.isDirectory())
 					return
 
-				for (const file of await readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true })) {
-					if (!file.isFile())
+				for (const child of await readDirectoryWithStats(path)) {
+					if (!child.stats.isFile())
 						continue
 
-					const fileExtension = getFileExtension(file.name)
+					const fileExtension = getFileExtension(child.name)
 
 					if (supportedExtensions.includes(fileExtension))
-						scriptNamesToUsersToSkip.get(getPathBaseName(file.name, fileExtension)).push(dirent.name)
+						scriptNamesToUsersToSkip.get(getPathBaseName(child.name, fileExtension)).push(name)
 				}
 			}))
 
 			const usersToPushToSet = new Set<string>()
 
 			if (pushEverything || wildUserScripts.has(scriptName)) {
-				for (const dirent of await readDirectory(resolvePath(sourceDirectory), { withFileTypes: true })) {
-					if (dirent.isDirectory())
-						usersToPushToSet.add(dirent.name)
+				for (const { stats, name } of await readDirectoryWithStats(sourceDirectory)) {
+					if (stats.isDirectory())
+						usersToPushToSet.add(name)
 				}
 
-				for (const dirent of await readDirectory(resolvePath(hackmudDirectory), { withFileTypes: true })) {
-					if (dirent.isDirectory())
-						usersToPushToSet.add(dirent.name)
-					else if (dirent.isFile() && dirent.name.endsWith(`.key`))
-						usersToPushToSet.add(dirent.name.slice(0, -4))
+				for (const { stats, name } of await readDirectoryWithStats(hackmudDirectory)) {
+					if (stats.isDirectory())
+						usersToPushToSet.add(name)
+					else if (stats.isFile() && name.endsWith(`.key`))
+						usersToPushToSet.add(name.slice(0, -4))
 				}
 
 				for (const users of scriptNamesToUsers.values()) {

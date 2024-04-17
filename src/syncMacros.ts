@@ -1,13 +1,14 @@
-import { readdir as readDirectory, readFile, stat as getFileStatus, writeFile } from "fs/promises"
+import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
+import { stat as getFileStatus, readFile, writeFile } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 
 export const syncMacros = async (hackmudPath: string) => {
-	const files = await readDirectory(hackmudPath, { withFileTypes: true })
+	const files = await readDirectoryWithStats(hackmudPath)
 	const macros = new Map<string, { macro: string, date: Date }>()
 	const users: string[] = []
 
 	await Promise.all(files.map(async file => {
-		if (!file.isFile())
+		if (!file.stats.isFile())
 			return
 
 		switch (getFileExtension(file.name)) {

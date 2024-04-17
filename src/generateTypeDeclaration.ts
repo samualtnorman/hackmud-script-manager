@@ -1,13 +1,13 @@
-import { readdir as readDirectory } from "fs/promises"
+import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { basename as getBaseName, resolve as resolvePath } from "path"
 
 export const generateTypeDeclaration = async (sourceDirectory: string, hackmudPath?: string) => {
 	const users = new Set<string>()
 
 	if (hackmudPath) {
-		for (const dirent of await readDirectory(hackmudPath, { withFileTypes: true })) {
-			if (dirent.isFile() && dirent.name.endsWith(`.key`))
-				users.add(getBaseName(dirent.name, `.key`))
+		for (const { stats, name } of await readDirectoryWithStats(hackmudPath)) {
+			if (stats.isFile() && name.endsWith(`.key`))
+				users.add(getBaseName(name, `.key`))
 		}
 	}
 
@@ -16,28 +16,28 @@ export const generateTypeDeclaration = async (sourceDirectory: string, hackmudPa
 	const allScripts: Record<string, string[]> = {}
 	const allAnyScripts: Record<string, string[]> = {}
 
-	await Promise.all((await readDirectory(sourceDirectory, { withFileTypes: true })).map(async dirent => {
-		if (dirent.isFile()) {
-			if (dirent.name.endsWith(`.ts`)) {
-				if (!dirent.name.endsWith(`.d.ts`))
-					wildScripts.push(getBaseName(dirent.name, `.ts`))
-			} else if (dirent.name.endsWith(`.js`))
-				wildAnyScripts.push(getBaseName(dirent.name, `.js`))
-		} else if (dirent.isDirectory()) {
+	await Promise.all((await readDirectoryWithStats(sourceDirectory)).map(async ({ stats, name }) => {
+		if (stats.isFile()) {
+			if (name.endsWith(`.ts`)) {
+				if (!name.endsWith(`.d.ts`))
+					wildScripts.push(getBaseName(name, `.ts`))
+			} else if (name.endsWith(`.js`))
+				wildAnyScripts.push(getBaseName(name, `.js`))
+		} else if (stats.isDirectory()) {
 			const scripts: string[] = []
 			const anyScripts: string[] = []
 
-			allScripts[dirent.name] = scripts
-			allAnyScripts[dirent.name] = anyScripts
-			users.add(dirent.name)
+			allScripts[name] = scripts
+			allAnyScripts[name] = anyScripts
+			users.add(name)
 
-			for (const file of await readDirectory(resolvePath(sourceDirectory, dirent.name), { withFileTypes: true })) {
-				if (file.isFile()) {
-					if (file.name.endsWith(`.ts`)) {
-						if (!dirent.name.endsWith(`.d.ts`))
-							scripts.push(getBaseName(file.name, `.ts`))
-					} else if (file.name.endsWith(`.js`))
-						anyScripts.push(getBaseName(file.name, `.js`))
+			for (const child of await readDirectoryWithStats(resolvePath(sourceDirectory, name))) {
+				if (child.stats.isFile()) {
+					if (child.name.endsWith(`.ts`)) {
+						if (!name.endsWith(`.d.ts`))
+							scripts.push(getBaseName(child.name, `.ts`))
+					} else if (child.name.endsWith(`.js`))
+						anyScripts.push(getBaseName(child.name, `.js`))
 				}
 			}
 		}
