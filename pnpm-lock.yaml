@@ -105,8 +105,8 @@ importers:
         specifier: ^15.2.3
         version: 15.2.3(rollup@4.14.2)
       '@samual/lib':
-        specifier: 0.10.2-5919775
-        version: 0.10.2-5919775
+        specifier: 0.10.2-e64c5bc
+        version: 0.10.2-e64c5bc
       acorn:
         specifier: ^8.11.3
         version: 8.11.3
@@ -1108,8 +1108,8 @@ packages:
     resolution: {integrity: sha512-DW+Cx3RwmvSUvtpcZd7NqUCu4kzCqn/Bs5Ybl4GQSn9XF4hPud+zaEuODNc+g2uLt2jH+8bYuANQGJMaDnSCZQ==}
     engines: {node: ^18 || >=20}
 
-  '@samual/lib@0.10.2-5919775':
-    resolution: {integrity: sha512-1DKlC8jb72IDKUEw+RHNszx6KIcFq24UfS8VTqBek+ZijepiIujRlkqOJyMm+Uc8eMCirkHFf49xOAtNsObrDg==}
+  '@samual/lib@0.10.2-e64c5bc':
+    resolution: {integrity: sha512-fr/cICkMvV2nmhkLENS49SXkvNjFyPkM5U89FfeNrdQHna1GMqjz2T4iu+k5AYNUd5e7IB2Su4f8nRIXbEgR4w==}
     engines: {node: ^18 || >=20}
 
   '@samual/rollup-config@0.0.3-f161e35':
@@ -3147,7 +3147,7 @@ snapshots:
 
   '@samual/lib@0.10.1': {}
 
-  '@samual/lib@0.10.2-5919775': {}
+  '@samual/lib@0.10.2-e64c5bc': {}
 
   '@samual/rollup-config@0.0.3-f161e35(@babel/core@7.24.4)(@types/babel__core@7.20.5)(prettier@3.2.5)(rollup@4.14.2)':
     dependencies:

@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { Cache } from "@samual/lib/Cache"
 import { assert } from "@samual/lib/assert"
+import { catchError } from "@samual/lib/catchError"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { getDeepObjectProperty } from "@samual/lib/getDeepObjectProperty"
+import { isRecord } from "@samual/lib/isRecord"
+import { setDeepObjectProperty } from "@samual/lib/setDeepObjectProperty"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { mkdir as makeDirectory, readFile, rmdir as removeDirectory, writeFile } from "fs/promises"
 import { homedir as getHomeDirectory } from "os"
@@ -224,17 +228,6 @@ ${colourL(`pull`)}
 			))
 		}
 	}
-}
-
-const exploreObject = (object: any, keys: string[], createPath = false) => {
-	for (const key of keys) {
-		if (createPath)
-			object = typeof object[key] == `object` ? object[key] : object[key] = {}
-		else
-			object = object?.[key]
-	}
-
-	return object
 }
 
 const updateConfig = async (config: Config) => {
@@ -663,11 +656,19 @@ switch (commands[0]) {
 		switch (commands[1]) {
 			case `get`: {
 				const key = commands[2]
+				const config = await configPromise
 
-				if (key)
-					log(exploreObject(await configPromise, key.split(`.`)))
-				else
-					console.log(await configPromise)
+				if (key) {
+					const [ value, error ] = catchError(() => getDeepObjectProperty(config, key.split(`.`)))
+
+					if (error)
+						logError(`Could not get key ${colourV(key)}`)
+					else if (typeof value == `string`)
+						log(value)
+					else
+						console.log(value)
+				} else
+					console.log(config)
 			} break
 
 			case `delete`: {
@@ -680,17 +681,18 @@ switch (commands[0]) {
 					break
 				}
 
-				const keyParts = key.split(`.`)
-
-				const pathName = keyParts
-					.map(name => /^[a-z_$][\w$]*$/i.test(name) ? name : JSON.stringify(name))
-					.join(`.`)
-
-				const lastKey = keyParts.pop()!
+				const keys = key.split(`.`)
+				const lastKey = keys.pop()!
 				const config = await configPromise
+				const object = getDeepObjectProperty(config, keys)
 
-				delete exploreObject(config, keyParts)?.[lastKey]
-				log(`Removed ${colourV(pathName)} from config file`)
+				if (isRecord(object)) {
+					delete object[lastKey]
+					await updateConfig(config)
+					log(`Removed ${colourV(key)} from config file:`)
+					console.log(config)
+				} else
+					log(`Could not delete ${colourV(key)}`)
 			} break
 
 			case `set`: {
@@ -704,46 +706,24 @@ switch (commands[0]) {
 					break
 				}
 
-				const keys = key.split(`.`)
-
-				const pathName = keys
-					.map(name => /^[a-z_$][\w$]*$/i.test(name) ? name : JSON.stringify(name))
-					.join(`.`)
-
 				if (!value) {
-					logError(`Must provide a value for the key ${pathName}\n`)
+					logError(`Must provide a value for the key ${colourV(key)}\n`)
 					logHelp()
 
 					break
 				}
 
-				const lastKey = keys.pop()!
 				const config = await configPromise
 
-				if (!keys.length && lastKey == `hackmudPath`)
-					config.hackmudPath = resolvePath(value.startsWith(`~/`) ? getHomeDirectory() + value.slice(1) : value)
-				else {
-					let object: any = config
-
-					for (const key of keys) {
-						if (typeof object[key] == `object`)
-							object = object[key]
-						else {
-							object[key] = {}
-							object = object[key]
-						}
-					}
-
-					object[lastKey] = value
-				}
-
+				setDeepObjectProperty(config, key.split(`.`), value)
+				log(`Set ${colourV(key)} to ${colourV(value)}:`)
 				console.log(config)
 				await updateConfig(config)
 			} break
 
 			default: {
 				if (commands[1])
-					logError(`Unknown command: ${JSON.stringify(commands[1])}\n`)
+					logError(`Unknown command: ${colourL(commands[1])}\n`)
 
 				logHelp()
 			}
@@ -874,7 +854,7 @@ switch (commands[0]) {
 
 	default: {
 		if (commands[0])
-			logError(`Unknown command: ${JSON.stringify(commands[0])}\n`)
+			logError(`Unknown command: ${colourL(commands[0])}\n`)
 
 		logHelp()
 	}
