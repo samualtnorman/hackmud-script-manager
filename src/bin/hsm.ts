@@ -124,14 +124,25 @@ if (options.get(`help`) || options.get(`h`)) {
 
 let autoExit = true
 
-const getDefaultHackmudPath = () => process.platform == `win32`
-	? resolvePath(process.env.APPDATA!, `hackmud`)
-	: resolvePath(getHomeDirectory(), `.config/hackmud`)
+const getHackmudPath = async () => {
+	const hackmudPathOption = options.get(`hackmud-path`)
+
+	if (hackmudPathOption != undefined && typeof hackmudPathOption != `string`) {
+		logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption)}\n`)
+		logHelp()
+		process.exit(1)
+	}
+
+	return hackmudPathOption || process.env.HSM_HACKMUD_PATH ||
+		(await configPromise).hackmudPath || (process.platform == `win32`
+			? resolvePath(process.env.APPDATA!, `hackmud`)
+			: resolvePath(getHomeDirectory(), `.config/hackmud`)
+		)
+}
 
 switch (commands[0]) {
 	case `push`: {
-		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
-
+		const hackmudPath = await getHackmudPath()
 		const sourcePath = commands[1]
 
 		if (!sourcePath) {
@@ -219,8 +230,7 @@ switch (commands[0]) {
 
 	case `dev`:
 	case `watch`: {
-		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
-
+		const hackmudPath = await getHackmudPath()
 		const sourcePath = commands[1]
 
 		if (!sourcePath) {
@@ -314,8 +324,7 @@ switch (commands[0]) {
 	} break
 
 	case `pull`: {
-		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
-
+		const hackmudPath = await getHackmudPath()
 		const script = commands[1]
 
 		if (!script) {
@@ -334,7 +343,7 @@ switch (commands[0]) {
 	} break
 
 	case `sync-macros`: {
-		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
+		const hackmudPath = await getHackmudPath()
 		const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
 
 		log(`Synced ${macrosSynced} macros to ${usersSynced} users`)
@@ -357,7 +366,7 @@ switch (commands[0]) {
 		const outputPath = commands[2] || `./player.d.ts`
 
 		const typeDeclaration =
-			await generateTypeDeclaration(sourcePath, (await configPromise).hackmudPath || getDefaultHackmudPath())
+			await generateTypeDeclaration(sourcePath, await getHackmudPath())
 
 		let typeDeclarationPath = resolvePath(outputPath)
 
@@ -600,6 +609,10 @@ function logHelp() {
 	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
 	const forceQuineCheatsOptionDescription = `Force quine cheats on. Use ${colourN(`--force-quine-cheats`)}=${colourV(`false`)} to force off`
 
+	const hackmudPathOption = `\
+${colourN(`--hackmud-path`)}=${colourB(`<path>`)}
+    Override hackmud path`
+
 	console.log(colourN(`Version`) + colourS(`: `) + colourV(moduleVersion))
 
 	switch (commands[0]) {
@@ -675,6 +688,7 @@ ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
 ${colourN(`--force-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
+${hackmudPathOption}
 ${commands[0] == `push` ? `` : `${colourN(`--type-declaration-path`)}=${colourB(`<path>`)}
     Path to generate a type declaration file for the scripts
 `}\
@@ -700,7 +714,10 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${col
 ${colourJ(pullCommandDescription)}
 
 ${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<script user>`)}${colourV(`.`)}${colourB(`<script name>`)}`
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<script user>`)}${colourV(`.`)}${colourB(`<script name>`)}
+
+${colourA(`Options:`)}
+${hackmudPathOption}`
 			))
 		} break
 
@@ -732,12 +749,20 @@ ${colourN(`--watch`)}
 ${colourJ(generateTypeDeclarationCommandDescription)}
 
 ${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [output path]`)}`
+${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [output path]`)}
+
+${colourA(`Options:`)}
+${hackmudPathOption}`
 			))
 		} break
 
 		case `sync-macros`: {
-			console.log(`\n${colourJ(syncMacrosCommandDescription)}`)
+			console.log(colourS(`
+${colourJ(syncMacrosCommandDescription)}
+
+${colourA(`Options:`)}
+${hackmudPathOption}`
+			))
 		} break
 
 		default: {
