@@ -28,12 +28,12 @@ const globalFunctionsUnder7Characters = [
   * @param file babel ast node representing a file containing preprocessed code
   * @param sourceCode the original untouched source code
   * @param options {@link TransformOptions details} */
-export const transform = (
+export function transform(
 	file: File,
 	sourceCode: string,
 	{ uniqueID = `00000000000`, scriptUser = `UNKNOWN`, scriptName = `UNKNOWN`, seclevel = 4 }:
 		Partial<TransformOptions> = {}
-) => {
+) {
 	const topFunctionName = `_${uniqueID}_SCRIPT_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()

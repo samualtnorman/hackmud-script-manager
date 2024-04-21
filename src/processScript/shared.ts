@@ -3,7 +3,7 @@ import type { Identifier, Program } from "@babel/types"
 import t from "@babel/types"
 import { ensure } from "@samual/lib/assert"
 
-export const getReferencePathsToGlobal = (name: string, program: NodePath<Program>) => {
+export function getReferencePathsToGlobal(name: string, program: NodePath<Program>) {
 	const [ variableDeclaration ] = program
 		.unshiftContainer(`body`, t.variableDeclaration(`let`, [ t.variableDeclarator(t.identifier(name)) ]))
 
