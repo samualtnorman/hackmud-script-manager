@@ -685,7 +685,7 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`bar`)}
     Pushes a script named ${colourL(`bar`)} found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`bar`)} ${colourC(`baz`)}${colourV(`.`)}${colourL(`qux`)}
-    Multiple can be specified.
+    Multiple can be specified
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`*`)}
 	Pushes all scripts found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${colourV(`.`)}${colourL(`foo`)}
