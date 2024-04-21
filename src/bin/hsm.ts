@@ -1,13 +1,9 @@
 #!/usr/bin/env node
 import { Cache } from "@samual/lib/Cache"
 import { assert } from "@samual/lib/assert"
-import { catchError } from "@samual/lib/catchError"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
-import { getDeepObjectProperty } from "@samual/lib/getDeepObjectProperty"
-import { isRecord } from "@samual/lib/isRecord"
-import { setDeepObjectProperty } from "@samual/lib/setDeepObjectProperty"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
-import { mkdir as makeDirectory, readFile, rmdir as removeDirectory, writeFile } from "fs/promises"
+import { readFile, writeFile } from "fs/promises"
 import { homedir as getHomeDirectory } from "os"
 import {
 	basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension,
@@ -21,10 +17,7 @@ import pull from "../pull"
 import syncMacros from "../syncMacros"
 
 type ArgumentValue = boolean | number | string
-type Config = Partial<{ hackmudPath: string }> & Record<string, unknown>
 
-const configDirectoryPath = resolvePath(getHomeDirectory(), `.config`)
-const configFilePath = resolvePath(configDirectoryPath, `hsm.json`)
 const options = new Map<string, ArgumentValue>()
 const commands: string[] = []
 
@@ -73,30 +66,6 @@ if (commands[0] == `v` || commands[0] == `version` || options.get(`version`) || 
 	process.exit()
 }
 
-let configDidNotExist = false
-
-const configPromise: Promise<Config> = readFile(configFilePath, { encoding: `utf-8` }).then(configFile => {
-	const [ temporaryConfig, error ] = catchError(() => JSON.parse(configFile))
-
-	if (error || !isRecord(temporaryConfig)) {
-		// TODO log to error log file
-		log(`Config file was corrupted, resetting`)
-
-		return {}
-	}
-
-	if (`hackmudPath` in temporaryConfig && typeof temporaryConfig.hackmudPath != `string`) {
-		log(`Property "hackmudPath" of config file was corrupted, removing`)
-		delete temporaryConfig.hackmudPath
-	}
-
-	return temporaryConfig
-}, () => {
-	configDidNotExist = true
-
-	return {}
-})
-
 const pushModule = import(`../push`)
 const processScriptModule = import(`../processScript`)
 const watchModule = import(`../watch`)
@@ -124,25 +93,9 @@ if (options.get(`help`) || options.get(`h`)) {
 
 let autoExit = true
 
-const getHackmudPath = async () => {
-	const hackmudPathOption = options.get(`hackmud-path`)
-
-	if (hackmudPathOption != undefined && typeof hackmudPathOption != `string`) {
-		logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption)}\n`)
-		logHelp()
-		process.exit(1)
-	}
-
-	return hackmudPathOption || process.env.HSM_HACKMUD_PATH ||
-		(await configPromise).hackmudPath || (process.platform == `win32`
-			? resolvePath(process.env.APPDATA!, `hackmud`)
-			: resolvePath(getHomeDirectory(), `.config/hackmud`)
-		)
-}
-
 switch (commands[0]) {
 	case `push`: {
-		const hackmudPath = await getHackmudPath()
+		const hackmudPath = getHackmudPath()
 		const sourcePath = commands[1]
 
 		if (!sourcePath) {
@@ -230,7 +183,7 @@ switch (commands[0]) {
 
 	case `dev`:
 	case `watch`: {
-		const hackmudPath = await getHackmudPath()
+		const hackmudPath = getHackmudPath()
 		const sourcePath = commands[1]
 
 		if (!sourcePath) {
@@ -324,7 +277,7 @@ switch (commands[0]) {
 	} break
 
 	case `pull`: {
-		const hackmudPath = await getHackmudPath()
+		const hackmudPath = getHackmudPath()
 		const script = commands[1]
 
 		if (!script) {
@@ -343,7 +296,7 @@ switch (commands[0]) {
 	} break
 
 	case `sync-macros`: {
-		const hackmudPath = await getHackmudPath()
+		const hackmudPath = getHackmudPath()
 		const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
 
 		log(`Synced ${macrosSynced} macros to ${usersSynced} users`)
@@ -366,7 +319,7 @@ switch (commands[0]) {
 		const outputPath = commands[2] || `./player.d.ts`
 
 		const typeDeclaration =
-			await generateTypeDeclaration(sourcePath, await getHackmudPath())
+			await generateTypeDeclaration(sourcePath, getHackmudPath())
 
 		let typeDeclarationPath = resolvePath(outputPath)
 
@@ -382,84 +335,6 @@ switch (commands[0]) {
 		})
 
 		log(`Wrote type declaration to ${chalk.bold(typeDeclarationPath)}`)
-	} break
-
-	case `config`: {
-		switch (commands[1]) {
-			case `get`: {
-				const key = commands[2]
-				const config = await configPromise
-
-				if (key) {
-					const [ value, error ] = catchError(() => getDeepObjectProperty(config, key.split(`.`)))
-
-					if (error)
-						logError(`Could not get key ${colourV(key)}`)
-					else if (typeof value == `string`)
-						log(value)
-					else
-						console.log(value)
-				} else
-					console.log(config)
-			} break
-
-			case `delete`: {
-				const key = commands[2]
-
-				if (!key) {
-					logError(`Must provide a key to delete\n`)
-					logHelp()
-
-					break
-				}
-
-				const keys = key.split(`.`)
-				const lastKey = keys.pop()!
-				const config = await configPromise
-				const object = getDeepObjectProperty(config, keys)
-
-				if (isRecord(object)) {
-					delete object[lastKey]
-					await updateConfig(config)
-					log(`Removed ${colourV(key)} from config file:`)
-					console.log(config)
-				} else
-					log(`Could not delete ${colourV(key)}`)
-			} break
-
-			case `set`: {
-				const key = commands[2]
-				const value = commands[3]
-
-				if (!key) {
-					logError(`Must provide a key and value\n`)
-					logHelp()
-
-					break
-				}
-
-				if (!value) {
-					logError(`Must provide a value for the key ${colourV(key)}\n`)
-					logHelp()
-
-					break
-				}
-
-				const config = await configPromise
-
-				setDeepObjectProperty(config, key.split(`.`), value)
-				log(`Set ${colourV(key)} to ${colourV(value)}:`)
-				console.log(config)
-				await updateConfig(config)
-			} break
-
-			default: {
-				if (commands[1])
-					logError(`Unknown command: ${colourL(commands[1])}\n`)
-
-				logHelp()
-			}
-		}
 	} break
 
 	case `help`:
@@ -599,10 +474,6 @@ function logHelp() {
 	const minifyCommandDescription = `Minify a script file on the spot`
 	const generateTypeDeclarationCommandDescription = `Generate a type declaration file for a directory of scripts`
 	const syncMacrosCommandDescription = `Sync macros across all hackmud users`
-	const configCommandDescription = `Modify and view the config file`
-	const configGetCommandDescription = `Retrieve a value from the config file`
-	const configSetCommandDescription = `Assign a value to the config file`
-	const configDeleteCommandDescription = `Remove a key and value from the config file`
 	const pullCommandDescription = `Pull a script a from a hackmud user's script directory`
 
 	const noMinifyOptionDescription = `Skip minification to produce a "readable" script`
@@ -616,53 +487,6 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)}
 	console.log(colourN(`Version`) + colourS(`: `) + colourV(moduleVersion))
 
 	switch (commands[0]) {
-		case `config`: {
-			switch (commands[1]) {
-				case `get`: {
-					console.log(`
-${colourJ(configGetCommandDescription)}
-
-${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(`${commands[0]} ${commands[1]}`)} ${colourB(`<key>`)}`
-					)
-				} break
-
-				case `set`: {
-					console.log(`
-${colourJ(configSetCommandDescription)}
-
-${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(`${commands[0]} ${commands[1]}`)} ${colourB(`<key> <value>`)}`
-					)
-				} break
-
-				case `delete`: {
-					console.log(`
-${colourJ(configDeleteCommandDescription)}
-
-${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(`${commands[0]} ${commands[1]}`)} ${colourB(`<key>`)}`
-					)
-				} break
-
-				default: {
-					console.log(colourS(`\
-${colourN(`Config path`)}: ${colourV(configFilePath)}
-
-${colourJ(`Modify the config file`)}
-
-${colourA(`Usage:`)}
-${colourC(`hsm`)} ${colourL(`${commands[0]} get`)} ${colourB(`<key>`)}
-    ${configGetCommandDescription}
-${colourC(`hsm`)} ${colourL(`${commands[0]} set`)} ${colourB(`<key> <value>`)}
-    ${configSetCommandDescription}
-${colourC(`hsm`)} ${colourL(`${commands[0]} delete`)} ${colourB(`<key>`)}
-    ${configDeleteCommandDescription}`
-					))
-				}
-			}
-		} break
-
 		case `dev`:
 		case `watch`:
 		case `push`: {
@@ -780,37 +604,11 @@ ${colourL(`gen-dts`)}
     ${generateTypeDeclarationCommandDescription}
 ${colourL(`sync-macros`)}
     ${syncMacrosCommandDescription}
-${colourL(`config`)}
-    ${configCommandDescription}
 ${colourL(`pull`)}
     ${pullCommandDescription}`
 			))
 		}
 	}
-}
-
-async function updateConfig(config: Config) {
-	const json = JSON.stringify(config, undefined, `\t`)
-
-	if (configDidNotExist)
-		log(`Creating config file at ${configFilePath}`)
-
-	await writeFile(configFilePath, json).catch(async error => {
-		switch (error.code) {
-			case `EISDIR`: {
-				await removeDirectory(configFilePath)
-			} break
-
-			case `ENOENT`: {
-				await makeDirectory(configDirectoryPath)
-			} break
-
-			default:
-				throw error
-		}
-
-		await writeFile(configFilePath, json)
-	})
 }
 
 function logInfo({ file, users, minLength, error }: Info, hackmudPath: string) {
@@ -830,4 +628,19 @@ function logInfo({ file, users, minLength, error }: Info, hackmudPath: string) {
 function logError(message: string) {
 	console.error(colourD(message))
 	process.exitCode = 1
+}
+
+function getHackmudPath() {
+	const hackmudPathOption = options.get(`hackmud-path`)
+
+	if (hackmudPathOption != undefined && typeof hackmudPathOption != `string`) {
+		logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption)}\n`)
+		logHelp()
+		process.exit(1)
+	}
+
+	return hackmudPathOption || process.env.HSM_HACKMUD_PATH || (process.platform == `win32`
+		? resolvePath(process.env.APPDATA!, `hackmud`)
+		: resolvePath(getHomeDirectory(), `.config/hackmud`)
+	)
 }
