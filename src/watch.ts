@@ -138,7 +138,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 					{ minify, scriptUser: true, scriptName, uniqueID, filePath, mangleNames, forceQuineCheats }
 				))
 			} catch (error) {
-				assert(error instanceof Error)
+				assert(error instanceof Error, HERE)
 				onPush?.({ file: path, users: [], minLength: 0, error })
 
 				return
@@ -174,7 +174,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 				{ minify, scriptUser: user, scriptName, filePath, mangleNames, forceQuineCheats }
 			))
 		} catch (error) {
-			assert(error instanceof Error)
+			assert(error instanceof Error, HERE)
 			onPush?.({ file: path, users: [], minLength: 0, error })
 
 			return
@@ -207,7 +207,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 		try {
 			await writeFile(typeDeclarationPath, typeDeclaration)
 		} catch (error) {
-			assert(error instanceof Error)
+			assert(error instanceof Error, HERE)
 
 			if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
 				throw error

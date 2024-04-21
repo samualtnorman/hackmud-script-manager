@@ -390,7 +390,7 @@ switch (commands[0]) {
 		let typeDeclarationPath = resolvePath(outputPath)
 
 		await writeFile(typeDeclarationPath, typeDeclaration).catch(error => {
-			assert(error instanceof Error)
+			assert(error instanceof Error, HERE)
 
 			if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
 				throw error

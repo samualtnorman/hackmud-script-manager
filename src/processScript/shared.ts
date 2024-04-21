@@ -9,7 +9,7 @@ export const getReferencePathsToGlobal = (name: string, program: NodePath<Progra
 
 	program.scope.crawl()
 
-	const binding = ensure(program.scope.getBinding(name))
+	const binding = ensure(program.scope.getBinding(name), HERE)
 
 	variableDeclaration.remove()
 

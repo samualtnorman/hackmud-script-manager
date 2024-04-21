@@ -86,17 +86,17 @@ export const transform = (
 
 			assert(
 				referencePath.parent.type == `MemberExpression`,
-				`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+				`${HERE} \`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 			)
 
 			assert(
 				referencePath.parent.property.type == `Identifier`,
-				`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+				`${HERE} \`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 			)
 
 			assert(
 				referencePath.parent.property.name == `prototype`,
-				`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+				`${HERE} \`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 			)
 
 			referencePath.parentPath.replaceWith(createGetFunctionPrototypeNode())
@@ -104,17 +104,17 @@ export const transform = (
 			for (const referencePath of FunctionReferencePaths) {
 				assert(
 					referencePath.parent.type == `MemberExpression`,
-					`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+					`${HERE} \`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 				)
 
 				assert(
 					referencePath.parent.property.type == `Identifier`,
-					`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+					`${HERE} \`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 				)
 
 				assert(
 					referencePath.parent.property.name == `prototype`,
-					`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+					`${HERE} \`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 				)
 
 				functionDotPrototypeIsReferencedMultipleTimes = true
@@ -168,14 +168,14 @@ export const transform = (
 
 	if (program.scope.hasGlobal(`$db`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$db`, program)) {
-			assert(referencePath.parentPath.node.type == `MemberExpression`)
-			assert(referencePath.parentPath.node.property.type == `Identifier`)
+			assert(referencePath.parentPath.node.type == `MemberExpression`, HERE)
+			assert(referencePath.parentPath.node.property.type == `Identifier`, HERE)
 
 			const databaseOpMethodName = referencePath.parentPath.node.property.name
 
 			assert(
 				validDBMethods.includes(databaseOpMethodName),
-				`invalid db method "${databaseOpMethodName}", valid db methods are "${validDBMethods.join(`", "`)}"`
+				`${HERE} invalid db method "${databaseOpMethodName}", valid db methods are "${validDBMethods.join(`", "`)}"`
 			)
 
 			if (referencePath.parentPath.parentPath?.type == `CallExpression`)
@@ -222,7 +222,7 @@ export const transform = (
 	if (program.scope.hasGlobal(`Object`)) {
 		for (const referencePath of getReferencePathsToGlobal(`Object`, program)) {
 			if (referencePath.parent.type == `MemberExpression` && !referencePath.parent.computed) {
-				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parent.property.type == `Identifier`, HERE)
 
 				if (referencePath.parent.property.name == `getPrototypeOf`) {
 					referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`))
@@ -237,7 +237,7 @@ export const transform = (
 	if (program.scope.hasGlobal(`console`)) {
 		for (const referencePath of getReferencePathsToGlobal(`console`, program)) {
 			if (referencePath.parent.type == `MemberExpression` && !referencePath.parent.computed) {
-				assert(referencePath.parent.property.type == `Identifier`)
+				assert(referencePath.parent.property.type == `Identifier`, HERE)
 
 				referencePath.parentPath
 					.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${referencePath.parent.property.name}_`))
@@ -251,13 +251,13 @@ export const transform = (
 	const lastStatement = program.node.body.at(-1)
 	let exportDefaultName
 
-	assert(lastStatement, `program is empty`)
+	assert(lastStatement, `${HERE} program is empty`)
 
 	if (lastStatement.type == `ExportNamedDeclaration`) {
 		program.node.body.pop()
 
 		for (const specifier of lastStatement.specifiers) {
-			assert(specifier.type == `ExportSpecifier`, `${specifier.type} is currently unsupported`)
+			assert(specifier.type == `ExportSpecifier`, `${HERE} ${specifier.type} is currently unsupported`)
 
 			const exportedName =
 				specifier.exported.type == `Identifier` ? specifier.exported.name : specifier.exported.value
@@ -367,11 +367,11 @@ export const transform = (
 
 		for (const [ globalBlockIndex, globalBlockStatement ] of [ ...globalBlock.body.entries() ].reverse()) {
 			if (globalBlockStatement.type == `VariableDeclaration`) {
-				assert(globalBlockStatement.declarations.length == 1)
+				assert(globalBlockStatement.declarations.length == 1, HERE)
 
 				const declarator = globalBlockStatement.declarations[0]!
 
-				assert(declarator.id.type == `Identifier`, `declarator.id.type was "${declarator.id.type}"`)
+				assert(declarator.id.type == `Identifier`, `${HERE} declarator.id.type was "${declarator.id.type}"`)
 				program.scope.crawl()
 
 				if (program.scope.hasGlobal(declarator.id.name)) {
@@ -390,10 +390,10 @@ export const transform = (
 					) {
 						const binding = program.scope.getBinding(declarator.id.name)
 
-						assert(binding)
+						assert(binding, HERE)
 
 						for (const referencePath of binding.referencePaths) {
-							assert(referencePath.node.type == `Identifier`)
+							assert(referencePath.node.type == `Identifier`, HERE)
 
 							referencePath.replaceWith(t.memberExpression(
 								t.identifier(`$${uniqueID}$GLOBAL$`),
@@ -456,10 +456,10 @@ export const transform = (
 
 					const binding = program.scope.getBinding(globalBlockStatement.id.name)
 
-					assert(binding)
+					assert(binding, HERE)
 
 					for (const referencePath of binding.referencePaths) {
-						assert(referencePath.node.type == `Identifier`)
+						assert(referencePath.node.type == `Identifier`, HERE)
 
 						referencePath.replaceWith(t.memberExpression(
 							t.identifier(`$${uniqueID}$GLOBAL$`),
@@ -626,7 +626,7 @@ export const transform = (
 			}
 		},
 		ClassBody({ node: classBody, scope, parent }) {
-			assert(t.isClass(parent))
+			assert(t.isClass(parent), HERE)
 
 			let thisIsReferenced = false as boolean
 
@@ -740,19 +740,19 @@ export const transform = (
 
 	function processFakeSubscriptObject(fakeSubscriptObjectName: string) {
 		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-			assert(referencePath.parent.type == `MemberExpression`)
+			assert(referencePath.parent.type == `MemberExpression`, HERE)
 			assert(referencePath.parent.property.type == `Identifier`)
-			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
+			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`, HERE)
+			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`, HERE)
 
 			assert(
 				/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parent.property.name),
-				`invalid user "${referencePath.parent.property.name}" in subscript`
+				`${HERE} invalid user "${referencePath.parent.property.name}" in subscript`
 			)
 
 			assert(
 				/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parentPath.parentPath.node.property.name),
-				`invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`
+				`${HERE} invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`
 			)
 
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {

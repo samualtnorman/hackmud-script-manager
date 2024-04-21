@@ -75,7 +75,7 @@ export async function processScript(code: string, {
 	mangleNames = false,
 	forceQuineCheats
 }: LaxPartial<ProcessOptions> = {}): Promise<{ script: string, warnings: { message: string, line: number }[] }> {
-	assert(/^\w{11}$/.exec(uniqueID))
+	assert(/^\w{11}$/.exec(uniqueID), HERE)
 
 	const sourceCode = code
 	let autocomplete
@@ -156,7 +156,7 @@ export async function processScript(code: string, {
 		}
 	}
 
-	assert(/^\w{11}$/.exec(uniqueID))
+	assert(/^\w{11}$/.exec(uniqueID), HERE)
 
 	const plugins: PluginItem[] = [
 		[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
@@ -319,7 +319,7 @@ export async function processScript(code: string, {
 				if (memberExpression.computed)
 					return
 
-				assert(memberExpression.property.type == `Identifier`)
+				assert(memberExpression.property.type == `Identifier`, HERE)
 
 				if (memberExpression.property.name == `prototype`) {
 					memberExpression.computed = true
@@ -349,7 +349,7 @@ export async function processScript(code: string, {
 
 						case `ObjectPattern`: {
 							for (const property of lValue.properties) {
-								assert(property.type == `ObjectProperty`)
+								assert(property.type == `ObjectProperty`, HERE)
 								renameVariables(property.value as LVal)
 							}
 						} break

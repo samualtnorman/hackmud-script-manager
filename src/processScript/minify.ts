@@ -43,7 +43,7 @@ export async function minify(
 	file: File,
 	{ uniqueID = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: LaxPartial<MinifyOptions> = {}
 ) {
-	assert(/^\w{11}$/.exec(uniqueID))
+	assert(/^\w{11}$/.exec(uniqueID), HERE)
 
 	let program!: NodePath<Program>
 
@@ -124,7 +124,7 @@ export async function minify(
 				if (memberExpression.computed)
 					return
 
-				assert(memberExpression.property.type == `Identifier`)
+				assert(memberExpression.property.type == `Identifier`, HERE)
 
 				if (memberExpression.property.name == `prototype`) {
 					memberExpression.computed = true
@@ -256,7 +256,7 @@ export async function minify(
 						if (memberExpression.computed)
 							return
 
-						assert(memberExpression.property.type == `Identifier`)
+						assert(memberExpression.property.type == `Identifier`, HERE)
 
 						if (memberExpression.property.name.length < 3)
 							return
@@ -360,7 +360,7 @@ export async function minify(
 
 		const functionDeclaration = file.program.body[0]!
 
-		assert(functionDeclaration.type == `FunctionDeclaration`)
+		assert(functionDeclaration.type == `FunctionDeclaration`, HERE)
 
 		if (jsonValues.length) {
 			hasComment = true
@@ -491,7 +491,7 @@ export async function minify(
 	if (forceQuineCheats == true)
 		return code
 
-	assert(scriptBeforeJSONValueReplacement)
+	assert(scriptBeforeJSONValueReplacement, HERE)
 
 	// if the script has a comment, it's also gonna contain `SC$scripts$quine()`
 	// which is gonna compile to `#fs.scripts.quine()` which contains
@@ -512,7 +512,11 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 		if (property.type != `ObjectProperty` || property.computed)
 			return false
 
-		assert(property.key.type == `Identifier` || property.key.type == `NumericLiteral` || property.key.type == `StringLiteral`)
+		assert(
+			property.key.type == `Identifier` || property.key.type == `NumericLiteral` ||
+				property.key.type == `StringLiteral`,
+			HERE
+		)
 
 		if (property.value.type == `ArrayExpression`) {
 			const childArray: unknown[] = []
@@ -531,11 +535,14 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 		} else if (property.value.type == `NullLiteral`)
 			// eslint-disable-next-line unicorn/no-null
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = null
-		else if (property.value.type == `BooleanLiteral` || property.value.type == `NumericLiteral` || property.value.type == `StringLiteral`)
+		else if (property.value.type == `BooleanLiteral` || property.value.type == `NumericLiteral` ||
+			property.value.type == `StringLiteral`
+		)
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = property.value.value
-		else if (property.value.type == `TemplateLiteral` && !property.value.expressions.length)
-			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = property.value.quasis[0]!.value.cooked
-		else
+		else if (property.value.type == `TemplateLiteral` && !property.value.expressions.length) {
+			o[property.key.type == `Identifier` ? property.key.name : property.key.value] =
+				property.value.quasis[0]!.value.cooked
+		} else
 			return false
 	}
 

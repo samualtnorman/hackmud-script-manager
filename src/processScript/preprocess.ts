@@ -20,7 +20,7 @@ export type PreprocessOptions = {
 /** @param code source code for preprocessing
   * @param options {@link PreprocessOptions details} */
 export async function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
-	assert(/^\w{11}$/.test(uniqueID))
+	assert(/^\w{11}$/.test(uniqueID), HERE)
 
 	const sourceCode = code
 	let lengthBefore
@@ -64,7 +64,7 @@ export async function preprocess(code: string, { uniqueID = `00000000000` }: Par
 
 			break
 		} catch (error_) {
-			assert(error_ instanceof SyntaxError)
+			assert(error_ instanceof SyntaxError, HERE)
 			error = error_ as SyntaxError & { pos: number, code: string, reasonCode: string }
 		}
 
