@@ -1,13 +1,10 @@
 {
+	"extends": "..",
 	"compilerOptions": {
 		"exactOptionalPropertyTypes": true,
-		"noUncheckedIndexedAccess": true,
-		"strict": true,
-		"useUnknownInCatchVariables": true,
-		"strictNullChecks": true,
-		"rootDir": "."
+		"declaration": true,
+		"outDir": "../dist",
+		"types": [ "@types/node", "@total-typescript/ts-reset", "babel-plugin-here/env" ]
 	},
-	"extends": "..",
-	"include": [ "**/*" ],
-	"references": [ { "path": ".." } ]
+	"include": [ "**/*" ]
 }

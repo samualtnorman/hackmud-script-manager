@@ -72,6 +72,7 @@
 	"devDependencies": {
 		"@samual/eslint-config": "^0.0.3",
 		"@samual/rollup-config": "0.0.3-f161e35",
+		"@total-typescript/ts-reset": "^0.5.1",
 		"@types/babel__core": "^7.20.5",
 		"@types/babel__generator": "^7.6.8",
 		"@types/babel__traverse": "^7.20.5",

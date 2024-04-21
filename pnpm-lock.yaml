@@ -138,6 +138,9 @@ importers:
       '@samual/rollup-config':
         specifier: 0.0.3-f161e35
         version: 0.0.3-f161e35(@babel/core@7.24.4)(@types/babel__core@7.20.5)(prettier@3.2.5)(rollup@4.14.2)
+      '@total-typescript/ts-reset':
+        specifier: ^0.5.1
+        version: 0.5.1
       '@types/babel__core':
         specifier: ^7.20.5
         version: 7.20.5
@@ -1115,6 +1118,9 @@ packages:
   '@samual/rollup-config@0.0.3-f161e35':
     resolution: {integrity: sha512-Kri/WTmEpJ6pyli4c8Bx/d51YFGr+RAp1mW7XLop7haldfqI7CJd1XTwX6E/Tz643zgpJIAf0sUyUNeUUHu9pA==}
     engines: {node: ^18 || >=20}
+
+  '@total-typescript/ts-reset@0.5.1':
+    resolution: {integrity: sha512-AqlrT8YA1o7Ff5wPfMOL0pvL+1X+sw60NN6CcOCqs658emD6RfiXhF7Gu9QcfKBH7ELY2nInLhKSCWVoNL70MQ==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -3167,6 +3173,8 @@ snapshots:
       - prettier
       - rollup
       - supports-color
+
+  '@total-typescript/ts-reset@0.5.1': {}
 
   '@types/babel__core@7.20.5':
     dependencies:

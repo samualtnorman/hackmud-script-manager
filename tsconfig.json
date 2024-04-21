@@ -1,22 +1,23 @@
 {
+	"include": [ "*", "scripts/*", "game-scripts/*" ],
 	"compilerOptions": {
 		"allowUnreachableCode": false,
 		"allowUnusedLabels": false,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitOverride": true,
-		"noImplicitReturns": true,
+		"noUncheckedIndexedAccess": true,
+		"noUnusedLocals": true,
 		"noUnusedParameters": true,
+		"strict": true,
+		"module": "ESNext",
 		"moduleResolution": "Node",
 		"resolveJsonModule": true,
-		// "noEmit": true,
+		"types": [ "@types/node", "@total-typescript/ts-reset" ],
+		"noEmit": true,
 		"checkJs": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"target": "ES2022",
-		"skipLibCheck": true,
-		"composite": true,
-		"emitDeclarationOnly": true,
-		"module": "ESNext"
-	},
-	"include": [ "*", "scripts/*", "game-scripts/*", "package.json" ]
+		"skipLibCheck": true
+	}
 }
