@@ -14,15 +14,12 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
 export type PreprocessOptions = {
-	/** 11 a-z 0-9 characters */
-	uniqueID: string
+	/** 11 a-z 0-9 characters */ uniqueID: string
 }
 
-/**
- * @param code source code for preprocessing
- * @param options {@link PreprocessOptions details}
- */
-export const preprocess = async (code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) => {
+/** @param code source code for preprocessing
+  * @param options {@link PreprocessOptions details} */
+export async function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
 	assert(/^\w{11}$/.test(uniqueID))
 
 	const sourceCode = code
@@ -30,11 +27,7 @@ export const preprocess = async (code: string, { uniqueID = `00000000000` }: Par
 
 	do {
 		lengthBefore = code.length
-
-		code = code
-			.replace(/^\s+/, ``)
-			.replace(/^\/\/.*/, ``)
-			.replace(/^\/\*[\s\S]*?\*\//, ``)
+		code = code.replace(/^\s+/, ``).replace(/^\/\/.*/, ``).replace(/^\/\*[\s\S]*?\*\//, ``)
 	} while (code.length != lengthBefore)
 
 	code = code.replace(/^function\s*\(/, `export default function (`)
@@ -72,12 +65,7 @@ export const preprocess = async (code: string, { uniqueID = `00000000000` }: Par
 			break
 		} catch (error_) {
 			assert(error_ instanceof SyntaxError)
-
-			error = error_ as SyntaxError & {
-				pos: number
-				code: string
-				reasonCode: string
-			}
+			error = error_ as SyntaxError & { pos: number, code: string, reasonCode: string }
 		}
 
 		if (error.code != `BABEL_PARSER_SYNTAX_ERROR` || error.reasonCode != `PrivateInExpectedIn`) {
@@ -126,7 +114,8 @@ export const preprocess = async (code: string, { uniqueID = `00000000000` }: Par
 						t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`))
 					]
 					: [ t.importSpecifier(t.identifier(`Record`), t.identifier(`Record`)) ]
-				) : [ t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`)) ],
+				)
+				: [ t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`)) ],
 			t.stringLiteral(`@bloomberg/record-tuple-polyfill`)
 		))
 	}

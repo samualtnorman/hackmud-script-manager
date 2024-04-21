@@ -11,50 +11,29 @@ import { getReferencePathsToGlobal } from "./shared"
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export type TransformOptions = {
-	/** 11 a-z 0-9 characters */
-	uniqueID: string
-
-	/** the user going to be hosting this script (or set to `true` if not yet known) */
-	scriptUser: string | true
-
-	/** the name of this script (or set to `true` if not yet known) */
-	scriptName: string | true
-
+	/** 11 a-z 0-9 characters */ uniqueID: string
+	/** the user going to be hosting this script (or set to `true` if not yet known) */ scriptUser: string | true
+	/** the name of this script (or set to `true` if not yet known) */ scriptName: string | true
 	seclevel: number
 }
 
 const globalFunctionsUnder7Characters = [
-	`Map`,
-	`Set`,
-	`Date`,
-	`JSON`,
-	`Math`,
-	`Array`,
-	`Error`,
-	`isNaN`,
-	`Number`,
-	`Object`,
-	`RegExp`,
-	`String`,
-	`Symbol`,
+	`Map`, `Set`, `Date`, `JSON`, `Math`, `Array`, `Error`, `isNaN`, `Number`, `Object`, `RegExp`, `String`, `Symbol`,
 	`BigInt`
 ]
 
-/**
- * transform a given babel `File` to be hackmud compatible
- *
- * (returned File will need `postprocess()`ing)
- *
- * @param file babel ast node representing a file containing preprocessed code
- * @param sourceCode the original untouched source code
- * @param options {@link TransformOptions details}
- */
-export const transform = (file: File, sourceCode: string, {
-	uniqueID = `00000000000`,
-	scriptUser = `UNKNOWN`,
-	scriptName = `UNKNOWN`,
-	seclevel = 4
-}: Partial<TransformOptions> = {}) => {
+/** transform a given babel `File` to be hackmud compatible
+  *
+  * (returned File will need `postprocess()`ing)
+  * @param file babel ast node representing a file containing preprocessed code
+  * @param sourceCode the original untouched source code
+  * @param options {@link TransformOptions details} */
+export const transform = (
+	file: File,
+	sourceCode: string,
+	{ uniqueID = `00000000000`, scriptUser = `UNKNOWN`, scriptName = `UNKNOWN`, seclevel = 4 }:
+		Partial<TransformOptions> = {}
+) => {
 	const topFunctionName = `_${uniqueID}_SCRIPT_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
@@ -78,59 +57,26 @@ export const transform = (file: File, sourceCode: string, {
 	}
 
 	if (program.scope.hasGlobal(`_SCRIPT_USER`)) {
-		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program)) {
-			if (scriptUser == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_USER$`))
-			else
-				referencePath.replaceWith(t.stringLiteral(scriptUser))
-		}
+		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program))
+			referencePath.replaceWith(t.stringLiteral(scriptUser == true ? `$${uniqueID}$SCRIPT_USER$` : scriptUser))
 	}
 
 	if (program.scope.hasGlobal(`_SCRIPT_NAME`)) {
-		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_NAME`, program)) {
-			if (scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$SCRIPT_NAME$`))
-			else
-				referencePath.replaceWith(t.stringLiteral(scriptName))
-		}
+		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_NAME`, program))
+			referencePath.replaceWith(t.stringLiteral(scriptName == true ? `$${uniqueID}$SCRIPT_NAME$` : scriptName))
 	}
 
 	if (program.scope.hasGlobal(`_FULL_SCRIPT_NAME`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_FULL_SCRIPT_NAME`, program)) {
-			if (scriptUser == true || scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME$`))
-			else
-				referencePath.replaceWith(t.stringLiteral(`${scriptUser}.${scriptName}`))
+			referencePath.replaceWith(t.stringLiteral(
+				scriptUser == true || scriptName == true
+					? `$${uniqueID}$FULL_SCRIPT_NAME$`
+					: `${scriptUser}.${scriptName}`
+			))
 		}
 	}
 
 	let functionDotPrototypeIsReferencedMultipleTimes = false
-
-	const createGetFunctionPrototypeNode = () => {
-		for (const globalFunction of globalFunctionsUnder7Characters) {
-			if (program.scope.hasOwnBinding(globalFunction))
-				continue
-
-			return t.memberExpression(
-				t.memberExpression(
-					t.identifier(globalFunction),
-					t.identifier(`constructor`)
-				),
-				t.identifier(`prototype`)
-			)
-		}
-
-		return t.memberExpression(
-			t.memberExpression(
-				t.arrowFunctionExpression(
-					[ t.identifier(`_`) ],
-					t.identifier(`_`)
-				),
-				t.identifier(`constructor`)
-			),
-			t.identifier(`prototype`)
-		)
-	}
 
 	if (program.scope.hasGlobal(`Function`)) {
 		const FunctionReferencePaths = getReferencePathsToGlobal(`Function`, program)
@@ -138,52 +84,49 @@ export const transform = (file: File, sourceCode: string, {
 		if (FunctionReferencePaths.length == 1) {
 			const referencePath = FunctionReferencePaths[0]!
 
-			assert(referencePath.parent.type == `MemberExpression`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
-			assert(referencePath.parent.property.type == `Identifier`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
-			assert(referencePath.parent.property.name == `prototype`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
+			assert(
+				referencePath.parent.type == `MemberExpression`,
+				`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+			)
+
+			assert(
+				referencePath.parent.property.type == `Identifier`,
+				`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+			)
+
+			assert(
+				referencePath.parent.property.name == `prototype`,
+				`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+			)
+
 			referencePath.parentPath.replaceWith(createGetFunctionPrototypeNode())
 		} else {
 			for (const referencePath of FunctionReferencePaths) {
-				assert(referencePath.parent.type == `MemberExpression`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
-				assert(referencePath.parent.property.type == `Identifier`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
-				assert(referencePath.parent.property.name == `prototype`, `\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`)
-				functionDotPrototypeIsReferencedMultipleTimes = true
-
-				referencePath.parentPath.replaceWith(
-					t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`)
+				assert(
+					referencePath.parent.type == `MemberExpression`,
+					`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
 				)
+
+				assert(
+					referencePath.parent.property.type == `Identifier`,
+					`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+				)
+
+				assert(
+					referencePath.parent.property.name == `prototype`,
+					`\`Function\` isn't available in hackmud, only \`Function.prototype\` is accessible`
+				)
+
+				functionDotPrototypeIsReferencedMultipleTimes = true
+				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`))
 			}
 
 			functionDotPrototypeIsReferencedMultipleTimes = true
 		}
 	}
 
-	let detectedSeclevel = 4
-
 	const neededSubscriptLets = new Set<string>()
-
-	const processFakeSubscriptObject = (fakeSubscriptObjectName: string) => {
-		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
-			assert(referencePath.parent.type == `MemberExpression`)
-			assert(referencePath.parent.property.type == `Identifier`)
-			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
-			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
-			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parent.property.name), `invalid user "${referencePath.parent.property.name}" in subscript`)
-			assert(/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parentPath.parentPath.node.property.name), `invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`)
-
-			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
-				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(
-					t.identifier(`$${uniqueID}$SUBSCRIPT$${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}$`)
-				)
-			} else {
-				const name = `${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
-
-				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`))
-				neededSubscriptLets.add(name)
-			}
-		}
-	}
+	let detectedSeclevel = 4
 
 	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName))
@@ -230,12 +173,17 @@ export const transform = (file: File, sourceCode: string, {
 
 			const databaseOpMethodName = referencePath.parentPath.node.property.name
 
-			assert(validDBMethods.includes(databaseOpMethodName), `invalid db method "${databaseOpMethodName}", valid db methods are "${validDBMethods.join(`", "`)}"`)
+			assert(
+				validDBMethods.includes(databaseOpMethodName),
+				`invalid db method "${databaseOpMethodName}", valid db methods are "${validDBMethods.join(`", "`)}"`
+			)
 
 			if (referencePath.parentPath.parentPath?.type == `CallExpression`)
 				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`))
 			else {
-				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${databaseOpMethodName}_`))
+				referencePath.parentPath
+					.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${databaseOpMethodName}_`))
+
 				neededDbMethodLets.add(databaseOpMethodName)
 			}
 		}
@@ -273,14 +221,13 @@ export const transform = (file: File, sourceCode: string, {
 
 	if (program.scope.hasGlobal(`Object`)) {
 		for (const referencePath of getReferencePathsToGlobal(`Object`, program)) {
-			if (referencePath.parent.type != `MemberExpression` || referencePath.parent.computed)
-				continue
+			if (referencePath.parent.type == `MemberExpression` && !referencePath.parent.computed) {
+				assert(referencePath.parent.property.type == `Identifier`)
 
-			assert(referencePath.parent.property.type == `Identifier`)
-
-			if (referencePath.parent.property.name == `getPrototypeOf`) {
-				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`))
-				needGetPrototypeOf = true
+				if (referencePath.parent.property.name == `getPrototypeOf`) {
+					referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`))
+					needGetPrototypeOf = true
+				}
 			}
 		}
 	}
@@ -289,16 +236,14 @@ export const transform = (file: File, sourceCode: string, {
 
 	if (program.scope.hasGlobal(`console`)) {
 		for (const referencePath of getReferencePathsToGlobal(`console`, program)) {
-			if (referencePath.parent.type != `MemberExpression` || referencePath.parent.computed)
-				continue
+			if (referencePath.parent.type == `MemberExpression` && !referencePath.parent.computed) {
+				assert(referencePath.parent.property.type == `Identifier`)
 
-			assert(referencePath.parent.property.type == `Identifier`)
+				referencePath.parentPath
+					.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${referencePath.parent.property.name}_`))
 
-			referencePath.parentPath.replaceWith(
-				t.identifier(`_${uniqueID}_CONSOLE_METHOD_${referencePath.parent.property.name}_`)
-			)
-
-			consoleMethodsReferenced.add(referencePath.parent.property.name)
+				consoleMethodsReferenced.add(referencePath.parent.property.name)
+			}
 		}
 	}
 
@@ -314,9 +259,8 @@ export const transform = (file: File, sourceCode: string, {
 		for (const specifier of lastStatement.specifiers) {
 			assert(specifier.type == `ExportSpecifier`, `${specifier.type} is currently unsupported`)
 
-			const exportedName = specifier.exported.type == `Identifier`
-				? specifier.exported.name
-				: specifier.exported.value
+			const exportedName =
+				specifier.exported.type == `Identifier` ? specifier.exported.name : specifier.exported.value
 
 			if (exportedName == `default`)
 				exportDefaultName = specifier.local.name
@@ -331,7 +275,10 @@ export const transform = (file: File, sourceCode: string, {
 	for (const statement of program.node.body) {
 		if (statement.type == `VariableDeclaration`) {
 			for (const declarator of statement.declarations) {
-				if (declarator.id.type == `Identifier` && declarator.id.name == exportDefaultName && declarator.init && (declarator.init.type == `FunctionExpression` || declarator.init.type == `ArrowFunctionExpression`) && !declarator.init.async && !declarator.init.generator) {
+				if (declarator.id.type == `Identifier` && declarator.id.name == exportDefaultName && declarator.init &&
+					(declarator.init.type == `FunctionExpression` || declarator.init.type == `ArrowFunctionExpression`
+					) && !declarator.init.async && !declarator.init.generator
+				) {
 					mainFunction = t.functionDeclaration(
 						t.identifier(topFunctionName),
 						declarator.init.params,
@@ -349,9 +296,7 @@ export const transform = (file: File, sourceCode: string, {
 							t.identifier(topFunctionName),
 							[ t.identifier(`context`), t.identifier(`args`) ],
 							t.blockStatement([
-								t.returnStatement(
-									t.callExpression(t.identifier(exportDefaultName), [])
-								)
+								t.returnStatement(t.callExpression(t.identifier(exportDefaultName), []))
 							])
 						)
 					}
@@ -361,47 +306,31 @@ export const transform = (file: File, sourceCode: string, {
 						exports.delete(identifierName)
 					}
 
-					globalBlock.body.push(
-						t.variableDeclaration(
-							`let`,
-							[ t.variableDeclarator(t.identifier(identifierName)) ]
-						)
-					)
+					globalBlock.body
+						.push(t.variableDeclaration(`let`, [ t.variableDeclarator(t.identifier(identifierName)) ]))
 				}
 
 				if (declarator.init) {
-					globalBlock.body.push(
-						t.expressionStatement(
-							t.assignmentExpression(
-								`=`,
-								declarator.id,
-								declarator.init
-							)
-						)
-					)
+					globalBlock.body
+						.push(t.expressionStatement(t.assignmentExpression(`=`, declarator.id, declarator.init)))
 				}
 			}
 		} else if (statement.type == `FunctionDeclaration`) {
 			if (statement.id!.name == exportDefaultName)
 				mainFunction = statement
 			else {
-				globalBlock.body.push(
-					t.variableDeclaration(
-						`let`,
-						[
-							t.variableDeclarator(
-								statement.id!,
-								t.functionExpression(
-									undefined,
-									statement.params,
-									statement.body,
-									statement.generator,
-									statement.async
-								)
-							)
-						]
+				globalBlock.body.push(t.variableDeclaration(`let`, [
+					t.variableDeclarator(
+						statement.id!,
+						t.functionExpression(
+							undefined,
+							statement.params,
+							statement.body,
+							statement.generator,
+							statement.async
+						)
 					)
-				)
+				]))
 			}
 		} else
 			globalBlock.body.push(statement)
@@ -409,10 +338,7 @@ export const transform = (file: File, sourceCode: string, {
 
 	mainFunction ||= t.functionDeclaration(
 		t.identifier(topFunctionName),
-		[
-			t.identifier(`context`),
-			t.identifier(`args`)
-		],
+		[ t.identifier(`context`), t.identifier(`args`) ],
 		t.blockStatement([])
 	)
 
@@ -420,28 +346,18 @@ export const transform = (file: File, sourceCode: string, {
 
 	if (globalBlock.body.length) {
 		if (exports.size || liveExports.size) {
-			mainFunction.body.body.push(
-				t.returnStatement(
-					t.objectExpression([
-						...[ ...exports ].map(
-							([ local, exported ]) =>
-								t.objectProperty(t.identifier(exported), t.identifier(local))
-						),
-						...[ ...liveExports ].map(
-							([ local, exported ]) => t.objectMethod(
-								`get`,
-								t.identifier(exported),
-								[],
-								t.blockStatement([
-									t.returnStatement(
-										t.identifier(local)
-									)
-								])
-							)
-						)
-					])
-				)
-			)
+			mainFunction.body.body.push(t.returnStatement(
+				t.objectExpression([
+					...[ ...exports ]
+						.map(([ local, exported ]) => t.objectProperty(t.identifier(exported), t.identifier(local))),
+					...[ ...liveExports ].map(([ local, exported ]) => t.objectMethod(
+						`get`,
+						t.identifier(exported),
+						[],
+						t.blockStatement([ t.returnStatement(t.identifier(local)) ])
+					))
+				])
+			))
 		}
 
 		program.scope.crawl()
@@ -461,19 +377,17 @@ export const transform = (file: File, sourceCode: string, {
 				if (program.scope.hasGlobal(declarator.id.name)) {
 					globalBlock.body.splice(globalBlockIndex, 1)
 
-					const [ globalBlockPath ] = program.unshiftContainer(
-						`body`,
-						globalBlock
-					)
-
-					const [ globalBlockStatementPath ] = program.unshiftContainer(
-						`body`,
-						globalBlockStatement
-					)
+					const [ globalBlockPath ] = program.unshiftContainer(`body`, globalBlock)
+					const [ globalBlockStatementPath ] = program.unshiftContainer(`body`, globalBlockStatement)
 
 					program.scope.crawl()
 
-					if (!declarator.init || (declarator.init.type != `FunctionExpression` && declarator.init.type != `ArrowFunctionExpression`) || Object.keys((program.scope as any).globals).some(global => globalBlockVariables.has(global))) {
+					if (!declarator.init ||
+						(declarator.init.type != `FunctionExpression` &&
+							declarator.init.type != `ArrowFunctionExpression`
+						) ||
+						Object.keys((program.scope as any).globals).some(global => globalBlockVariables.has(global))
+					) {
 						const binding = program.scope.getBinding(declarator.id.name)
 
 						assert(binding)
@@ -481,12 +395,10 @@ export const transform = (file: File, sourceCode: string, {
 						for (const referencePath of binding.referencePaths) {
 							assert(referencePath.node.type == `Identifier`)
 
-							referencePath.replaceWith(
-								t.memberExpression(
-									t.identifier(`$${uniqueID}$GLOBAL$`),
-									t.identifier(referencePath.node.name)
-								)
-							)
+							referencePath.replaceWith(t.memberExpression(
+								t.identifier(`$${uniqueID}$GLOBAL$`),
+								t.identifier(referencePath.node.name)
+							))
 						}
 
 						for (const referencePath of binding.constantViolations) {
@@ -499,10 +411,7 @@ export const transform = (file: File, sourceCode: string, {
 
 									Object.assign(
 										node,
-										t.memberExpression(
-											t.identifier(`$${uniqueID}$GLOBAL$`),
-											t.identifier(name)
-										)
+										t.memberExpression(t.identifier(`$${uniqueID}$GLOBAL$`), t.identifier(name))
 									)
 								}
 							}
@@ -515,26 +424,20 @@ export const transform = (file: File, sourceCode: string, {
 							globalBlock.body.splice(
 								globalBlockIndex,
 								0,
-								t.expressionStatement(
-									t.assignmentExpression(
-										`=`,
-										t.memberExpression(
-											t.identifier(`$${uniqueID}$GLOBAL$`),
-											t.identifier(declarator.id.name)
-										),
-										declarator.init
-									)
-								)
+								t.expressionStatement(t.assignmentExpression(
+									`=`,
+									t.memberExpression(
+										t.identifier(`$${uniqueID}$GLOBAL$`),
+										t.identifier(declarator.id.name)
+									),
+									declarator.init
+								))
 							)
 						}
 					} else {
 						globalBlockPath.remove()
 						globalBlockStatementPath.remove()
-
-						mainFunction.body.body.unshift(
-							globalBlockStatement
-						)
-
+						mainFunction.body.body.unshift(globalBlockStatement)
 						hoistedGlobalBlockFunctions++
 					}
 				} else
@@ -546,15 +449,8 @@ export const transform = (file: File, sourceCode: string, {
 				if (program.scope.hasGlobal(globalBlockStatement.id.name)) {
 					globalBlock.body.splice(globalBlockIndex, 1)
 
-					const [ globalBlockPath ] = program.unshiftContainer(
-						`body`,
-						globalBlock
-					)
-
-					const [ globalBlockStatementPath ] = program.unshiftContainer(
-						`body`,
-						globalBlockStatement
-					)
+					const [ globalBlockPath ] = program.unshiftContainer(`body`, globalBlock)
+					const [ globalBlockStatementPath ] = program.unshiftContainer(`body`, globalBlockStatement)
 
 					program.scope.crawl()
 
@@ -565,12 +461,10 @@ export const transform = (file: File, sourceCode: string, {
 					for (const referencePath of binding.referencePaths) {
 						assert(referencePath.node.type == `Identifier`)
 
-						referencePath.replaceWith(
-							t.memberExpression(
-								t.identifier(`$${uniqueID}$GLOBAL$`),
-								t.identifier(referencePath.node.name)
-							)
-						)
+						referencePath.replaceWith(t.memberExpression(
+							t.identifier(`$${uniqueID}$GLOBAL$`),
+							t.identifier(referencePath.node.name)
+						))
 					}
 
 					globalBlockPath.remove()
@@ -579,21 +473,19 @@ export const transform = (file: File, sourceCode: string, {
 					globalBlock.body.splice(
 						globalBlockIndex,
 						0,
-						t.expressionStatement(
-							t.assignmentExpression(
-								`=`,
-								t.memberExpression(
-									t.identifier(`$${uniqueID}$GLOBAL$`),
-									t.identifier(globalBlockStatement.id.name)
-								),
-								t.classExpression(
-									undefined,
-									globalBlockStatement.superClass,
-									globalBlockStatement.body,
-									globalBlockStatement.decorators
-								)
+						t.expressionStatement(t.assignmentExpression(
+							`=`,
+							t.memberExpression(
+								t.identifier(`$${uniqueID}$GLOBAL$`),
+								t.identifier(globalBlockStatement.id.name)
+							),
+							t.classExpression(
+								undefined,
+								globalBlockStatement.superClass,
+								globalBlockStatement.body,
+								globalBlockStatement.decorators
 							)
-						)
+						))
 					)
 				}
 			}
@@ -602,10 +494,7 @@ export const transform = (file: File, sourceCode: string, {
 		if (program.scope.hasGlobal(`_EXPORTS`)) {
 			for (const referencePath of getReferencePathsToGlobal(`_EXPORTS`, program)) {
 				referencePath.replaceWith(
-					t.arrayExpression(
-						[ ...exports.keys(), ...liveExports.keys() ]
-							.map(name => t.stringLiteral(name))
-					)
+					t.arrayExpression([ ...exports.keys(), ...liveExports.keys() ].map(name => t.stringLiteral(name)))
 				)
 			}
 		}
@@ -614,23 +503,14 @@ export const transform = (file: File, sourceCode: string, {
 			mainFunction.body.body.splice(
 				hoistedGlobalBlockFunctions,
 				0,
-				t.ifStatement(
-					t.unaryExpression(
-						`!`,
-						t.identifier(`$${uniqueID}$FMCL$`)
-					),
-					globalBlock
-				)
+				t.ifStatement(t.unaryExpression(`!`, t.identifier(`$${uniqueID}$FMCL$`)), globalBlock)
 			)
 		}
 	}
 
 	if (functionDotPrototypeIsReferencedMultipleTimes) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
-			t.variableDeclarator(
-				t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`),
-				createGetFunctionPrototypeNode()
-			)
+			t.variableDeclarator(t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`), createGetFunctionPrototypeNode())
 		]))
 	}
 
@@ -640,19 +520,10 @@ export const transform = (file: File, sourceCode: string, {
 				t.objectPattern([
 					t.objectProperty(t.identifier(`get`), t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`))
 				]),
-				t.callExpression(
-					t.memberExpression(
-						t.identifier(`Object`),
-						t.identifier(`getOwnPropertyDescriptor`)
-					),
-					[
-						t.memberExpression(
-							t.identifier(`Object`),
-							t.identifier(`prototype`)
-						),
-						t.stringLiteral(`__proto__`)
-					]
-				)
+				t.callExpression(t.memberExpression(t.identifier(`Object`), t.identifier(`getOwnPropertyDescriptor`)), [
+					t.memberExpression(t.identifier(`Object`), t.identifier(`prototype`)),
+					t.stringLiteral(`__proto__`)
+				])
 			),
 			t.variableDeclarator(
 				t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`),
@@ -676,108 +547,84 @@ export const transform = (file: File, sourceCode: string, {
 	}
 
 	if (consoleMethodsReferenced.size) {
-		mainFunction.body.body.unshift(
-			t.variableDeclaration(
-				`let`,
-				[ ...consoleMethodsReferenced ].map(name => t.variableDeclarator(
-					t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
-					t.arrowFunctionExpression(
-						[ t.restElement(t.identifier(`args`)) ],
-						t.unaryExpression(
-							`void`,
-							t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`args`) ])
-						)
+		mainFunction.body.body.unshift(t.variableDeclaration(
+			`let`,
+			[ ...consoleMethodsReferenced ].map(name => t.variableDeclarator(
+				t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
+				t.arrowFunctionExpression(
+					[ t.restElement(t.identifier(`args`)) ],
+					t.unaryExpression(
+						`void`,
+						t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`args`) ])
 					)
-				))
-			)
-		)
+				)
+			))
+		))
 	}
 
 	if (neededDbMethodLets.size) {
-		mainFunction.body.body.unshift(
-			t.variableDeclaration(
-				`let`,
-				[ ...neededDbMethodLets ].map(name => {
-					const getArgs = () => name == `ObjectId`
-						? []
-						: (name == `i` || name == `r`
-							? [ t.identifier(`a`) ]
-							: [ t.identifier(`a`), t.identifier(`b`) ]
-						)
+		mainFunction.body.body.unshift(t.variableDeclaration(
+			`let`,
+			[ ...neededDbMethodLets ].map(name => {
+				const getArgs = () => name == `ObjectId`
+					? []
+					: (name == `i` || name == `r` ? [ t.identifier(`a`) ] : [ t.identifier(`a`), t.identifier(`b`) ])
 
-					return t.variableDeclarator(
-						t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
-						t.arrowFunctionExpression(
-							getArgs(),
-							t.callExpression(t.identifier(`$${uniqueID}$DB$${name}$`), getArgs())
-						)
+				return t.variableDeclarator(
+					t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
+					t.arrowFunctionExpression(
+						getArgs(),
+						t.callExpression(t.identifier(`$${uniqueID}$DB$${name}$`), getArgs())
 					)
-				})
-			)
-		)
+				)
+			})
+		))
 	}
 
 	if (needDebugLet) {
-		mainFunction.body.body.unshift(
-			t.variableDeclaration(
-				`let`,
-				[
-					t.variableDeclarator(
-						t.identifier(`_${uniqueID}_DEBUG_`),
-						t.callExpression(
-							t.identifier(`$${uniqueID}$DEBUG$`),
-							[ t.identifier(`a`) ]
-						)
-					)
-				]
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
+			t.variableDeclarator(
+				t.identifier(`_${uniqueID}_DEBUG_`),
+				t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`a`) ])
 			)
-		)
+		]))
 	}
 
 	if (neededSubscriptLets.size) {
-		mainFunction.body.body.unshift(
-			t.variableDeclaration(
-				`let`,
-				[ ...neededSubscriptLets ].map(name => t.variableDeclarator(
-					t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`),
-					t.arrowFunctionExpression(
-						[ t.restElement(t.identifier(`args`)) ],
-						t.callExpression(
-							t.identifier(`$${uniqueID}$SUBSCRIPT$${name}$`),
-							[ t.spreadElement(t.identifier(`args`)) ]
-						)
+		mainFunction.body.body.unshift(t.variableDeclaration(
+			`let`,
+			[ ...neededSubscriptLets ].map(name => t.variableDeclarator(
+				t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`),
+				t.arrowFunctionExpression(
+					[ t.restElement(t.identifier(`args`)) ],
+					t.callExpression(
+						t.identifier(`$${uniqueID}$SUBSCRIPT$${name}$`),
+						[ t.spreadElement(t.identifier(`args`)) ]
 					)
-				))
-			)
-		)
+				)
+			))
+		))
 	}
 
 	traverse(file, {
 		BlockStatement({ node: blockStatement }) {
 			for (const [ index, functionDeclaration ] of blockStatement.body.entries()) {
-				if (functionDeclaration.type != `FunctionDeclaration` || functionDeclaration.generator)
-					continue
+				if (functionDeclaration.type == `FunctionDeclaration` && !functionDeclaration.generator) {
+					blockStatement.body.splice(index, 1)
 
-				blockStatement.body.splice(index, 1)
-
-				blockStatement.body.unshift(
-					t.variableDeclaration(
-						`let`,
-						[
-							t.variableDeclarator(
-								functionDeclaration.id!,
-								t.arrowFunctionExpression(
-									functionDeclaration.params,
-									functionDeclaration.body,
-									functionDeclaration.async
-								)
+					blockStatement.body.unshift(t.variableDeclaration(`let`, [
+						t.variableDeclarator(
+							functionDeclaration.id!,
+							t.arrowFunctionExpression(
+								functionDeclaration.params,
+								functionDeclaration.body,
+								functionDeclaration.async
 							)
-						]
-					)
-				)
+						)
+					]))
+				}
 			}
 		},
-
 		ClassBody({ node: classBody, scope, parent }) {
 			assert(t.isClass(parent))
 
@@ -795,10 +642,7 @@ export const transform = (file: File, sourceCode: string, {
 						thisIsReferenced = true
 						path.replaceWith(t.identifier(`_${uniqueID}_THIS_`))
 					},
-
-					Function(path) {
-						path.skip()
-					}
+					Function: path => path.skip()
 				}, scope)
 
 				if (!methodReferencesThis)
@@ -816,48 +660,25 @@ export const transform = (file: File, sourceCode: string, {
 
 					if (!superCalls.length) {
 						classMethod.body.body.unshift(
-							t.variableDeclaration(
-								`let`,
-								[
-									t.variableDeclarator(
-										t.identifier(`_${uniqueID}_THIS_`),
-										t.callExpression(t.super(), [])
-									)
-								]
-							)
-						)
-					} else if (superCalls.length == 1 && superCalls[0]!.parent.type == `ExpressionStatement` && superCalls[0]!.parentPath.parentPath!.parent == classMethod) {
-						superCalls[0]!.parentPath.replaceWith(
-							t.variableDeclaration(
-								`let`,
-								[
-									t.variableDeclarator(
-										t.identifier(`_${uniqueID}_THIS_`),
-										superCalls[0]!.node
-									)
-								]
-							)
-						)
-					} else {
-						for (const path of superCalls) {
-							path.replaceWith(
-								t.assignmentExpression(
-									`=`,
+							t.variableDeclaration(`let`, [
+								t.variableDeclarator(
 									t.identifier(`_${uniqueID}_THIS_`),
-									path.node
+									t.callExpression(t.super(), [])
 								)
-							)
-						}
+							])
+						)
+					} else if (superCalls.length == 1 && superCalls[0]!.parent.type == `ExpressionStatement` &&
+						superCalls[0]!.parentPath.parentPath!.parent == classMethod
+					) {
+						superCalls[0]!.parentPath.replaceWith(t.variableDeclaration(`let`, [
+							t.variableDeclarator(t.identifier(`_${uniqueID}_THIS_`), superCalls[0]!.node)
+						]))
+					} else {
+						for (const path of superCalls)
+							path.replaceWith(t.assignmentExpression(`=`, t.identifier(`_${uniqueID}_THIS_`), path.node))
 
 						classMethod.body.body.unshift(
-							t.variableDeclaration(
-								`let`,
-								[
-									t.variableDeclarator(
-										t.identifier(`_${uniqueID}_THIS_`)
-									)
-								]
-							)
+							t.variableDeclaration(`let`, [ t.variableDeclarator(t.identifier(`_${uniqueID}_THIS_`)) ])
 						)
 					}
 
@@ -869,58 +690,85 @@ export const transform = (file: File, sourceCode: string, {
 				// TODO track whether any class in the chain overwrites `valueOf()` (if unsure, assume yes)
 				// TODO for classes that need it, create a super class for this one to extend from with `valueOf()` assigned to an unused name
 
-				classMethod.body.body.unshift(t.variableDeclaration(
-					`let`,
-					[
-						t.variableDeclarator(
-							t.identifier(`_${uniqueID}_THIS_`),
-							t.callExpression(
-								t.memberExpression(
-									t.super(),
-									t.identifier(`valueOf`)
-								),
-								[]
-							)
-						)
-					]
-				))
+				classMethod.body.body.unshift(t.variableDeclaration(`let`, [
+					t.variableDeclarator(
+						t.identifier(`_${uniqueID}_THIS_`),
+						t.callExpression(t.memberExpression(t.super(), t.identifier(`valueOf`)), [])
+					)
+				]))
 			}
 
 			if (!parent.superClass && thisIsReferenced)
 				parent.superClass = t.identifier(`Object`)
 		},
-
 		VariableDeclaration({ node: variableDeclaration }) {
 			if (variableDeclaration.kind == `const`)
 				variableDeclaration.kind = `let`
 		},
-
-		ThisExpression(path) {
-			path.replaceWith(t.identifier(`undefined`))
-		},
-
+		ThisExpression: path => path.replaceWith(t.identifier(`undefined`)),
 		BigIntLiteral(path) {
 			const bigIntAsNumber = Number(path.node.value)
 
-			if (BigInt(bigIntAsNumber) == BigInt(path.node.value)) {
-				path.replaceWith(
-					t.callExpression(
-						t.identifier(`BigInt`),
-						[ t.numericLiteral(bigIntAsNumber) ]
-					)
-				)
-			} else {
-				path.replaceWith(
-					t.callExpression(
-						t.identifier(`BigInt`),
-						[ t.stringLiteral(path.node.value) ]
-					)
-				)
-			}
+			path.replaceWith(t.callExpression(t.identifier(`BigInt`), [
+				BigInt(bigIntAsNumber) == BigInt(path.node.value)
+					? t.numericLiteral(bigIntAsNumber)
+					: t.stringLiteral(path.node.value)
+			]))
 		}
 	})
 
 	return { file, seclevel }
+
+	function createGetFunctionPrototypeNode() {
+		for (const globalFunction of globalFunctionsUnder7Characters) {
+			if (!program.scope.hasOwnBinding(globalFunction)) {
+				return t.memberExpression(
+					t.memberExpression(t.identifier(globalFunction), t.identifier(`constructor`)),
+					t.identifier(`prototype`)
+				)
+			}
+		}
+
+		return t.memberExpression(
+			t.memberExpression(
+				t.arrowFunctionExpression([ t.identifier(`_`) ], t.identifier(`_`)),
+				t.identifier(`constructor`)
+			),
+			t.identifier(`prototype`)
+		)
+	}
+
+	function processFakeSubscriptObject(fakeSubscriptObjectName: string) {
+		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
+			assert(referencePath.parent.type == `MemberExpression`)
+			assert(referencePath.parent.property.type == `Identifier`)
+			assert(referencePath.parentPath.parentPath?.node.type == `MemberExpression`)
+			assert(referencePath.parentPath.parentPath.node.property.type == `Identifier`)
+
+			assert(
+				/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parent.property.name),
+				`invalid user "${referencePath.parent.property.name}" in subscript`
+			)
+
+			assert(
+				/^[_a-z][\d_a-z]{0,24}$/.test(referencePath.parentPath.parentPath.node.property.name),
+				`invalid script name "${referencePath.parentPath.parentPath.node.property.name}" in subscript`
+			)
+
+			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
+				// BUG this is causing typescript to be slow
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueID}$SUBSCRIPT$${
+					referencePath.parent.property.name
+				}$${referencePath.parentPath.parentPath.node.property.name}$`))
+			} else {
+				const name =
+					`${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
+
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`))
+				neededSubscriptLets.add(name)
+			}
+		}
+	}
 }
 
 export default transform

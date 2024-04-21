@@ -36,12 +36,13 @@ export const syncMacros = async (hackmudPath: string) => {
 	let macroFile = ``
 	let macrosSynced = 0
 
-	for (const [ name, { macro } ] of [ ...macros ].sort(([ a ], [ b ]) => (a as any > b as any) - (a as any < b as any))) {
-		if (macro[0] != macro[0]!.toLowerCase())
-			continue
-
-		macroFile += `${name}\n${macro}\n`
-		macrosSynced++
+	for (const [ name, { macro } ] of
+		[ ...macros ].sort(([ a ], [ b ]) => (a as any > b as any) - (a as any < b as any))
+	) {
+		if (macro[0] == macro[0]!.toLowerCase()) {
+			macroFile += `${name}\n${macro}\n`
+			macrosSynced++
+		}
 	}
 
 	for (const user of users)

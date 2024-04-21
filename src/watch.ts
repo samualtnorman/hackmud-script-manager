@@ -13,36 +13,27 @@ import processScript from "./processScript"
 import type { PushOptions } from "./push"
 
 export type WatchOptions = PushOptions & {
-	/**
-	 * if provided, will write typescript type declarations for all the scripts on every change detected
-	 *
-	 * writing the type declarations enables interscript type checking and autocompletetes for the args
-	 */
+	/** if provided, will write typescript type declarations for all the scripts on every change detected
+	  *
+	  * writing the type declarations enables interscript type checking and autocompletetes for the args */
 	typeDeclarationPath: string
 
 	onReady: () => void
 }
 
-/**
- * Watches target file or folder for updates and builds and pushes updated file.
- *
- * @param sourceDirectory path to folder containing source files
- * @param hackmudDirectory path to hackmud directory
- * @param options {@link WatchOptions details} and {@link PushOptions more details}
- */
-export const watch = async (
-	sourceDirectory: string,
-	hackmudDirectory: string,
-	{
-		scripts = [ `*.*` ],
-		onPush,
-		minify = true,
-		mangleNames = false,
-		typeDeclarationPath: typeDeclarationPath_,
-		onReady,
-		forceQuineCheats
-	}: LaxPartial<WatchOptions> = {}
-) => {
+/** Watches target file or folder for updates and builds and pushes updated file.
+  * @param sourceDirectory path to folder containing source files
+  * @param hackmudDirectory path to hackmud directory
+  * @param options {@link WatchOptions details} and {@link PushOptions more details} */
+export async function watch(sourceDirectory: string, hackmudDirectory: string, {
+	scripts = [ `*.*` ],
+	onPush,
+	minify = true,
+	mangleNames = false,
+	typeDeclarationPath: typeDeclarationPath_,
+	onReady,
+	forceQuineCheats
+}: LaxPartial<WatchOptions> = {}) {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
 
@@ -65,11 +56,10 @@ export const watch = async (
 			scriptNamesToUsers.get(scriptName).add(user)
 	}
 
-	const watcher = watchDirectory([ `*/*.ts`, `*/*.js` ], {
-		cwd: sourceDirectory,
-		awaitWriteFinish: { stabilityThreshold: 100 },
-		ignored: `*.d.ts`
-	}).on(`change`, async path => {
+	const watcher = watchDirectory(
+		[ `*/*.ts`, `*/*.js` ],
+		{ cwd: sourceDirectory, awaitWriteFinish: { stabilityThreshold: 100 }, ignored: `*.d.ts` }
+	).on(`change`, async path => {
 		if (path.endsWith(`.d.ts`))
 			return
 
@@ -80,25 +70,26 @@ export const watch = async (
 
 		const scriptName = getPathBaseName(path, extension)
 
-		// if the path is still the same after getting just the base, it means it's directly in the source directory (global)
+		// if the path is still the same after getting just the base, it means it's directly in the source directory
+		// (global)
 		if (path == getPathBaseName(path)) {
-			if (!pushEverything && !wildScriptUsers.size && !wildUserScripts.has(scriptName) && !scriptNamesToUsers.has(scriptName))
+			if (!pushEverything && !wildScriptUsers.size && !wildUserScripts.has(scriptName) &&
+				!scriptNamesToUsers.has(scriptName)
+			)
 				return
 
 			const scriptNamesToUsersToSkip = new Cache((_scriptName: string): string[] => [])
 
 			await Promise.all((await readDirectoryWithStats(sourceDirectory)).map(async ({ stats, name, path }) => {
-				if (!stats.isDirectory())
-					return
+				if (stats.isDirectory()) {
+					for (const child of await readDirectoryWithStats(path)) {
+						if (child.stats.isFile()) {
+							const fileExtension = getFileExtension(child.name)
 
-				for (const child of await readDirectoryWithStats(path)) {
-					if (!child.stats.isFile())
-						continue
-
-					const fileExtension = getFileExtension(child.name)
-
-					if (supportedExtensions.includes(fileExtension))
-						scriptNamesToUsersToSkip.get(getPathBaseName(child.name, fileExtension)).push(name)
+							if (supportedExtensions.includes(fileExtension))
+								scriptNamesToUsersToSkip.get(getPathBaseName(child.name, fileExtension)).push(name)
+						}
+					}
 				}
 			}))
 
@@ -132,12 +123,7 @@ export const watch = async (
 			const usersToPushTo = [ ...usersToPushToSet ].filter(user => !scriptNamesToUsersToSkip.has(user))
 
 			if (!usersToPushTo.length) {
-				onPush?.({
-					file: path,
-					users: [],
-					minLength: 0,
-					error: new Error(`no users to push to`)
-				})
+				onPush?.({ file: path, users: [], minLength: 0, error: new Error(`no users to push to`) })
 
 				return
 			}
@@ -149,49 +135,33 @@ export const watch = async (
 			try {
 				({ script: minifiedCode } = await processScript(
 					await readFile(filePath, { encoding: `utf-8` }),
-					{
-						minify,
-						scriptUser: true,
-						scriptName,
-						uniqueID,
-						filePath,
-						mangleNames,
-						forceQuineCheats
-					}
+					{ minify, scriptUser: true, scriptName, uniqueID, filePath, mangleNames, forceQuineCheats }
 				))
 			} catch (error) {
 				assert(error instanceof Error)
-
-				onPush?.({
-					file: path,
-					users: [],
-					minLength: 0,
-					error
-				})
+				onPush?.({ file: path, users: [], minLength: 0, error })
 
 				return
 			}
 
 			await Promise.all(usersToPushTo.map(user => writeFilePersistent(
 				resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`),
-				minifiedCode
-					.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
+				minifiedCode.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
 					.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
 			)))
 
-			onPush?.({
-				file: path,
-				users: usersToPushTo,
-				minLength: countHackmudCharacters(minifiedCode),
-				error: undefined
-			})
+			onPush?.(
+				{ file: path, users: usersToPushTo, minLength: countHackmudCharacters(minifiedCode), error: undefined }
+			)
 
 			return
 		}
 
 		const user = getPathBaseName(resolvePath(path, `..`))
 
-		if (!pushEverything && !wildScriptUsers.size && !wildUserScripts.has(scriptName) && !scriptNamesToUsers.get(scriptName).has(user))
+		if (!pushEverything && !wildScriptUsers.size && !wildUserScripts.has(scriptName) &&
+			!scriptNamesToUsers.get(scriptName).has(user)
+		)
 			return
 
 		const filePath = resolvePath(sourceDirectory, path)
@@ -199,35 +169,19 @@ export const watch = async (
 		let script
 
 		try {
-			({ script } = await processScript(sourceCode, {
-				minify,
-				scriptUser: user,
-				scriptName,
-				filePath,
-				mangleNames,
-				forceQuineCheats
-			}))
+			({ script } = await processScript(
+				sourceCode,
+				{ minify, scriptUser: user, scriptName, filePath, mangleNames, forceQuineCheats }
+			))
 		} catch (error) {
 			assert(error instanceof Error)
-
-			onPush?.({
-				file: path,
-				users: [],
-				minLength: 0,
-				error
-			})
+			onPush?.({ file: path, users: [], minLength: 0, error })
 
 			return
 		}
 
 		await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts`, `${scriptName}.js`), script)
-
-		onPush?.({
-			file: path,
-			users: [ user ],
-			minLength: countHackmudCharacters(script),
-			error: undefined
-		})
+		onPush?.({ file: path, users: [ user ], minLength: countHackmudCharacters(script), error: undefined })
 	})
 
 	if (onReady)

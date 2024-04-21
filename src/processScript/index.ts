@@ -47,51 +47,34 @@ export { preprocess } from "./preprocess"
 export { transform } from "./transform"
 
 export type ProcessOptions = {
-	/** whether to minify the given code */
-	minify: boolean
-
-	/** 11 a-z 0-9 characters */
-	uniqueID: string
-
-	/** the user going to be hosting this script (or set to `true` if not yet known) */
-	scriptUser: string | true
-
-	/** the name of this script (or set to `true` if not yet known) */
-	scriptName: string | true
-
+	/** whether to minify the given code */ minify: boolean
+	/** 11 a-z 0-9 characters */ uniqueID: string
+	/** the user going to be hosting this script (or set to `true` if not yet known) */ scriptUser: string | true
+	/** the name of this script (or set to `true` if not yet known) */ scriptName: string | true
 	filePath: string
+	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
-	/** whether to mangle function and class names (defaults to `false`) */
-	mangleNames: boolean
-
-	/**
-	 * when set to `true` forces use of quine cheats
-	 *
-	 * when set to `false` forces quine cheats not to be used
-	 *
-	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
-	 */
+	/** when set to `true` forces use of quine cheats
+	  *
+	  * when set to `false` forces quine cheats not to be used
+	  *
+	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	  */
 	forceQuineCheats: boolean
 }
 
-/**
- * Minifies a given script
- *
- * @param code JavaScript or TypeScript code
- * @param options {@link ProcessOptions details}
- */
-export const processScript = async (
-	code: string,
-	{
-		minify: shouldMinify = true,
-		uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
-		scriptUser = `UNKNOWN`,
-		scriptName = `UNKNOWN`,
-		filePath,
-		mangleNames = false,
-		forceQuineCheats
-	}: LaxPartial<ProcessOptions> = {}
-): Promise<{ script: string, warnings: { message: string, line: number }[] }> => {
+/** Minifies a given script
+  * @param code JavaScript or TypeScript code
+  * @param options {@link ProcessOptions details} */
+export async function processScript(code: string, {
+	minify: shouldMinify = true,
+	uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
+	scriptUser = `UNKNOWN`,
+	scriptName = `UNKNOWN`,
+	filePath,
+	mangleNames = false,
+	forceQuineCheats
+}: LaxPartial<ProcessOptions> = {}): Promise<{ script: string, warnings: { message: string, line: number }[] }> {
 	assert(/^\w{11}$/.exec(uniqueID))
 
 	const sourceCode = code
@@ -167,7 +150,7 @@ export const processScript = async (
 
 					default:
 						// TODO turn into warning when I get round to those
-						throw new Error(`unrecognised seclevel "${seclevelString}"`)
+						throw Error(`unrecognised seclevel "${seclevelString}"`)
 				}
 			}
 		}
@@ -198,9 +181,12 @@ export const processScript = async (
 	if (filePath) {
 		filePathResolved = resolvePath(filePath)
 
-		if (filePath.endsWith(`.ts`))
-			plugins.push([ (await import(`@babel/plugin-transform-typescript`)).default, { allowDeclareFields: true, optimizeConstEnums: true } ])
-		else {
+		if (filePath.endsWith(`.ts`)) {
+			plugins.push([
+				(await import(`@babel/plugin-transform-typescript`)).default,
+				{ allowDeclareFields: true, optimizeConstEnums: true }
+			])
+		} else {
 			const [
 				babelPluginProposalDoExpressions,
 				babelPluginProposalFunctionBind,
@@ -269,7 +255,7 @@ export const processScript = async (
 		plugins: [
 			{
 				name: `hackmud-script-manager`,
-				transform: async (code, id) => {
+				async transform(code, id) {
 					if (!id.includes(`/node_modules/`))
 						return (await preprocess(code, { uniqueID })).code
 
@@ -283,7 +269,9 @@ export const processScript = async (
 					})
 
 					for (const referencePath of getReferencePathsToGlobal(`JSON`, program)) {
-						if (referencePath.parentPath.node.type == `MemberExpression` && referencePath.parentPath.node.property.type == `Identifier`) {
+						if (referencePath.parentPath.node.type == `MemberExpression` &&
+							referencePath.parentPath.node.property.type == `Identifier`
+						) {
 							if (referencePath.parentPath.node.property.name == `parse`)
 								referencePath.parentPath.node.property.name = `oparse`
 							else if (referencePath.parentPath.node.property.name == `stringify`)
@@ -311,11 +299,15 @@ export const processScript = async (
 
 	code = (await bundle.generate({})).output[0].code
 
-	const { file, seclevel } = transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName })
+	const { file, seclevel } =
+		transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName })
 
-	if (statedSeclevel != undefined && seclevel < statedSeclevel)
+	if (statedSeclevel != undefined && seclevel < statedSeclevel) {
 		// TODO replace with a warning and build script anyway
-		throw new Error(`detected seclevel ${seclevelNames[seclevel]} is lower than stated seclevel ${seclevelNames[statedSeclevel]}`)
+		throw Error(`detected seclevel ${seclevelNames[seclevel]} is lower than stated seclevel ${
+			seclevelNames[statedSeclevel]
+		}`)
+	}
 
 	code = generate(file).code
 
@@ -343,13 +335,16 @@ export const processScript = async (
 					)
 				}
 			},
-
 			VariableDeclarator(path) {
 				const renameVariables = (lValue: LVal) => {
 					switch (lValue.type) {
 						case `Identifier`: {
-							if (includesIllegalString(lValue.name))
-								path.scope.rename(lValue.name, `$${Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)}`)
+							if (includesIllegalString(lValue.name)) {
+								path.scope.rename(
+									lValue.name,
+									`$${Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)}`
+								)
+							}
 						} break
 
 						case `ObjectPattern`: {
@@ -367,24 +362,21 @@ export const processScript = async (
 						} break
 
 						default:
-							throw new Error(`unknown lValue type "${lValue.type}"`)
+							throw Error(`unknown lValue type "${lValue.type}"`)
 					}
 				}
 
 				renameVariables(path.node.id)
 			},
-
 			ObjectProperty({ node: objectProperty }) {
 				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
 					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
 					objectProperty.shorthand = false
 				}
 			},
-
 			StringLiteral({ node }) {
 				node.value = replaceUnsafeStrings(uniqueID, node.value)
 			},
-
 			TemplateLiteral({ node }) {
 				for (const templateElement of node.quasis) {
 					if (templateElement.value.cooked) {
@@ -398,7 +390,6 @@ export const processScript = async (
 						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
 				}
 			},
-
 			RegExpLiteral(path) {
 				path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
 				delete path.node.extra
@@ -406,23 +397,21 @@ export const processScript = async (
 		})
 
 		// we can't have comments because they may contain illegal strings
-		code = await format(generate(file, { comments: false }).code, {
-			parser: `babel`,
-			arrowParens: `avoid`,
-			semi: false,
-			trailingComma: `none`
-		})
+		code = await format(
+			generate(file, { comments: false }).code,
+			{ parser: `babel`, arrowParens: `avoid`, semi: false, trailingComma: `none` }
+		)
 	}
 
 	code = postprocess(code, seclevel, uniqueID)
 
-	if (includesIllegalString(code))
-		throw new Error(`you found a weird edge case where I wasn't able to replace illegal strings like "SC$", please report thx`)
-
-	return {
-		script: code,
-		warnings: []
+	if (includesIllegalString(code)) {
+		throw Error(
+			`you found a weird edge case where I wasn't able to replace illegal strings like "SC$", please report thx`
+		)
 	}
+
+	return { script: code, warnings: [] }
 }
 
 export default processScript

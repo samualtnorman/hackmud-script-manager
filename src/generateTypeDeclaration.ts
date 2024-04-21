@@ -1,7 +1,7 @@
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { basename as getBaseName, resolve as resolvePath } from "path"
 
-export const generateTypeDeclaration = async (sourceDirectory: string, hackmudPath?: string) => {
+export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string) {
 	const users = new Set<string>()
 
 	if (hackmudPath) {

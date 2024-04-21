@@ -10,54 +10,40 @@ import { supportedExtensions } from "./constants"
 import processScript from "./processScript"
 
 export type PushOptions = {
-	/** whether to do the minify step (defaults to `true`) */
-	minify: boolean
+	/** whether to do the minify step (defaults to `true`) */ minify: boolean
+	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
-	/** whether to mangle function and class names (defaults to `false`) */
-	mangleNames: boolean
-
-	/**
-	 * array of scripts in the format `foo.bar`
-	 *
-	 * also accepts wild card (`*`) e.g. `*.bar` or `foo.*`
-	 *
-	 * pushes everything by default (`*.*`)
-	 */
+	/** array of scripts in the format `foo.bar`
+	  *
+	  * also accepts wild card (`*`) e.g. `*.bar` or `foo.*`
+	  *
+	  * pushes everything by default (`*.*`) */
 	scripts: string[]
 
-	/** callback called on script push */
-	onPush: (info: Info) => void
+	/** callback called on script push */ onPush: (info: Info) => void
 
-	/**
-	 * when set to `true` forces use of quine cheats
-	 *
-	 * when set to `false` forces quine cheats not to be used
-	 *
-	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
-	 */
+	/** when set to `true` forces use of quine cheats
+	  *
+	  * when set to `false` forces quine cheats not to be used
+	  *
+	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	  */
 	forceQuineCheats: boolean
 }
 
-/**
- * Push scripts from a source directory to the hackmud directory.
- *
- * Pushes files directly in the source folder to all users
- * @param sourceDirectory directory containing source code
- * @param hackmudDirectory directory created by hackmud containing user data including scripts
- * @param options {@link PushOptions details}
- * @returns array of info on pushed scripts
- */
-export const push = async (
+/** Push scripts from a source directory to the hackmud directory.
+  *
+  * Pushes files directly in the source folder to all users
+  * @param sourceDirectory directory containing source code
+  * @param hackmudDirectory directory created by hackmud containing user data including scripts
+  * @param options {@link PushOptions details}
+  * @returns array of info on pushed scripts */
+export async function push(
 	sourceDirectory: string,
 	hackmudDirectory: string,
-	{
-		scripts = [ `*.*` ],
-		onPush = () => {},
-		minify = true,
-		mangleNames = false,
-		forceQuineCheats
-	}: LaxPartial<PushOptions> = {}
-) => {
+	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats }:
+		LaxPartial<PushOptions> = {}
+) {
 	const scriptNamesByUser = new Cache((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
@@ -90,12 +76,9 @@ export const push = async (
 			await Promise.all([ readDirectoryWithStats(hackmudDirectory), readDirectoryWithStats(sourceDirectory) ])
 
 		const allUsers = new Set([
-			...sourceDirectoryDirents
-				.filter(({ stats }) => stats.isDirectory())
-				.map(({ path }) => getBaseName(path)),
+			...sourceDirectoryDirents.filter(({ stats }) => stats.isDirectory()).map(({ path }) => getBaseName(path)),
 			...hackmudDirectoryEntries.filter(({ stats }) => stats.isDirectory()).map(({ name }) => name),
-			...hackmudDirectoryEntries
-				.filter(({ name, stats }) => stats.isFile() && name.endsWith(`.key`))
+			...hackmudDirectoryEntries.filter(({ name, stats }) => stats.isFile() && name.endsWith(`.key`))
 				.map(({ name }) => name.slice(0, -4)),
 			...scriptNamesByUser.keys(),
 			...wildScriptUsers
@@ -126,17 +109,14 @@ export const push = async (
 				if (stats.isFile() && supportedExtensions.includes(extension)) {
 					const scriptName = getBaseName(name, extension)
 
-					const { script: minifiedCode } = await processScript(
-						await readFile(path, { encoding: `utf-8` }),
-						{
-							minify,
-							scriptUser: user,
-							scriptName,
-							filePath: path,
-							mangleNames,
-							forceQuineCheats
-						}
-					)
+					const { script: minifiedCode } = await processScript(await readFile(path, { encoding: `utf-8` }), {
+						minify,
+						scriptUser: user,
+						scriptName,
+						filePath: path,
+						mangleNames,
+						forceQuineCheats
+					})
 
 					const info: Info = {
 						file: `${user}/${name}`,
@@ -147,7 +127,12 @@ export const push = async (
 
 					scriptNamesAlreadyPushedByUser.get(user).add(scriptName)
 					allInfo.push(info)
-					await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`), minifiedCode)
+
+					await writeFilePersistent(
+						resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`),
+						minifiedCode
+					)
+
 					onPush(info)
 				}
 			}))
@@ -171,25 +156,24 @@ export const push = async (
 			for (const extension of supportedExtensions) {
 				try {
 					fileName = `${scriptName}${extension}`
+
+					code =
 					// eslint-disable-next-line no-await-in-loop -- I don't think paralelysing this is worth it
-					code = await readFile(filePath = resolvePath(sourceDirectory, user, fileName), { encoding: `utf-8` })
+						await readFile(filePath = resolvePath(sourceDirectory, user, fileName), { encoding: `utf-8` })
 
 					break
 				} catch {}
 			}
 
 			if (code) {
-				const { script: minifiedCode } = await processScript(
-					code,
-					{
-						minify,
-						scriptUser: user,
-						scriptName,
-						filePath,
-						mangleNames,
-						forceQuineCheats
-					}
-				)
+				const { script: minifiedCode } = await processScript(code, {
+					minify,
+					scriptUser: user,
+					scriptName,
+					filePath,
+					mangleNames,
+					forceQuineCheats
+				})
 
 				const info: Info = {
 					file: `${user}/${fileName}`,
@@ -199,7 +183,12 @@ export const push = async (
 				}
 
 				allInfo.push(info)
-				await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts`, `${scriptName}.js`), minifiedCode)
+
+				await writeFilePersistent(
+					resolvePath(hackmudDirectory, user, `scripts`, `${scriptName}.js`),
+					minifiedCode
+				)
+
 				onPush(info)
 			} else
 				usersByGlobalScriptsToPush.get(scriptName).add(user)
@@ -212,7 +201,7 @@ export const push = async (
 			(sourceDirectoryDirents || await readDirectoryWithStats(sourceDirectory))
 				.map(async ({ path, stats, name }) => {
 					if (name.endsWith(`.d.ts`))
-							return
+						return
 
 					const extension = getFileExtension(name)
 
@@ -229,18 +218,15 @@ export const push = async (
 
 					const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
-					const { script: minifiedCode } = await processScript(
-						await readFile(path, { encoding: `utf-8` }),
-						{
-							minify,
-							scriptUser: true,
-							scriptName,
-							uniqueID,
-							filePath: path,
-							mangleNames,
-							forceQuineCheats
-						}
-					)
+					const { script: minifiedCode } = await processScript(await readFile(path, { encoding: `utf-8` }), {
+						minify,
+						scriptUser: true,
+						scriptName,
+						uniqueID,
+						filePath: path,
+						mangleNames,
+						forceQuineCheats
+					})
 
 					const info: Info = {
 						file: name,
@@ -251,14 +237,10 @@ export const push = async (
 
 					await Promise.all(usersToPushTo.map(user =>
 						writeFilePersistent(
-							resolvePath(
-								hackmudDirectory,
-								user,
-								`scripts/${scriptName}.js`
-							),
-							minifiedCode
-								.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
-								.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
+							resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`),
+							minifiedCode.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user).replace(
+								new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`
+							)
 						)
 					))
 
@@ -287,15 +269,7 @@ export const push = async (
 
 				const { script: minifiedCode } = await processScript(
 					code,
-					{
-						minify,
-						scriptUser: true,
-						scriptName,
-						uniqueID,
-						filePath,
-						mangleNames,
-						forceQuineCheats
-					}
+					{ minify, scriptUser: true, scriptName, uniqueID, filePath, mangleNames, forceQuineCheats }
 				)
 
 				const info: Info = {
@@ -305,18 +279,11 @@ export const push = async (
 					error: undefined
 				}
 
-				await Promise.all([ ...users ].map(user =>
-					writeFilePersistent(
-						resolvePath(
-							hackmudDirectory,
-							user,
-							`scripts/${scriptName}.js`
-						),
-						minifiedCode
-							.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
-							.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
-					)
-				))
+				await Promise.all([ ...users ].map(user => writeFilePersistent(
+					resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`),
+					minifiedCode.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
+						.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
+				)))
 
 				allInfo.push(info)
 				onPush(info)
