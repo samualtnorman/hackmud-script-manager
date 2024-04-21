@@ -37,16 +37,6 @@ const userColours = new Cache<string, string>(user => {
 	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6]!(user)
 })
 
-const logNeedHackmudPathMessage = () => console.error(colourS(`\
-${colourD(`You need to set hackmudPath in config before you can use this command`)}
-
-${colourA(`To fix this:`)}
-Open hackmud and run "${colourC(`#dir`)}"
-This will open a file browser and print your hackmud user's script directory
-Go up 2 directories and then copy the path
-Then in a terminal run "${colourC(`hsm`)} ${colourL(`config set`)} ${colourV(`hackmudPath`)} ${colourB(`<the path you copied>`)}"`
-))
-
 const log = (message: string) => console.log(colourS(message))
 
 for (const argument of process.argv.slice(2)) {
@@ -134,15 +124,13 @@ if (options.get(`help`) || options.get(`h`)) {
 
 let autoExit = true
 
+const getDefaultHackmudPath = () => process.platform == `win32`
+	? resolvePath(process.env.APPDATA!, `hackmud`)
+	: resolvePath(getHomeDirectory(), `.config/hackmud`)
+
 switch (commands[0]) {
 	case `push`: {
-		const { hackmudPath } = await configPromise
-
-		if (!hackmudPath) {
-			logNeedHackmudPathMessage()
-
-			break
-		}
+		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
 
 		const sourcePath = commands[1]
 
@@ -231,13 +219,7 @@ switch (commands[0]) {
 
 	case `dev`:
 	case `watch`: {
-		const { hackmudPath } = await configPromise
-
-		if (!hackmudPath) {
-			logNeedHackmudPathMessage()
-
-			break
-		}
+		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
 
 		const sourcePath = commands[1]
 
@@ -332,13 +314,7 @@ switch (commands[0]) {
 	} break
 
 	case `pull`: {
-		const { hackmudPath } = await configPromise
-
-		if (!hackmudPath) {
-			logNeedHackmudPathMessage()
-
-			break
-		}
+		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
 
 		const script = commands[1]
 
@@ -358,14 +334,7 @@ switch (commands[0]) {
 	} break
 
 	case `sync-macros`: {
-		const { hackmudPath } = await configPromise
-
-		if (!hackmudPath) {
-			logNeedHackmudPathMessage()
-
-			break
-		}
-
+		const { hackmudPath = getDefaultHackmudPath() } = await configPromise
 		const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
 
 		log(`Synced ${macrosSynced} macros to ${usersSynced} users`)
@@ -386,7 +355,10 @@ switch (commands[0]) {
 
 		const sourcePath = resolvePath(target)
 		const outputPath = commands[2] || `./player.d.ts`
-		const typeDeclaration = await generateTypeDeclaration(sourcePath, (await configPromise).hackmudPath)
+
+		const typeDeclaration =
+			await generateTypeDeclaration(sourcePath, (await configPromise).hackmudPath || getDefaultHackmudPath())
+
 		let typeDeclarationPath = resolvePath(outputPath)
 
 		await writeFile(typeDeclarationPath, typeDeclaration).catch(error => {
