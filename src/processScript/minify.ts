@@ -521,14 +521,14 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 		if (property.value.type == `ArrayExpression`) {
 			const childArray: unknown[] = []
 
-			if (!parseArrayExpression(property.value, childArray))
+			if (property.value.elements.length && !parseArrayExpression(property.value, childArray))
 				return false
 
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = childArray
 		} else if (property.value.type == `ObjectExpression`) {
 			const childObject: Record<string, unknown> = {}
 
-			if (!parseObjectExpression(property.value, childObject))
+			if (property.value.properties.length && !parseObjectExpression(property.value, childObject))
 				return false
 
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = childObject
@@ -560,14 +560,14 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 		if (element.type == `ArrayExpression`) {
 			const childArray: unknown[] = []
 
-			if (!parseArrayExpression(element, childArray))
+			if (!element.elements.length && parseArrayExpression(element, childArray))
 				return false
 
 			o.push(childArray)
 		} else if (element.type == `ObjectExpression`) {
 			const childObject: Record<string, unknown> = {}
 
-			if (!parseObjectExpression(element, childObject))
+			if (element.properties.length && !parseObjectExpression(element, childObject))
 				return false
 
 			o.push(childObject)
