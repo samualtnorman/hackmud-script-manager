@@ -1,7 +1,7 @@
 # Hackmud Script Manager
 Command made for [hackmud-environment](https://github.com/samualtnorman/hackmud-environment), which is a scripting environment for hackmud with minification, autocompletes / intellisense, and TypeScript support.
 
-Install with `npm install hackmud-script-manager -g` to make the `hsm` command available everywhere.
+Install with `npm install -g hackmud-script-manager` to make the `hsm` command available everywhere.
 
 ## Features
 - Minification
