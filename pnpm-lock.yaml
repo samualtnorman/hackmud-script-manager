@@ -151,7 +151,7 @@ importers:
         specifier: ^7.20.5
         version: 7.20.5
       '@types/node':
-        specifier: ^18.0.6
+        specifier: ~18.0.6
         version: 18.0.6
       '@types/semver':
         specifier: ^7.5.8
