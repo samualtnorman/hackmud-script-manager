@@ -90,6 +90,7 @@
 	"private": true,
 	"type": "module",
 	"exports": {
+		".": "./index.js",
 		"./*": "./*.js",
 		"./*.js": "./*.js"
 	},
