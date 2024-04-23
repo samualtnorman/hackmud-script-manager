@@ -131,5 +131,3 @@ export async function preprocess(code: string, { uniqueID = `00000000000` }: Par
 
 	return { code: generate(file).code }
 }
-
-export default preprocess

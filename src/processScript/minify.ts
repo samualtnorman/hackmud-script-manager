@@ -502,8 +502,6 @@ export async function minify(
 	return code
 }
 
-export default minify
-
 function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<string, unknown>) {
 	if (!node.properties.length)
 		return false

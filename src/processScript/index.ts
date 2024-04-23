@@ -29,11 +29,11 @@ import { resolve as resolvePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants"
-import minify from "./minify"
-import postprocess from "./postprocess"
-import preprocess from "./preprocess"
+import { minify } from "./minify"
+import { postprocess } from "./postprocess"
+import { preprocess } from "./preprocess"
 import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings } from "./shared"
-import transform from "./transform"
+import { transform } from "./transform"
 
 const { format } = prettier
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -413,5 +413,3 @@ export async function processScript(code: string, {
 
 	return { script: code, warnings: [] }
 }
-
-export default processScript

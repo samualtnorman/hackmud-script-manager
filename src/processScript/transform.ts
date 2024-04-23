@@ -770,5 +770,3 @@ export function transform(
 		}
 	}
 }
-
-export default transform

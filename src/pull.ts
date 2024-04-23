@@ -16,5 +16,3 @@ export async function pull(sourceFolderPath: string, hackmudPath: string, script
 		resolvePath(sourceFolderPath, user, `${name}.js`)
 	)
 }
-
-export default pull

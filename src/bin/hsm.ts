@@ -12,9 +12,9 @@ import {
 import type { Info } from ".."
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants"
-import generateTypeDeclaration from "../generateTypeDeclaration"
-import pull from "../pull"
-import syncMacros from "../syncMacros"
+import { generateTypeDeclaration } from "../generateTypeDeclaration"
+import { pull } from "../pull"
+import { syncMacros } from "../syncMacros"
 
 type ArgumentValue = boolean | number | string
 

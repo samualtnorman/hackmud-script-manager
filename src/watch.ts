@@ -8,8 +8,8 @@ import { watch as watchDirectory } from "chokidar"
 import { readFile, writeFile } from "fs/promises"
 import { extname as getFileExtension, basename as getPathBaseName, resolve as resolvePath } from "path"
 import { supportedExtensions } from "./constants"
-import generateTypeDeclaration from "./generateTypeDeclaration"
-import processScript from "./processScript"
+import { generateTypeDeclaration } from "./generateTypeDeclaration"
+import { processScript } from "./processScript"
 import type { PushOptions } from "./push"
 
 export type WatchOptions = PushOptions & {
@@ -221,5 +221,3 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	watcher.on(`add`, writeTypeDeclaration)
 	watcher.on(`unlink`, writeTypeDeclaration)
 }
-
-export default watch

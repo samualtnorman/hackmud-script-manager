@@ -16,5 +16,3 @@ export const postprocess = (code: string, seclevel: number, uniqueID: string) =>
 	.replace(new RegExp(`\\$${uniqueID}\\$NOT_A_DEBUG_CALL\\$`, `g`), `#D\\(`)
 	.replace(new RegExp(`\\$${uniqueID}\\$NOT_FMCL\\$`, `g`), `#\\FMCL`)
 	.replace(new RegExp(`\\$${uniqueID}\\$NOT_G\\$`, `g`), `#\\G`)
-
-export default postprocess

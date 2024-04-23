@@ -7,7 +7,7 @@ import { readFile } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
 import type { Info } from "."
 import { supportedExtensions } from "./constants"
-import processScript from "./processScript"
+import { processScript } from "./processScript"
 
 export type PushOptions = {
 	/** whether to do the minify step (defaults to `true`) */ minify: boolean
@@ -293,5 +293,3 @@ export async function push(
 
 	return allInfo
 }
-
-export default push

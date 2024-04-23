@@ -119,5 +119,3 @@ type WildFullsec = Record<string, () => ScriptFailure> & {
 
 	return o
 }
-
-export default generateTypeDeclaration

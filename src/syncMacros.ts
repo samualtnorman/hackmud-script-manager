@@ -50,5 +50,3 @@ export async function syncMacros(hackmudPath: string) {
 
 	return { macrosSynced, usersSynced: users.length }
 }
-
-export default syncMacros
