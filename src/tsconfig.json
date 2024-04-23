@@ -4,7 +4,8 @@
 		"exactOptionalPropertyTypes": true,
 		"declaration": true,
 		"outDir": "../dist",
-		"types": [ "@types/node", "@total-typescript/ts-reset", "babel-plugin-here/env" ]
+		"types": [ "@types/node", "@total-typescript/ts-reset", "babel-plugin-here/env" ],
+		"rootDir": "."
 	},
 	"include": [ "**/*" ]
 }
