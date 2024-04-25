@@ -69,7 +69,7 @@ export type ProcessOptions = {
 export async function processScript(code: string, {
 	minify: shouldMinify = true,
 	uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
-	scriptUser = `UNKNOWN`,
+	scriptUser,
 	scriptName = `UNKNOWN`,
 	filePath,
 	mangleNames = false,

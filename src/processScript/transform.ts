@@ -2,6 +2,7 @@ import type { NodePath } from "@babel/traverse"
 import babelTraverse from "@babel/traverse"
 import type { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
 import t from "@babel/types"
+import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
 import { clearObject } from "@samual/lib/clearObject"
 import { validDBMethods } from "../constants"
@@ -31,8 +32,7 @@ const globalFunctionsUnder7Characters = [
 export function transform(
 	file: File,
 	sourceCode: string,
-	{ uniqueID = `00000000000`, scriptUser = `UNKNOWN`, scriptName = `UNKNOWN`, seclevel = 4 }:
-		Partial<TransformOptions> = {}
+	{ uniqueID = `00000000000`, scriptUser, scriptName = `UNKNOWN`, seclevel = 4 }: LaxPartial<TransformOptions> = {}
 ) {
 	const topFunctionName = `_${uniqueID}_SCRIPT_`
 	const exports = new Map<string, string>()
@@ -56,9 +56,19 @@ export function transform(
 			referencePath.replaceWith(t.numericLiteral(Date.now()))
 	}
 
+	let uniqueIdScriptUserNeeded = false
+
 	if (program.scope.hasGlobal(`_SCRIPT_USER`)) {
-		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program))
-			referencePath.replaceWith(t.stringLiteral(scriptUser == true ? `$${uniqueID}$SCRIPT_USER$` : scriptUser))
+		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program)) {
+			if (scriptUser == undefined) {
+				uniqueIdScriptUserNeeded = true
+				referencePath.replaceWith(t.identifier(`_${uniqueID}_SCRIPT_USER_`))
+			} else {
+				referencePath.replaceWith(t.stringLiteral(
+					scriptUser == true ? `$${uniqueID}$SCRIPT_USER$` : scriptUser
+				))
+			}
+		}
 	}
 
 	if (program.scope.hasGlobal(`_SCRIPT_NAME`)) {
@@ -341,6 +351,30 @@ export function transform(
 		[ t.identifier(`context`), t.identifier(`args`) ],
 		t.blockStatement([])
 	)
+
+	if (uniqueIdScriptUserNeeded) {
+		// eslint-disable-next-line unicorn/prevent-abbreviations
+		const mainFunctionParams = mainFunction.params
+
+		mainFunction.params = [ t.restElement(t.identifier(`_${uniqueID}_PARAMS_`)) ]
+
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
+			t.variableDeclarator(t.arrayPattern(mainFunctionParams), t.identifier(`_${uniqueID}_PARAMS_`)),
+			t.variableDeclarator(
+				t.arrayPattern([ t.identifier(`_${uniqueID}_SCRIPT_USER_`) ]),
+				t.callExpression(
+					t.memberExpression(
+						t.memberExpression(
+							t.memberExpression(t.identifier(`_${uniqueID}_PARAMS_`), t.numericLiteral(0), true),
+							t.identifier(`this_script`)
+						),
+						t.identifier(`split`)
+					),
+					[ t.stringLiteral(`.`) ]
+				)
+			)
+		]))
+	}
 
 	program.node.body = [ mainFunction ]
 

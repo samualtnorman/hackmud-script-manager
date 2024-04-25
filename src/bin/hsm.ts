@@ -372,7 +372,7 @@ switch (commands[0]) {
 		const scriptUser = (
 			getPathBaseName(resolvePath(target, `..`)) == `scripts` &&
 			getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
-		) ? getPathBaseName(resolvePath(target, `../..`)) : `UNKNOWN`
+		) ? getPathBaseName(resolvePath(target, `../..`)) : undefined
 
 		const optionsHasNoMinify = options.has(`no-minify`)
 
