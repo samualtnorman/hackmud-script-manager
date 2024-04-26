@@ -4,6 +4,7 @@ import type { NodePath } from "@babel/traverse"
 import babelTraverse from "@babel/traverse"
 import type { Program } from "@babel/types"
 import t from "@babel/types"
+import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
 import { spliceString } from "@samual/lib/spliceString"
 import { resolve as resolveModule } from "import-meta-resolve"
@@ -13,13 +14,11 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
-export type PreprocessOptions = {
-	/** 11 a-z 0-9 characters */ uniqueID: string
-}
+export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ uniqueID: string }>
 
 /** @param code source code for preprocessing
   * @param options {@link PreprocessOptions details} */
-export async function preprocess(code: string, { uniqueID = `00000000000` }: Partial<PreprocessOptions> = {}) {
+export async function preprocess(code: string, { uniqueID = `00000000000` }: PreprocessOptions = {}) {
 	assert(/^\w{11}$/.test(uniqueID), HERE)
 
 	const sourceCode = code

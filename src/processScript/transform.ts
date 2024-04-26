@@ -11,12 +11,11 @@ import { getReferencePathsToGlobal } from "./shared"
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
-export type TransformOptions = {
+export type TransformOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueID: string
 	/** the user going to be hosting this script (or set to `true` if not yet known) */ scriptUser: string | true
-	/** the name of this script (or set to `true` if not yet known) */ scriptName: string | true
 	seclevel: number
-}
+}> & { /** the name of this script (or set to `true` if not yet known) */ scriptName: string | true }
 
 const globalFunctionsUnder7Characters = [
 	`Map`, `Set`, `Date`, `JSON`, `Math`, `Array`, `Error`, `isNaN`, `Number`, `Object`, `RegExp`, `String`, `Symbol`,
@@ -32,7 +31,7 @@ const globalFunctionsUnder7Characters = [
 export function transform(
 	file: File,
 	sourceCode: string,
-	{ uniqueID = `00000000000`, scriptUser, scriptName = `UNKNOWN`, seclevel = 4 }: LaxPartial<TransformOptions> = {}
+	{ uniqueID = `00000000000`, scriptUser, scriptName, seclevel = 4 }: TransformOptions
 ) {
 	const topFunctionName = `_${uniqueID}_SCRIPT_`
 	const exports = new Map<string, string>()

@@ -12,14 +12,14 @@ import { generateTypeDeclaration } from "./generateTypeDeclaration"
 import { processScript } from "./processScript"
 import type { PushOptions } from "./push"
 
-export type WatchOptions = PushOptions & {
+export type WatchOptions = PushOptions & LaxPartial<{
 	/** if provided, will write typescript type declarations for all the scripts on every change detected
 	  *
 	  * writing the type declarations enables interscript type checking and autocompletetes for the args */
 	typeDeclarationPath: string
 
 	onReady: () => void
-}
+}>
 
 /** Watches target file or folder for updates and builds and pushes updated file.
   * @param sourceDirectory path to folder containing source files
@@ -33,7 +33,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	typeDeclarationPath: typeDeclarationPath_,
 	onReady,
 	forceQuineCheats
-}: LaxPartial<WatchOptions> = {}) {
+}: WatchOptions = {}) {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
 

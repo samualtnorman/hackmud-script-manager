@@ -16,7 +16,7 @@ const { default: generate } = babelGenerator as any as typeof import("@babel/gen
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
-type MinifyOptions = {
+type MinifyOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueID: string
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
@@ -29,7 +29,7 @@ type MinifyOptions = {
 	forceQuineCheats: boolean
 
 	/** the comment inserted after the function signature */ autocomplete: string
-}
+}>
 
 const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
 	.exec(((await terser.minify(`$(${number})`, { ecma: 2015 })).code!))!.groups!.number!
@@ -41,7 +41,7 @@ const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
   * @param options {@link MinifyOptions details} */
 export async function minify(
 	file: File,
-	{ uniqueID = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: LaxPartial<MinifyOptions> = {}
+	{ uniqueID = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
 ) {
 	assert(/^\w{11}$/.exec(uniqueID), HERE)
 

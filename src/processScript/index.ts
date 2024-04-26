@@ -46,11 +46,10 @@ export { postprocess } from "./postprocess"
 export { preprocess } from "./preprocess"
 export { transform } from "./transform"
 
-export type ProcessOptions = {
+export type ProcessOptions = LaxPartial<{
 	/** whether to minify the given code */ minify: boolean
 	/** 11 a-z 0-9 characters */ uniqueID: string
 	/** the user going to be hosting this script (or set to `true` if not yet known) */ scriptUser: string | true
-	/** the name of this script (or set to `true` if not yet known) */ scriptName: string | true
 	filePath: string
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
@@ -61,7 +60,7 @@ export type ProcessOptions = {
 	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
 	  */
 	forceQuineCheats: boolean
-}
+}> & { /** the name of this script (or set to `true` if not yet known) */ scriptName: string | true }
 
 /** Minifies a given script
   * @param code JavaScript or TypeScript code
@@ -70,11 +69,11 @@ export async function processScript(code: string, {
 	minify: shouldMinify = true,
 	uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
 	scriptUser,
-	scriptName = `UNKNOWN`,
+	scriptName,
 	filePath,
 	mangleNames = false,
 	forceQuineCheats
-}: LaxPartial<ProcessOptions> = {}): Promise<{ script: string, warnings: { message: string, line: number }[] }> {
+}: ProcessOptions): Promise<{ script: string, warnings: { message: string, line: number }[] }> {
 	assert(/^\w{11}$/.exec(uniqueID), HERE)
 
 	const sourceCode = code

@@ -9,7 +9,7 @@ import type { Info } from "."
 import { supportedExtensions } from "./constants"
 import { processScript } from "./processScript"
 
-export type PushOptions = {
+export type PushOptions = LaxPartial<{
 	/** whether to do the minify step (defaults to `true`) */ minify: boolean
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
@@ -29,7 +29,7 @@ export type PushOptions = {
 	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
 	  */
 	forceQuineCheats: boolean
-}
+}>
 
 /** Push scripts from a source directory to the hackmud directory.
   *
@@ -41,8 +41,7 @@ export type PushOptions = {
 export async function push(
 	sourceDirectory: string,
 	hackmudDirectory: string,
-	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats }:
-		LaxPartial<PushOptions> = {}
+	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats }: PushOptions = {}
 ) {
 	const scriptNamesByUser = new Cache((_user: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
