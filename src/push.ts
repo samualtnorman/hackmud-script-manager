@@ -124,19 +124,19 @@ export async function push(
 	await Promise.all([ ...pathsToUsers ].map(async ([ path, [ ...users ] ]) => {
 		const scriptName = getBaseName(path.slice(0, -3))
 
-		const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
+		const uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
 		const { script: minifiedCode } = await processScript(
 			await readFile(path, { encoding: `utf8` }),
-			{ minify, scriptUser: true, scriptName, uniqueID, filePath: path, mangleNames, forceQuineCheats }
+			{ minify, scriptUser: true, scriptName, uniqueId, filePath: path, mangleNames, forceQuineCheats }
 		)
 
 		const info: Info = { path, users, characterCount: countHackmudCharacters(minifiedCode), error: undefined }
 
 		await Promise.all(users.map(user => writeFilePersistent(
 			resolvePath(hackmudPath, user, `scripts/${scriptName}.js`),
-			minifiedCode.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
-				.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
+			minifiedCode.replace(new RegExp(`\\$${uniqueId}\\$SCRIPT_USER\\$`, `g`), user)
+				.replace(new RegExp(`\\$${uniqueId}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
 		)))
 
 		allInfo.push(info)

@@ -17,7 +17,7 @@ const { default: generate } = babelGenerator as any as typeof import("@babel/gen
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 type MinifyOptions = LaxPartial<{
-	/** 11 a-z 0-9 characters */ uniqueID: string
+	/** 11 a-z 0-9 characters */ uniqueId: string
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
 	/** when set to `true` forces use of quine cheats
@@ -41,9 +41,9 @@ const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
   * @param options {@link MinifyOptions details} */
 export async function minify(
 	file: File,
-	{ uniqueID = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
+	{ uniqueId = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
 ) {
-	assert(/^\w{11}$/.exec(uniqueID), HERE)
+	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
 	let program!: NodePath<Program>
 
@@ -82,7 +82,7 @@ export async function minify(
 	}
 
 	for (const global in (program.scope as any).globals as Record<string, any>) {
-		if (global == `arguments` || global.startsWith(`$${uniqueID}$`))
+		if (global == `arguments` || global.startsWith(`$${uniqueId}$`))
 			continue
 
 		const referencePaths = getReferencePathsToGlobal(global, program)
@@ -91,23 +91,23 @@ export async function minify(
 			continue
 
 		for (const path of referencePaths)
-			path.replaceWith(t.identifier(`_${uniqueID}_GLOBAL_${global}_`))
+			path.replaceWith(t.identifier(`_${uniqueId}_GLOBAL_${global}_`))
 
 		mainFunctionPath.node.body.body.unshift(t.variableDeclaration(
 			`let`,
-			[ t.variableDeclarator(t.identifier(`_${uniqueID}_GLOBAL_${global}_`), t.identifier(global)) ]
+			[ t.variableDeclarator(t.identifier(`_${uniqueId}_GLOBAL_${global}_`), t.identifier(global)) ]
 		))
 	}
 
-	const hashGReferencePaths = getReferencePathsToGlobal(`$${uniqueID}$GLOBAL$`, program)
+	const hashGReferencePaths = getReferencePathsToGlobal(`$${uniqueId}$GLOBAL$`, program)
 
 	if (hashGReferencePaths.length > 3) {
 		for (const path of hashGReferencePaths)
-			path.replaceWith(t.identifier(`_${uniqueID}_G_`))
+			path.replaceWith(t.identifier(`_${uniqueId}_G_`))
 
 		mainFunctionPath.node.body.body.unshift(t.variableDeclaration(
 			`let`,
-			[ t.variableDeclarator(t.identifier(`_${uniqueID}_G_`), t.identifier(`$${uniqueID}$GLOBAL$`)) ]
+			[ t.variableDeclarator(t.identifier(`_${uniqueId}_G_`), t.identifier(`$${uniqueId}$GLOBAL$`)) ]
 		))
 	}
 
@@ -128,42 +128,42 @@ export async function minify(
 
 				if (memberExpression.property.name == `prototype`) {
 					memberExpression.computed = true
-					memberExpression.property = t.identifier(`_${uniqueID}_PROTOTYPE_PROPERTY_`)
+					memberExpression.property = t.identifier(`_${uniqueId}_PROTOTYPE_PROPERTY_`)
 				} else if (memberExpression.property.name == `__proto__`) {
 					memberExpression.computed = true
-					memberExpression.property = t.identifier(`_${uniqueID}_PROTO_PROPERTY_`)
+					memberExpression.property = t.identifier(`_${uniqueId}_PROTO_PROPERTY_`)
 				} else if (includesIllegalString(memberExpression.property.name)) {
 					memberExpression.computed = true
 
 					memberExpression.property = t.stringLiteral(
-						replaceUnsafeStrings(uniqueID, memberExpression.property.name)
+						replaceUnsafeStrings(uniqueId, memberExpression.property.name)
 					)
 				}
 			},
 			ObjectProperty({ node: objectProperty }) {
 				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
-					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
+					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueId, objectProperty.key.name))
 					objectProperty.shorthand = false
 				}
 			},
 			StringLiteral({ node }) {
-				node.value = replaceUnsafeStrings(uniqueID, node.value)
+				node.value = replaceUnsafeStrings(uniqueId, node.value)
 			},
 			TemplateLiteral({ node }) {
 				for (const templateElement of node.quasis) {
 					if (templateElement.value.cooked) {
-						templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
+						templateElement.value.cooked = replaceUnsafeStrings(uniqueId, templateElement.value.cooked)
 
 						templateElement.value.raw = templateElement.value.cooked
 							.replaceAll(`\\`, `\\\\`)
 							.replaceAll(`\``, `\\\``)
 							.replaceAll(`\${`, `$\\{`)
 					} else
-						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
+						templateElement.value.raw = replaceUnsafeStrings(uniqueId, templateElement.value.raw)
 				}
 			},
 			RegExpLiteral(path) {
-				path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+				path.node.pattern = replaceUnsafeStrings(uniqueId, path.node.pattern)
 				delete path.node.extra
 			}
 		})
@@ -185,8 +185,8 @@ export async function minify(
 			format: { semicolons: false },
 			keep_classnames: !mangleNames,
 			keep_fnames: !mangleNames
-		})).code!.replace(new RegExp(`_${uniqueID}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
-			.replace(new RegExp(`_${uniqueID}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
+		})).code!.replace(new RegExp(`_${uniqueId}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
+			.replace(new RegExp(`_${uniqueId}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
 
 		if (autocomplete) {
 			scriptBeforeJSONValueReplacement = spliceString(
@@ -219,13 +219,13 @@ export async function minify(
 						const o: Record<string, unknown> = {}
 
 						if (parseObjectExpression(path.node, o))
-							path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValues.push(o) - 1}_`))
+							path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValues.push(o) - 1}_`))
 					},
 					ArrayExpression(path) {
 						const o: unknown[] = []
 
 						if (parseArrayExpression(path.node, o))
-							path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValues.push(o) - 1}_`))
+							path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValues.push(o) - 1}_`))
 					}
 				})
 
@@ -267,7 +267,7 @@ export async function minify(
 					UnaryExpression(path) {
 						if (path.node.operator == `void`) {
 							if (path.node.argument.type == `NumericLiteral` && !path.node.argument.value) {
-								path.replaceWith(t.identifier(`_${uniqueID}_UNDEFINED_`))
+								path.replaceWith(t.identifier(`_${uniqueId}_UNDEFINED_`))
 								undefinedIsReferenced = true
 							}
 						} else if (path.node.operator == `-` && path.node.argument.type == `NumericLiteral`) {
@@ -285,7 +285,7 @@ export async function minify(
 								if (jsonValueIndex == -1)
 									jsonValueIndex += jsonValues.push(value)
 
-								path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
+								path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValueIndex}_`))
 							})())
 
 							path.skip()
@@ -298,7 +298,7 @@ export async function minify(
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(null)
 
-						path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
+						path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValueIndex}_`))
 						/* eslint-enable unicorn/no-null */
 					},
 					NumericLiteral(path) {
@@ -314,11 +314,11 @@ export async function minify(
 							if (jsonValueIndex == -1)
 								jsonValueIndex += jsonValues.push(path.node.value)
 
-							path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
+							path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValueIndex}_`))
 						})())
 					},
 					StringLiteral(path) {
-						path.node.value = replaceUnsafeStrings(uniqueID, path.node.value)
+						path.node.value = replaceUnsafeStrings(uniqueId, path.node.value)
 
 						// eslint-disable-next-line @typescript-eslint/no-base-to-string -- the `NodePath`'s `.toString()` method compiles and returns the contained `Node`
 						if (JSON.stringify(path.node.value).includes(`\\u00`) || path.toString().length < 4)
@@ -332,7 +332,7 @@ export async function minify(
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(path.node.value)
 
-						path.replaceWith(t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`))
+						path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValueIndex}_`))
 					},
 					ObjectProperty({ node }) {
 						if (node.computed || node.key.type != `Identifier` || node.key.name.length < 4)
@@ -344,10 +344,10 @@ export async function minify(
 							jsonValueIndex += jsonValues.push(node.key.name)
 
 						node.computed = true
-						node.key = t.identifier(`_${uniqueID}_JSON_VALUE_${jsonValueIndex}_`)
+						node.key = t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValueIndex}_`)
 					},
 					RegExpLiteral(path) {
-						path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+						path.node.pattern = replaceUnsafeStrings(uniqueId, path.node.pattern)
 						delete path.node.extra
 					}
 				})
@@ -370,16 +370,16 @@ export async function minify(
 				) {
 					const variableDeclaration = t.variableDeclaration(`let`, [
 						t.variableDeclarator(
-							t.identifier(`_${uniqueID}_JSON_VALUE_0_`),
+							t.identifier(`_${uniqueId}_JSON_VALUE_0_`),
 							t.memberExpression(
 								t.taggedTemplateExpression(
 									t.memberExpression(
-										t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine$`), []),
+										t.callExpression(t.identifier(`$${uniqueId}$SUBSCRIPT$scripts$quine$`), []),
 										t.identifier(`split`)
 									),
 									t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
 								),
-								t.identifier(`$${uniqueID}$SPLIT_INDEX$`),
+								t.identifier(`$${uniqueId}$SPLIT_INDEX$`),
 								true
 							)
 						)
@@ -387,7 +387,7 @@ export async function minify(
 
 					if (undefinedIsReferenced) {
 						variableDeclaration.declarations
-							.push(t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)))
+							.push(t.variableDeclarator(t.identifier(`_${uniqueId}_UNDEFINED_`)))
 					}
 
 					functionDeclaration.body.body.unshift(variableDeclaration)
@@ -395,17 +395,17 @@ export async function minify(
 				} else {
 					const variableDeclaration = t.variableDeclaration(`let`, [
 						t.variableDeclarator(
-							t.identifier(`_${uniqueID}_JSON_VALUE_0_`),
+							t.identifier(`_${uniqueId}_JSON_VALUE_0_`),
 							t.callExpression(t.memberExpression(t.identifier(`JSON`), t.identifier(`parse`)), [
 								t.memberExpression(
 									t.taggedTemplateExpression(
 										t.memberExpression(
-											t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine$`), []),
+											t.callExpression(t.identifier(`$${uniqueId}$SUBSCRIPT$scripts$quine$`), []),
 											t.identifier(`split`)
 										),
 										t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
 									),
-									t.identifier(`$${uniqueID}$SPLIT_INDEX$`),
+									t.identifier(`$${uniqueId}$SPLIT_INDEX$`),
 									true
 								)
 							])
@@ -414,7 +414,7 @@ export async function minify(
 
 					if (undefinedIsReferenced) {
 						variableDeclaration.declarations
-							.push(t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)))
+							.push(t.variableDeclarator(t.identifier(`_${uniqueId}_UNDEFINED_`)))
 					}
 
 					functionDeclaration.body.body.unshift(variableDeclaration)
@@ -423,17 +423,17 @@ export async function minify(
 			} else {
 				const variableDeclaration = t.variableDeclaration(`let`, [
 					t.variableDeclarator(
-						t.arrayPattern(jsonValues.map((_, index) => t.identifier(`_${uniqueID}_JSON_VALUE_${index}_`))),
+						t.arrayPattern(jsonValues.map((_, index) => t.identifier(`_${uniqueId}_JSON_VALUE_${index}_`))),
 						t.callExpression(t.memberExpression(t.identifier(`JSON`), t.identifier(`parse`)), [
 							t.memberExpression(
 								t.taggedTemplateExpression(
 									t.memberExpression(
-										t.callExpression(t.identifier(`$${uniqueID}$SUBSCRIPT$scripts$quine$`), []),
+										t.callExpression(t.identifier(`$${uniqueId}$SUBSCRIPT$scripts$quine$`), []),
 										t.identifier(`split`)
 									),
 									t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
 								),
-								t.identifier(`$${uniqueID}$SPLIT_INDEX$`),
+								t.identifier(`$${uniqueId}$SPLIT_INDEX$`),
 								true
 							)
 						])
@@ -441,14 +441,14 @@ export async function minify(
 				])
 
 				if (undefinedIsReferenced)
-					variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)))
+					variableDeclaration.declarations.push(t.variableDeclarator(t.identifier(`_${uniqueId}_UNDEFINED_`)))
 
 				functionDeclaration.body.body.unshift(variableDeclaration)
 				comment = JSON.stringify(jsonValues)
 			}
 		} else if (undefinedIsReferenced) {
 			functionDeclaration.body.body.unshift(t.variableDeclaration(`let`, [
-				t.variableDeclarator(t.identifier(`_${uniqueID}_UNDEFINED_`)) ]
+				t.variableDeclarator(t.identifier(`_${uniqueId}_UNDEFINED_`)) ]
 			))
 		}
 
@@ -483,7 +483,7 @@ export async function minify(
 		)
 
 		code = code.replace(
-			`$${uniqueID}$SPLIT_INDEX$`,
+			`$${uniqueId}$SPLIT_INDEX$`,
 			await minifyNumber(code.split(`\t`).findIndex(part => part == comment))
 		)
 	}

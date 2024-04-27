@@ -48,7 +48,7 @@ export { transform } from "./transform"
 
 export type ProcessOptions = LaxPartial<{
 	/** whether to minify the given code */ minify: boolean
-	/** 11 a-z 0-9 characters */ uniqueID: string
+	/** 11 a-z 0-9 characters */ uniqueId: string
 	/** the user going to be hosting this script (or set to `true` if not yet known) */ scriptUser: string | true
 	filePath: string
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
@@ -67,14 +67,14 @@ export type ProcessOptions = LaxPartial<{
   * @param options {@link ProcessOptions details} */
 export async function processScript(code: string, {
 	minify: shouldMinify = true,
-	uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
+	uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
 	scriptUser,
 	scriptName,
 	filePath,
 	mangleNames = false,
 	forceQuineCheats
 }: ProcessOptions): Promise<{ script: string, warnings: { message: string, line: number }[] }> {
-	assert(/^\w{11}$/.exec(uniqueID), HERE)
+	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
 	const sourceCode = code
 	let autocomplete
@@ -155,7 +155,7 @@ export async function processScript(code: string, {
 		}
 	}
 
-	assert(/^\w{11}$/.exec(uniqueID), HERE)
+	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
 	const plugins: PluginItem[] = [
 		[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
@@ -215,7 +215,7 @@ export async function processScript(code: string, {
 			)
 		}
 	} else {
-		filePathResolved = `${uniqueID}.ts`
+		filePathResolved = `${uniqueId}.ts`
 
 		const [
 			babelPluginTransformTypescript,
@@ -256,7 +256,7 @@ export async function processScript(code: string, {
 				name: `hackmud-script-manager`,
 				async transform(code, id) {
 					if (!id.includes(`/node_modules/`))
-						return (await preprocess(code, { uniqueID })).code
+						return (await preprocess(code, { uniqueId })).code
 
 					let program!: NodePath<Program>
 
@@ -299,7 +299,7 @@ export async function processScript(code: string, {
 	code = (await bundle.generate({})).output[0].code
 
 	const { file, seclevel } =
-		transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueID, scriptUser, scriptName })
+		transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueId, scriptUser, scriptName })
 
 	if (statedSeclevel != undefined && seclevel < statedSeclevel) {
 		// TODO replace with a warning and build script anyway
@@ -311,7 +311,7 @@ export async function processScript(code: string, {
 	code = generate(file).code
 
 	if (shouldMinify)
-		code = await minify(file, { uniqueID, mangleNames, forceQuineCheats, autocomplete })
+		code = await minify(file, { uniqueId, mangleNames, forceQuineCheats, autocomplete })
 	else {
 		traverse(file, {
 			MemberExpression({ node: memberExpression }) {
@@ -330,7 +330,7 @@ export async function processScript(code: string, {
 					memberExpression.computed = true
 
 					memberExpression.property = t.stringLiteral(
-						replaceUnsafeStrings(uniqueID, memberExpression.property.name)
+						replaceUnsafeStrings(uniqueId, memberExpression.property.name)
 					)
 				}
 			},
@@ -369,28 +369,28 @@ export async function processScript(code: string, {
 			},
 			ObjectProperty({ node: objectProperty }) {
 				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
-					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueID, objectProperty.key.name))
+					objectProperty.key = t.stringLiteral(replaceUnsafeStrings(uniqueId, objectProperty.key.name))
 					objectProperty.shorthand = false
 				}
 			},
 			StringLiteral({ node }) {
-				node.value = replaceUnsafeStrings(uniqueID, node.value)
+				node.value = replaceUnsafeStrings(uniqueId, node.value)
 			},
 			TemplateLiteral({ node }) {
 				for (const templateElement of node.quasis) {
 					if (templateElement.value.cooked) {
-						templateElement.value.cooked = replaceUnsafeStrings(uniqueID, templateElement.value.cooked)
+						templateElement.value.cooked = replaceUnsafeStrings(uniqueId, templateElement.value.cooked)
 
 						templateElement.value.raw = templateElement.value.cooked
 							.replaceAll(`\\`, `\\\\`)
 							.replaceAll(`\``, `\\\``)
 							.replaceAll(`\${`, `$\\{`)
 					} else
-						templateElement.value.raw = replaceUnsafeStrings(uniqueID, templateElement.value.raw)
+						templateElement.value.raw = replaceUnsafeStrings(uniqueId, templateElement.value.raw)
 				}
 			},
 			RegExpLiteral(path) {
-				path.node.pattern = replaceUnsafeStrings(uniqueID, path.node.pattern)
+				path.node.pattern = replaceUnsafeStrings(uniqueId, path.node.pattern)
 				delete path.node.extra
 			}
 		})
@@ -402,7 +402,7 @@ export async function processScript(code: string, {
 		)
 	}
 
-	code = postprocess(code, seclevel, uniqueID)
+	code = postprocess(code, seclevel, uniqueId)
 
 	if (includesIllegalString(code)) {
 		throw Error(

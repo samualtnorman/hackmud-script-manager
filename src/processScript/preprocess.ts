@@ -14,12 +14,12 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
-export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ uniqueID: string }>
+export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ uniqueId: string }>
 
 /** @param code source code for preprocessing
   * @param options {@link PreprocessOptions details} */
-export async function preprocess(code: string, { uniqueID = `00000000000` }: PreprocessOptions = {}) {
-	assert(/^\w{11}$/.test(uniqueID), HERE)
+export async function preprocess(code: string, { uniqueId = `00000000000` }: PreprocessOptions = {}) {
+	assert(/^\w{11}$/.test(uniqueId), HERE)
 
 	const sourceCode = code
 	let lengthBefore
@@ -83,9 +83,9 @@ export async function preprocess(code: string, { uniqueID = `00000000000` }: Pre
 		else if ((match = /^#D[^\w$]/.exec(codeSlice)))
 			code = spliceString(code, `$`, error.pos, 1)
 		else if ((match = /^#FMCL/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueID}$FMCL$`, error.pos, match[0]!.length)
+			code = spliceString(code, `$${uniqueId}$FMCL$`, error.pos, match[0]!.length)
 		else if ((match = /^#G/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueID}$GLOBAL$`, error.pos, match[0]!.length)
+			code = spliceString(code, `$${uniqueId}$GLOBAL$`, error.pos, match[0]!.length)
 		else if ((match = /^#db\./.exec(codeSlice)))
 			code = spliceString(code, `$`, error.pos, 1)
 		else

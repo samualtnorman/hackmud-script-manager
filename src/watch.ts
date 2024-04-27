@@ -128,14 +128,14 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 				return
 			}
 
-			const uniqueID = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
+			const uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 			const filePath = resolvePath(sourceDirectory, path)
 			let minifiedCode: string
 
 			try {
 				({ script: minifiedCode } = await processScript(
 					await readFile(filePath, { encoding: `utf8` }),
-					{ minify, scriptUser: true, scriptName, uniqueID, filePath, mangleNames, forceQuineCheats }
+					{ minify, scriptUser: true, scriptName, uniqueId, filePath, mangleNames, forceQuineCheats }
 				))
 			} catch (error) {
 				assert(error instanceof Error, HERE)
@@ -146,8 +146,8 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 
 			await Promise.all(usersToPushTo.map(user => writeFilePersistent(
 				resolvePath(hackmudDirectory, user, `scripts/${scriptName}.js`),
-				minifiedCode.replace(new RegExp(`\\$${uniqueID}\\$SCRIPT_USER\\$`, `g`), user)
-					.replace(new RegExp(`\\$${uniqueID}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
+				minifiedCode.replace(new RegExp(`\\$${uniqueId}\\$SCRIPT_USER\\$`, `g`), user)
+					.replace(new RegExp(`\\$${uniqueId}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
 			)))
 
 			onPush?.(

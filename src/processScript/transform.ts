@@ -12,7 +12,7 @@ import { getReferencePathsToGlobal } from "./shared"
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export type TransformOptions = LaxPartial<{
-	/** 11 a-z 0-9 characters */ uniqueID: string
+	/** 11 a-z 0-9 characters */ uniqueId: string
 	/** the user going to be hosting this script (or set to `true` if not yet known) */ scriptUser: string | true
 	seclevel: number
 }> & { /** the name of this script (or set to `true` if not yet known) */ scriptName: string | true }
@@ -31,9 +31,9 @@ const globalFunctionsUnder7Characters = [
 export function transform(
 	file: File,
 	sourceCode: string,
-	{ uniqueID = `00000000000`, scriptUser, scriptName, seclevel = 4 }: TransformOptions
+	{ uniqueId = `00000000000`, scriptUser, scriptName, seclevel = 4 }: TransformOptions
 ) {
-	const topFunctionName = `_${uniqueID}_SCRIPT_`
+	const topFunctionName = `_${uniqueId}_SCRIPT_`
 	const exports = new Map<string, string>()
 	const liveExports = new Map<string, string>()
 	let program!: NodePath<t.Program>
@@ -61,10 +61,10 @@ export function transform(
 		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_USER`, program)) {
 			if (scriptUser == undefined) {
 				uniqueIdScriptUserNeeded = true
-				referencePath.replaceWith(t.identifier(`_${uniqueID}_SCRIPT_USER_`))
+				referencePath.replaceWith(t.identifier(`_${uniqueId}_SCRIPT_USER_`))
 			} else {
 				referencePath.replaceWith(t.stringLiteral(
-					scriptUser == true ? `$${uniqueID}$SCRIPT_USER$` : scriptUser
+					scriptUser == true ? `$${uniqueId}$SCRIPT_USER$` : scriptUser
 				))
 			}
 		}
@@ -72,19 +72,19 @@ export function transform(
 
 	if (program.scope.hasGlobal(`_SCRIPT_NAME`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_NAME`, program))
-			referencePath.replaceWith(t.stringLiteral(scriptName == true ? `$${uniqueID}$SCRIPT_NAME$` : scriptName))
+			referencePath.replaceWith(t.stringLiteral(scriptName == true ? `$${uniqueId}$SCRIPT_NAME$` : scriptName))
 	}
 
 	if (program.scope.hasGlobal(`_FULL_SCRIPT_NAME`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_FULL_SCRIPT_NAME`, program)) {
 			if (scriptUser == true || scriptName == true)
-				referencePath.replaceWith(t.stringLiteral(`$${uniqueID}$FULL_SCRIPT_NAME$`))
+				referencePath.replaceWith(t.stringLiteral(`$${uniqueId}$FULL_SCRIPT_NAME$`))
 			else if (scriptUser == undefined) {
 				uniqueIdScriptUserNeeded = true
 
 				referencePath.replaceWith(t.binaryExpression(
 					`+`,
-					t.identifier(`_${uniqueID}_SCRIPT_USER_`),
+					t.identifier(`_${uniqueId}_SCRIPT_USER_`),
 					t.stringLiteral(`.${scriptName}`)
 				))
 			} else
@@ -134,7 +134,7 @@ export function transform(
 				)
 
 				functionDotPrototypeIsReferencedMultipleTimes = true
-				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`))
+				referencePath.parentPath.replaceWith(t.identifier(`_${uniqueId}_FUNCTION_DOT_PROTOTYPE_`))
 			}
 
 			functionDotPrototypeIsReferencedMultipleTimes = true
@@ -195,10 +195,10 @@ export function transform(
 			)
 
 			if (referencePath.parentPath.parentPath?.type == `CallExpression`)
-				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueID}$DB$${databaseOpMethodName}$`))
+				referencePath.parentPath.replaceWith(t.identifier(`$${uniqueId}$DB$${databaseOpMethodName}$`))
 			else {
 				referencePath.parentPath
-					.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${databaseOpMethodName}_`))
+					.replaceWith(t.identifier(`_${uniqueId}_CONSOLE_METHOD_${databaseOpMethodName}_`))
 
 				neededDbMethodLets.add(databaseOpMethodName)
 			}
@@ -210,9 +210,9 @@ export function transform(
 	if (program.scope.hasGlobal(`$D`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$D`, program)) {
 			if (referencePath.parentPath.type == `CallExpression`)
-				referencePath.replaceWith(t.identifier(`$${uniqueID}$DEBUG$`))
+				referencePath.replaceWith(t.identifier(`$${uniqueId}$DEBUG$`))
 			else {
-				referencePath.replaceWith(t.identifier(`_${uniqueID}_DEBUG_`))
+				referencePath.replaceWith(t.identifier(`_${uniqueId}_DEBUG_`))
 				needDebugLet = true
 			}
 		}
@@ -220,12 +220,12 @@ export function transform(
 
 	if (program.scope.hasGlobal(`$FMCL`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$FMCL`, program))
-			referencePath.replaceWith(t.identifier(`$${uniqueID}$FMCL$`))
+			referencePath.replaceWith(t.identifier(`$${uniqueId}$FMCL$`))
 	}
 
 	if (program.scope.hasGlobal(`$G`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$G`, program))
-			referencePath.replaceWith(t.identifier(`$${uniqueID}$GLOBAL$`))
+			referencePath.replaceWith(t.identifier(`$${uniqueId}$GLOBAL$`))
 	}
 
 	if (program.scope.hasGlobal(`_SECLEVEL`)) {
@@ -241,7 +241,7 @@ export function transform(
 				assert(referencePath.parent.property.type == `Identifier`, HERE)
 
 				if (referencePath.parent.property.name == `getPrototypeOf`) {
-					referencePath.parentPath.replaceWith(t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`))
+					referencePath.parentPath.replaceWith(t.identifier(`_${uniqueId}_GET_PROTOTYPE_OF_`))
 					needGetPrototypeOf = true
 				}
 			}
@@ -256,7 +256,7 @@ export function transform(
 				assert(referencePath.parent.property.type == `Identifier`, HERE)
 
 				referencePath.parentPath
-					.replaceWith(t.identifier(`_${uniqueID}_CONSOLE_METHOD_${referencePath.parent.property.name}_`))
+					.replaceWith(t.identifier(`_${uniqueId}_CONSOLE_METHOD_${referencePath.parent.property.name}_`))
 
 				consoleMethodsReferenced.add(referencePath.parent.property.name)
 			}
@@ -362,16 +362,16 @@ export function transform(
 		// eslint-disable-next-line unicorn/prevent-abbreviations
 		const mainFunctionParams = mainFunction.params
 
-		mainFunction.params = [ t.restElement(t.identifier(`_${uniqueID}_PARAMS_`)) ]
+		mainFunction.params = [ t.restElement(t.identifier(`_${uniqueId}_PARAMS_`)) ]
 
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
-			t.variableDeclarator(t.arrayPattern(mainFunctionParams), t.identifier(`_${uniqueID}_PARAMS_`)),
+			t.variableDeclarator(t.arrayPattern(mainFunctionParams), t.identifier(`_${uniqueId}_PARAMS_`)),
 			t.variableDeclarator(
-				t.arrayPattern([ t.identifier(`_${uniqueID}_SCRIPT_USER_`) ]),
+				t.arrayPattern([ t.identifier(`_${uniqueId}_SCRIPT_USER_`) ]),
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
-							t.memberExpression(t.identifier(`_${uniqueID}_PARAMS_`), t.numericLiteral(0), true),
+							t.memberExpression(t.identifier(`_${uniqueId}_PARAMS_`), t.numericLiteral(0), true),
 							t.identifier(`this_script`)
 						),
 						t.identifier(`split`)
@@ -436,7 +436,7 @@ export function transform(
 							assert(referencePath.node.type == `Identifier`, HERE)
 
 							referencePath.replaceWith(t.memberExpression(
-								t.identifier(`$${uniqueID}$GLOBAL$`),
+								t.identifier(`$${uniqueId}$GLOBAL$`),
 								t.identifier(referencePath.node.name)
 							))
 						}
@@ -451,7 +451,7 @@ export function transform(
 
 									Object.assign(
 										node,
-										t.memberExpression(t.identifier(`$${uniqueID}$GLOBAL$`), t.identifier(name))
+										t.memberExpression(t.identifier(`$${uniqueId}$GLOBAL$`), t.identifier(name))
 									)
 								}
 							}
@@ -467,7 +467,7 @@ export function transform(
 								t.expressionStatement(t.assignmentExpression(
 									`=`,
 									t.memberExpression(
-										t.identifier(`$${uniqueID}$GLOBAL$`),
+										t.identifier(`$${uniqueId}$GLOBAL$`),
 										t.identifier(declarator.id.name)
 									),
 									declarator.init
@@ -502,7 +502,7 @@ export function transform(
 						assert(referencePath.node.type == `Identifier`, HERE)
 
 						referencePath.replaceWith(t.memberExpression(
-							t.identifier(`$${uniqueID}$GLOBAL$`),
+							t.identifier(`$${uniqueId}$GLOBAL$`),
 							t.identifier(referencePath.node.name)
 						))
 					}
@@ -516,7 +516,7 @@ export function transform(
 						t.expressionStatement(t.assignmentExpression(
 							`=`,
 							t.memberExpression(
-								t.identifier(`$${uniqueID}$GLOBAL$`),
+								t.identifier(`$${uniqueId}$GLOBAL$`),
 								t.identifier(globalBlockStatement.id.name)
 							),
 							t.classExpression(
@@ -543,14 +543,14 @@ export function transform(
 			mainFunction.body.body.splice(
 				hoistedGlobalBlockFunctions,
 				0,
-				t.ifStatement(t.unaryExpression(`!`, t.identifier(`$${uniqueID}$FMCL$`)), globalBlock)
+				t.ifStatement(t.unaryExpression(`!`, t.identifier(`$${uniqueId}$FMCL$`)), globalBlock)
 			)
 		}
 	}
 
 	if (functionDotPrototypeIsReferencedMultipleTimes) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
-			t.variableDeclarator(t.identifier(`_${uniqueID}_FUNCTION_DOT_PROTOTYPE_`), createGetFunctionPrototypeNode())
+			t.variableDeclarator(t.identifier(`_${uniqueId}_FUNCTION_DOT_PROTOTYPE_`), createGetFunctionPrototypeNode())
 		]))
 	}
 
@@ -558,7 +558,7 @@ export function transform(
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
 				t.objectPattern([
-					t.objectProperty(t.identifier(`get`), t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`))
+					t.objectProperty(t.identifier(`get`), t.identifier(`_${uniqueId}_DUNDER_PROTO_GETTER_`))
 				]),
 				t.callExpression(t.memberExpression(t.identifier(`Object`), t.identifier(`getOwnPropertyDescriptor`)), [
 					t.memberExpression(t.identifier(`Object`), t.identifier(`prototype`)),
@@ -566,7 +566,7 @@ export function transform(
 				])
 			),
 			t.variableDeclarator(
-				t.identifier(`_${uniqueID}_GET_PROTOTYPE_OF_`),
+				t.identifier(`_${uniqueId}_GET_PROTOTYPE_OF_`),
 				t.callExpression(
 					t.memberExpression(
 						t.memberExpression(
@@ -580,7 +580,7 @@ export function transform(
 						),
 						t.identifier(`bind`)
 					),
-					[ t.identifier(`_${uniqueID}_DUNDER_PROTO_GETTER_`) ]
+					[ t.identifier(`_${uniqueId}_DUNDER_PROTO_GETTER_`) ]
 				)
 			)
 		]))
@@ -590,12 +590,12 @@ export function transform(
 		mainFunction.body.body.unshift(t.variableDeclaration(
 			`let`,
 			[ ...consoleMethodsReferenced ].map(name => t.variableDeclarator(
-				t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
+				t.identifier(`_${uniqueId}_CONSOLE_METHOD_${name}_`),
 				t.arrowFunctionExpression(
 					[ t.restElement(t.identifier(`args`)) ],
 					t.unaryExpression(
 						`void`,
-						t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`args`) ])
+						t.callExpression(t.identifier(`$${uniqueId}$DEBUG$`), [ t.identifier(`args`) ])
 					)
 				)
 			))
@@ -611,10 +611,10 @@ export function transform(
 					: (name == `i` || name == `r` ? [ t.identifier(`a`) ] : [ t.identifier(`a`), t.identifier(`b`) ])
 
 				return t.variableDeclarator(
-					t.identifier(`_${uniqueID}_CONSOLE_METHOD_${name}_`),
+					t.identifier(`_${uniqueId}_CONSOLE_METHOD_${name}_`),
 					t.arrowFunctionExpression(
 						getArgs(),
-						t.callExpression(t.identifier(`$${uniqueID}$DB$${name}$`), getArgs())
+						t.callExpression(t.identifier(`$${uniqueId}$DB$${name}$`), getArgs())
 					)
 				)
 			})
@@ -624,8 +624,8 @@ export function transform(
 	if (needDebugLet) {
 		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
 			t.variableDeclarator(
-				t.identifier(`_${uniqueID}_DEBUG_`),
-				t.callExpression(t.identifier(`$${uniqueID}$DEBUG$`), [ t.identifier(`a`) ])
+				t.identifier(`_${uniqueId}_DEBUG_`),
+				t.callExpression(t.identifier(`$${uniqueId}$DEBUG$`), [ t.identifier(`a`) ])
 			)
 		]))
 	}
@@ -634,11 +634,11 @@ export function transform(
 		mainFunction.body.body.unshift(t.variableDeclaration(
 			`let`,
 			[ ...neededSubscriptLets ].map(name => t.variableDeclarator(
-				t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`),
+				t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`),
 				t.arrowFunctionExpression(
 					[ t.restElement(t.identifier(`args`)) ],
 					t.callExpression(
-						t.identifier(`$${uniqueID}$SUBSCRIPT$${name}$`),
+						t.identifier(`$${uniqueId}$SUBSCRIPT$${name}$`),
 						[ t.spreadElement(t.identifier(`args`)) ]
 					)
 				)
@@ -680,7 +680,7 @@ export function transform(
 					ThisExpression(path) {
 						methodReferencesThis = true
 						thisIsReferenced = true
-						path.replaceWith(t.identifier(`_${uniqueID}_THIS_`))
+						path.replaceWith(t.identifier(`_${uniqueId}_THIS_`))
 					},
 					Function: path => path.skip()
 				}, scope)
@@ -702,7 +702,7 @@ export function transform(
 						classMethod.body.body.unshift(
 							t.variableDeclaration(`let`, [
 								t.variableDeclarator(
-									t.identifier(`_${uniqueID}_THIS_`),
+									t.identifier(`_${uniqueId}_THIS_`),
 									t.callExpression(t.super(), [])
 								)
 							])
@@ -711,14 +711,14 @@ export function transform(
 						superCalls[0]!.parentPath.parentPath!.parent == classMethod
 					) {
 						superCalls[0]!.parentPath.replaceWith(t.variableDeclaration(`let`, [
-							t.variableDeclarator(t.identifier(`_${uniqueID}_THIS_`), superCalls[0]!.node)
+							t.variableDeclarator(t.identifier(`_${uniqueId}_THIS_`), superCalls[0]!.node)
 						]))
 					} else {
 						for (const path of superCalls)
-							path.replaceWith(t.assignmentExpression(`=`, t.identifier(`_${uniqueID}_THIS_`), path.node))
+							path.replaceWith(t.assignmentExpression(`=`, t.identifier(`_${uniqueId}_THIS_`), path.node))
 
 						classMethod.body.body.unshift(
-							t.variableDeclaration(`let`, [ t.variableDeclarator(t.identifier(`_${uniqueID}_THIS_`)) ])
+							t.variableDeclaration(`let`, [ t.variableDeclarator(t.identifier(`_${uniqueId}_THIS_`)) ])
 						)
 					}
 
@@ -732,7 +732,7 @@ export function transform(
 
 				classMethod.body.body.unshift(t.variableDeclaration(`let`, [
 					t.variableDeclarator(
-						t.identifier(`_${uniqueID}_THIS_`),
+						t.identifier(`_${uniqueId}_THIS_`),
 						t.callExpression(t.memberExpression(t.super(), t.identifier(`valueOf`)), [])
 					)
 				]))
@@ -797,14 +797,14 @@ export function transform(
 
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
 				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueID}$SUBSCRIPT$${
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$SUBSCRIPT$${
 					referencePath.parent.property.name
 				}$${referencePath.parentPath.parentPath.node.property.name}$`))
 			} else {
 				const name =
 					`${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
 
-				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueID}_SUBSCRIPT_${name}_`))
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`))
 				neededSubscriptLets.add(name)
 			}
 		}
