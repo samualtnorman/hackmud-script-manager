@@ -615,12 +615,12 @@ function logInfo({ path, users, characterCount, error }: Info, hackmudPath: stri
 	path = getRelativePath(`.`, path)
 
 	if (error) {
-		logError(`error "${chalk.bold(error.message)}" in ${chalk.bold(path)}`)
+		logError(`Error "${chalk.bold(error.message)}" in ${chalk.bold(path)}`)
 
 		return
 	}
 
-	log(`pushed ${chalk.bold(path)} to ${users.map(user => chalk.bold(userColours.get(user))).join(`, `)} | ${
+	log(`Pushed ${chalk.bold(path)} to ${users.map(user => chalk.bold(userColours.get(user))).join(`, `)} | ${
 		chalk.bold(String(characterCount))
 	} chars | ${chalk.bold(
 		`${resolvePath(hackmudPath!, users[0]!, `scripts`, getPathBaseName(path, getPathFileExtension(path)))}.js`
