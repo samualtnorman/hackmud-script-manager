@@ -1,4 +1,0 @@
-root: true
-extends: [ "@samual/eslint-config" ]
-parserOptions: { project: [ ./tsconfig.json, ./src/tsconfig.json ] }
-rules: { "@typescript-eslint/no-unused-vars": off }

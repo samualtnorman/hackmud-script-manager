@@ -70,7 +70,6 @@
 		"terser": "^5.30.4"
 	},
 	"devDependencies": {
-		"@samual/eslint-config": "^0.0.3",
 		"@samual/rollup-config": "0.1.0",
 		"@total-typescript/ts-reset": "^0.5.1",
 		"@types/babel__core": "^7.20.5",
@@ -79,7 +78,6 @@
 		"@types/node": "~18.0.6",
 		"@types/semver": "^7.5.8",
 		"babel-plugin-here": "^1.0.1",
-		"eslint": "^8.57.0",
 		"semver": "^7.6.0",
 		"typescript": "^5.4.5"
 	},
