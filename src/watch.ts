@@ -57,7 +57,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	}
 
 	const watcher = watchDirectory(
-		[ `*/*.ts`, `*/*.js` ],
+		[ `*.ts`, `*.js`, `*/*.ts`, `*/*.js` ],
 		{ cwd: sourceDirectory, awaitWriteFinish: { stabilityThreshold: 100 }, ignored: `*.d.ts` }
 	).on(`change`, async path => {
 		if (path.endsWith(`.d.ts`))
