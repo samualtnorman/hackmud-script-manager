@@ -14,7 +14,7 @@ export async function syncMacros(hackmudPath: string) {
 		switch (getFileExtension(file.name)) {
 			case `.macros`: {
 				const [ lines, date ] = await Promise.all([
-					readFile(resolvePath(hackmudPath, file.name), { encoding: `utf-8` }).then(file => file.split(`\n`)),
+					readFile(resolvePath(hackmudPath, file.name), { encoding: `utf8` }).then(file => file.split(`\n`)),
 					getFileStatus(resolvePath(hackmudPath, file.name)).then(({ mtime }) => mtime)
 				])
 

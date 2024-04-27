@@ -417,7 +417,7 @@ switch (commands[0]) {
 				: (fileExtension == `.js` ? `${fileBaseName}.min.js` : `${fileBaseName}.js`)
 		)
 
-		const golfFile = () => readFile(target, { encoding: `utf-8` }).then(async source => {
+		const golfFile = () => readFile(target, { encoding: `utf8` }).then(async source => {
 			const timeStart = performance.now()
 
 			const { script, warnings } = await processScript(source, {
@@ -611,17 +611,19 @@ ${colourL(`pull`)}
 	}
 }
 
-function logInfo({ file, users, minLength, error }: Info, hackmudPath: string) {
+function logInfo({ path, users, characterCount, error }: Info, hackmudPath: string) {
+	path = getRelativePath(`.`, path)
+
 	if (error) {
-		logError(`error "${chalk.bold(error.message)}" in ${chalk.bold(file)}`)
+		logError(`error "${chalk.bold(error.message)}" in ${chalk.bold(path)}`)
 
 		return
 	}
 
-	console.log(`pushed ${chalk.bold(file)} to ${users.map(user => chalk.bold(userColours.get(user))).join(`, `)} | ${
-		chalk.bold(String(minLength))
+	log(`pushed ${chalk.bold(path)} to ${users.map(user => chalk.bold(userColours.get(user))).join(`, `)} | ${
+		chalk.bold(String(characterCount))
 	} chars | ${chalk.bold(
-		`${resolvePath(hackmudPath!, users[0]!, `scripts`, getPathBaseName(file, getPathFileExtension(file)))}.js`
+		`${resolvePath(hackmudPath!, users[0]!, `scripts`, getPathBaseName(path, getPathFileExtension(path)))}.js`
 	)}`)
 }
 

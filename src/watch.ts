@@ -123,7 +123,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			const usersToPushTo = [ ...usersToPushToSet ].filter(user => !scriptNamesToUsersToSkip.has(user))
 
 			if (!usersToPushTo.length) {
-				onPush?.({ file: path, users: [], minLength: 0, error: new Error(`no users to push to`) })
+				onPush?.({ path, users: [], characterCount: 0, error: new Error(`no users to push to`) })
 
 				return
 			}
@@ -134,12 +134,12 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 
 			try {
 				({ script: minifiedCode } = await processScript(
-					await readFile(filePath, { encoding: `utf-8` }),
+					await readFile(filePath, { encoding: `utf8` }),
 					{ minify, scriptUser: true, scriptName, uniqueID, filePath, mangleNames, forceQuineCheats }
 				))
 			} catch (error) {
 				assert(error instanceof Error, HERE)
-				onPush?.({ file: path, users: [], minLength: 0, error })
+				onPush?.({ path, users: [], characterCount: 0, error })
 
 				return
 			}
@@ -151,7 +151,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			)))
 
 			onPush?.(
-				{ file: path, users: usersToPushTo, minLength: countHackmudCharacters(minifiedCode), error: undefined }
+				{ path, users: usersToPushTo, characterCount: countHackmudCharacters(minifiedCode), error: undefined }
 			)
 
 			return
@@ -165,7 +165,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			return
 
 		const filePath = resolvePath(sourceDirectory, path)
-		const sourceCode = await readFile(filePath, { encoding: `utf-8` })
+		const sourceCode = await readFile(filePath, { encoding: `utf8` })
 		let script
 
 		try {
@@ -175,13 +175,13 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			))
 		} catch (error) {
 			assert(error instanceof Error, HERE)
-			onPush?.({ file: path, users: [], minLength: 0, error })
+			onPush?.({ path, users: [], characterCount: 0, error })
 
 			return
 		}
 
 		await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts`, `${scriptName}.js`), script)
-		onPush?.({ file: path, users: [ user ], minLength: countHackmudCharacters(script), error: undefined })
+		onPush?.({ path, users: [ user ], characterCount: countHackmudCharacters(script), error: undefined })
 	})
 
 	if (onReady)
