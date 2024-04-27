@@ -59,19 +59,19 @@
 		"@rollup/plugin-commonjs": "^25.0.7",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^15.2.3",
-		"@samual/lib": "0.10.2-e64c5bc",
+		"@samual/lib": "0.11.0",
 		"acorn": "^8.11.3",
 		"chalk": "^5.3.0",
 		"chokidar": "^3.6.0",
 		"import-meta-resolve": "^4.0.0",
 		"prettier": "^3.2.5",
 		"proxy-polyfill": "^0.3.2",
-		"rollup": "^4.14.2",
-		"terser": "^5.30.3"
+		"rollup": "^4.16.4",
+		"terser": "^5.30.4"
 	},
 	"devDependencies": {
 		"@samual/eslint-config": "^0.0.3",
-		"@samual/rollup-config": "0.0.3-f161e35",
+		"@samual/rollup-config": "0.1.0",
 		"@total-typescript/ts-reset": "^0.5.1",
 		"@types/babel__core": "^7.20.5",
 		"@types/babel__generator": "^7.6.8",
