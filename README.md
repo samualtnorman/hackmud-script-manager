@@ -1,7 +1,14 @@
 # Hackmud Script Manager
 Command made for [hackmud-environment](https://github.com/samualtnorman/hackmud-environment), which is a scripting environment for hackmud with minification, autocompletes / intellisense, and TypeScript support.
 
-Install with `npm install -g hackmud-script-manager` to make the `hsm` command available everywhere.
+## Install
+1. [Install Node.js](https://nodejs.org/en/download)
+2. Run `npm install -g hackmud-script-manager`
+
+## Usage
+1. Run `#dir` in game, then `cd` to that folder
+2. Name your source script file to `<name>.src.js`
+3. Run `hsm golf <name>.src.js` and it will create a minified script file called `<name>.js`
 
 ## Features
 - Minification
