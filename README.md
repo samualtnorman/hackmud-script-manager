@@ -1,6 +1,8 @@
 # Hackmud Script Manager
 Command made for [hackmud-environment](https://github.com/samualtnorman/hackmud-environment), which is a scripting environment for hackmud with minification, autocompletes / intellisense, and TypeScript support.
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R6R0XN5CX)
+
 ## Install
 1. [Install Node.js](https://nodejs.org/en/download)
 2. Run `npm install -g hackmud-script-manager`
