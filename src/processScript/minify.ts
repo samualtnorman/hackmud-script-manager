@@ -558,7 +558,7 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 		if (element.type == `ArrayExpression`) {
 			const childArray: unknown[] = []
 
-			if (!element.elements.length && parseArrayExpression(element, childArray))
+			if (element.elements.length && !parseArrayExpression(element, childArray))
 				return false
 
 			o.push(childArray)
