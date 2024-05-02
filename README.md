@@ -3,6 +3,8 @@ Command made for [hackmud-environment](https://github.com/samualtnorman/hackmud-
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R6R0XN5CX)
 
+You can read about how HSM works [in my blog post](https://samual.uk/blog/js-code-transformation-niche-environment/).
+
 ## Install
 1. [Install Node.js](https://nodejs.org/en/download)
 2. Run `npm install -g hackmud-script-manager`
