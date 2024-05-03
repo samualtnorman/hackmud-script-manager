@@ -44,12 +44,16 @@ interface PlayerLowsec {}
 
 interface PlayerNullsec {}
 
+type RarityString = "noob" | "kiddie" | "h4x0r" | "h4rdc0r3" | "|_|b3|2" | "31337";
+type RarityNumber = 0 | 1 | 2 | 3 | 4 | 5;
+type Rarity = RarityString | RarityNumber;
+
 type UpgradeCore = {
 	name: string
 	type: "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
 	up_class?: -1 | 0 | 1 | 2 | 3
 	tier: 1 | 2 | 3 | 4
-	rarity: 0 | 1 | 2 | 3 | 4 | 5
+	rarity: RarityNumber
 	i: number
 	loaded: boolean
 	sn: string
@@ -60,7 +64,7 @@ type Upgrade = UpgradeCore & Record<string, null | boolean | number | string>
 
 type CLIUpgrade = Omit<UpgradeCore, `rarity`> & {
 	[x: string]: null | boolean | number | string
-	rarity: "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
+	rarity: Rarity
 }
 
 type UsersTopItem<R> = {
@@ -840,7 +844,7 @@ type Highsec = Fullsec & PlayerHighsec & {
 		}) => (
 			Omit<UpgradeCore, keyof F | `rarity`> & F & {
 				[x: string]: null | boolean | number | string
-				rarity: "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
+				rarity: Rarity
 			}
 		)[] | ScriptFailure)
 	}
