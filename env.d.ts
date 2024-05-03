@@ -231,12 +231,12 @@ type Fullsec = Subscripts & PlayerFullsec & {
 		/**
 		 * **FULLSEC**
 		 */
-		browse: ((args: {
+		browse: ((args: Partial<{
 			seller: string
 			listed_before: number
 			listed_after: number
 			cost: number | string
-		} & CLIUpgrade) => {
+		} & CLIUpgrade>) => {
 			i: string
 			name: string
 			rarity: Upgrade["rarity"]
