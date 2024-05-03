@@ -14,6 +14,11 @@ type ScriptFailure = {
 type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
 
+type Scriptor<Args = unknown, Ret = ScriptResponse> = {
+	name: string,
+	call: (args?: Args) => Ret
+}
+
 type Subscripts =
 	Record<
 		string,
