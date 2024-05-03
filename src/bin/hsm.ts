@@ -519,17 +519,17 @@ ${commands[0] == `push` ? `` : `${colourN(`--type-declaration-path`)}=${colourB(
 
 ${colourA(`Examples:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)}
-	Pushes all scripts found in ${colourV(`src`)} folder to all users
+    Pushes all scripts found in ${colourV(`src`)} folder to all users
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`bar`)}
     Pushes a script named ${colourL(`bar`)} found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`bar`)} ${colourC(`baz`)}${colourV(`.`)}${colourL(`qux`)}
     Multiple can be specified
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`foo`)}${colourV(`.`)}${colourL(`*`)}
-	Pushes all scripts found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
+    Pushes all scripts found in ${colourV(`src`)} folder to user ${userColours.get(`foo`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${colourV(`.`)}${colourL(`foo`)}
-	Pushes all scripts named ${colourL(`foo`)} found in ${colourV(`src`)} folder to all user
+    Pushes all scripts named ${colourL(`foo`)} found in ${colourV(`src`)} folder to all user
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${colourV(`.`)}${colourL(`*`)}
-	Pushes all scripts found in ${colourV(`src`)} folder to all users`
+    Pushes all scripts found in ${colourV(`src`)} folder to all users`
 			))
 		} break
 
