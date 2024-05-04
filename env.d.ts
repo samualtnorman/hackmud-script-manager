@@ -14,10 +14,14 @@ type ScriptFailure = {
 type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
 
+type Scriptor<Args = unknown, Ret = ScriptResponse> = Pick<Function, "name" | "call"> ;
+
+/*
 type Scriptor<Args = unknown, Ret = ScriptResponse> = {
 	name: string,
 	call: (args?: Args) => Ret
 }
+*/
 
 type Subscripts =
 	Record<
@@ -49,16 +53,16 @@ interface PlayerLowsec {}
 
 interface PlayerNullsec {}
 
-type RarityString = "noob" | "kiddie" | "h4x0r" | "h4rdc0r3" | "|_|b3|2" | "31337";
-type RarityNumber = 0 | 1 | 2 | 3 | 4 | 5;
-type Rarity = RarityString | RarityNumber;
+type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
+type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5;
+type UpgradeRarity = UpgradeRarityString | UpgradeRarityNumber;
 
 type UpgradeCore = {
 	name: string
 	type: "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
 	up_class?: -1 | 0 | 1 | 2 | 3
 	tier: 1 | 2 | 3 | 4
-	rarity: RarityNumber
+	rarity: UpgradeRarityNumber
 	i: number
 	loaded: boolean
 	sn: string
@@ -69,7 +73,7 @@ type Upgrade = UpgradeCore & Record<string, null | boolean | number | string>
 
 type CLIUpgrade = Omit<UpgradeCore, `rarity`> & {
 	[x: string]: null | boolean | number | string
-	rarity: Rarity
+	rarity: UpgradeRarityString
 }
 
 type UsersTopItem<R> = {
@@ -245,7 +249,8 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			listed_before: number
 			listed_after: number
 			cost: number | string
-		} & CLIUpgrade>) => {
+			rarity: UpgradeRarityNumber
+		} & Omit<CLIUpgrade, "rarity">>) => {
 			i: string
 			name: string
 			rarity: Upgrade["rarity"]
@@ -849,7 +854,7 @@ type Highsec = Fullsec & PlayerHighsec & {
 		}) => (
 			Omit<UpgradeCore, keyof F | `rarity`> & F & {
 				[x: string]: null | boolean | number | string
-				rarity: Rarity
+				rarity: UpgradeRarity
 			}
 		)[] | ScriptFailure)
 	}
