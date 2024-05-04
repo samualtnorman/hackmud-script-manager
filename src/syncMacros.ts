@@ -45,8 +45,10 @@ export async function syncMacros(hackmudPath: string) {
 		}
 	}
 
-	for (const user of users)
-		await writeFile(resolvePath(hackmudPath, `${user}.macros`), macroFile)
+	//for (const user of users)
+	//	await writeFile(resolvePath(hackmudPath, `${user}.macros`), macroFile)
+
+	await Promise.all(users.map(async user => writeFile(resolvePath(hackmudPath, `${user}.macros`), macroFile)))
 
 	return { macrosSynced, usersSynced: users.length }
 }
