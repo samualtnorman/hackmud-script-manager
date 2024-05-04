@@ -14,7 +14,7 @@ type ScriptFailure = {
 type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
 
-type Scriptor<Args = unknown, Ret = ScriptResponse> = Pick<Function, "name" | "call"> ;
+type Scriptor = Pick<Function, "name" | "call">;
 
 /*
 type Scriptor<Args = unknown, Ret = ScriptResponse> = {
