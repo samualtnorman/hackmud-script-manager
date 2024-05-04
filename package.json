@@ -17,6 +17,13 @@
 		"golf",
 		"golfer"
 	],
+	"scripts": {
+		"build": "pnpm install",
+		"package": "bash scripts/package.sh",
+		"roolup": "bash -c ./rollup.config.js",
+		"clean": "bash -c 'rm -rf dist' && bash -c 'rm -rf node_modules'",
+		"hsm": "node dist/bin/hsm.js"
+	},
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
 	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"license": "MIT",
