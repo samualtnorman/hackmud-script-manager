@@ -15,22 +15,15 @@ type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
 
 type AllOptional<T> = {
-	[K in keyof T]-?: {} extends Pick<T, K> ? true : false;
-}[keyof T] extends true ? true : false;
+	[K in keyof T]-?: {} extends Pick<T, K> ? true : false
+}[keyof T]
 
 type Scriptor<Args = unknown, Ret = unknown> = {
 	name: string,
 	call: AllOptional<Args> extends true
 		? (args?: Args) => Ret
-		: (args: Args) => Ret;
-};
-
-/*
-type Scriptor<Args = unknown, Ret = ScriptResponse> = {
-	name: string,
-	call: (args?: Args) => Ret
+		: (args: Args) => Ret
 }
-*/
 
 type Subscripts =
 	Record<
