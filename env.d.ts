@@ -14,7 +14,16 @@ type ScriptFailure = {
 type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
 
-type Scriptor = Pick<Function, "name" | "call">;
+type AllOptional<T> = {
+	[K in keyof T]-?: {} extends Pick<T, K> ? true : false;
+}[keyof T] extends true ? true : false;
+
+type Scriptor<Args = unknown, Ret = unknown> = {
+	name: string,
+	call: AllOptional<Args> extends true
+		? (args?: Args) => Ret
+		: (args: Args) => Ret;
+};
 
 /*
 type Scriptor<Args = unknown, Ret = ScriptResponse> = {
@@ -854,7 +863,7 @@ type Highsec = Fullsec & PlayerHighsec & {
 		}) => (
 			Omit<UpgradeCore, keyof F | `rarity`> & F & {
 				[x: string]: null | boolean | number | string
-				rarity: UpgradeRarity
+				rarity: UpgradeRarityString
 			}
 		)[] | ScriptFailure)
 	}
