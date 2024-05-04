@@ -20,7 +20,11 @@
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
 	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"license": "MIT",
-	"author": "Samual Norman",
+	"author": "Samual Norman <me@samual.uk> (https://samual.uk/)",
+	"contributors": [
+		"Daniel Swann (https://github.com/danswann)",
+		"Longboyy"
+	],
 	"main": "index.js",
 	"repository": {
 		"type": "git",
