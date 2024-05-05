@@ -745,7 +745,9 @@ export function transform(
 			if (variableDeclaration.kind == `const`)
 				variableDeclaration.kind = `let`
 		},
-		ThisExpression: path => path.replaceWith(t.identifier(`undefined`)),
+		ThisExpression: path => {
+			path.replaceWith(t.identifier(`undefined`))
+		},
 		BigIntLiteral(path) {
 			const bigIntAsNumber = Number(path.node.value)
 
