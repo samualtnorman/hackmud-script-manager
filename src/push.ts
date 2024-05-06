@@ -56,6 +56,9 @@ export async function push(
 			.filter(({ stats, name }) => stats.isFile() && name.endsWith(`.key`)).map(({ name }) => name.slice(0, -4))
 	])
 
+	if (!allUsers.size)
+		throw Error(`Could not find any users. Either provide the names of your users or log into a user in hackmud.`)
+
 	const usersToScriptsToPush =
 		new Cache((_user: string) => new Map</* script name */ string, /* script path */ string>)
 
