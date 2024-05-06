@@ -209,7 +209,9 @@ export async function minify(
 
 		traverse(file, {
 			FunctionDeclaration(path) {
-				path.traverse({
+				const body = path.get(`body`)
+
+				body.traverse({
 					Function(path) {
 						if (path.parent.type != `CallExpression` && path.parentKey != `callee`)
 							path.skip()
@@ -229,7 +231,7 @@ export async function minify(
 					}
 				})
 
-				path.traverse({
+				body.traverse({
 					TemplateLiteral(path) {
 						if (path.parent.type == `TaggedTemplateExpression`)
 							return
