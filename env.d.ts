@@ -41,7 +41,7 @@ type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" 
 type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5;
 type UpgradeRarity = UpgradeRarityString | UpgradeRarityNumber;
 
-type UpgradeCore = {
+type UpgradeBase = {
 	name: string
 	type: "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
 	up_class?: -1 | 0 | 1 | 2 | 3
@@ -53,9 +53,9 @@ type UpgradeCore = {
 	description: string
 }
 
-type Upgrade = UpgradeCore & Record<string, null | boolean | number | string>
+type Upgrade = UpgradeBase & Record<string, null | boolean | number | string>
 
-type CLIUpgrade = Omit<UpgradeCore, `rarity`> & {
+type CLIUpgrade = Omit<UpgradeBase, `rarity`> & {
 	[x: string]: null | boolean | number | string
 	rarity: UpgradeRarityString
 }
@@ -424,17 +424,17 @@ type Fullsec = Subscripts & PlayerFullsec & {
 		upgrades_of_owner: {
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?: { filter?: F, full?: false }): (
 				Omit<
-					Pick<UpgradeCore, "tier" | "rarity" | "name" | "type" | "i" | "loaded">,
+					Pick<UpgradeBase, "tier" | "rarity" | "name" | "type" | "i" | "loaded">,
 					keyof F
 				> & Pick<F, "tier" | "rarity" | "name" | "type" | "i" | "loaded">
 			)[] | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args: { filter?: F, full: true }): (
-				Omit<UpgradeCore, keyof F> & F & Record<string, null | boolean | number | string>
+				Omit<UpgradeBase, keyof F> & F & Record<string, null | boolean | number | string>
 			)[] | ScriptFailure
 
 			<I extends number>(args: { i: I }): (
-				Omit<UpgradeCore, "i"> & { [x: string]: null | boolean | number | string, i: I }
+				Omit<UpgradeBase, "i"> & { [x: string]: null | boolean | number | string, i: I }
 			) | ScriptFailure
 		}
 
@@ -511,7 +511,7 @@ type Highsec = Fullsec & PlayerHighsec & {
 		/** **HIGHSEC** */
 		upgrades: {
 			<I extends number>(args: { i: I }): (
-				Omit<UpgradeCore, "i"> & { [x: string]: null | boolean | number | string, i: I }
+				Omit<UpgradeBase, "i"> & { [x: string]: null | boolean | number | string, i: I }
 			) | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?: {
@@ -519,20 +519,20 @@ type Highsec = Fullsec & PlayerHighsec & {
 				is_script?: true
 				full?: false
 			}): (
-				Omit<Pick<UpgradeCore, "tier" | "rarity" | "name" | "type" | "i" | "loaded">, keyof F> & F &
+				Omit<Pick<UpgradeBase, "tier" | "rarity" | "name" | "type" | "i" | "loaded">, keyof F> & F &
 					Record<string, null | boolean | number | string>
 			)[] | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?:
 				{ filter?: F, is_script?: true, full: true }
-			): (Omit<UpgradeCore, keyof F> & F & Record<string, null | boolean | number | string>)[] | ScriptFailure
+			): (Omit<UpgradeBase, keyof F> & F & Record<string, null | boolean | number | string>)[] | ScriptFailure
 
 			(args?: { filter?: Partial<Upgrade & { loaded: boolean }>, is_script: false, full?: false }):
 				{ msg: string, upgrades: string[] } | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(
 				args?: { filter?: F, is_script: false, full: true }
-			): (Omit<UpgradeCore, keyof F | `rarity`> & F & {
+			): (Omit<UpgradeBase, keyof F | `rarity`> & F & {
 				[x: string]: null | boolean | number | string
 				rarity: UpgradeRarityString
 			})[] | ScriptFailure
