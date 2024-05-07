@@ -770,6 +770,8 @@ type CLIContext = {
 
 	/** The name of the script that directly called this script, or null if called on the command line or as a
 	  * scriptor. */ calling_script: null
+	is_scriptor?: undefined
+	is_brain?: undefined
 }
 
 type SubscriptContext = Replace<CLIContext, {
@@ -778,8 +780,12 @@ type SubscriptContext = Replace<CLIContext, {
 	calling_script: string
 }>
 
-type ScriptorContext = CLIContext & { /** Whether the script is being run as a scriptor. */ is_scriptor: true }
-type BrainContext = CLIContext & { /** Whether the script is being run via a bot brain. */ is_brain: true }
+type ScriptorContext =
+	Replace<CLIContext, { /** Whether the script is being run as a scriptor. */ is_scriptor: true }>
+
+type BrainContext =
+	Replace<CLIContext, { /** Whether the script is being run via a bot brain. */ is_brain: true }>
+
 type Context = CLIContext | SubscriptContext | ScriptorContext | BrainContext
 
 /** Subscript space that can call FULLSEC scripts. */ declare const $fs: Fullsec
