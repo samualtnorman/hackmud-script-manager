@@ -51,7 +51,7 @@ type UpgradeBase = {
 
 type Upgrade = UpgradeBase & Record<string, null | boolean | number | string>
 
-type CLIUpgrade = Omit<UpgradeBase, `rarity`> & {
+type CliUpgrade = Omit<UpgradeBase, `rarity`> & {
 	[x: string]: null | boolean | number | string
 	rarity: UpgradeRarityString
 }
@@ -151,7 +151,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 	market: {
 		/** **FULLSEC** */ browse: {
 			(args:
-				Partial<{ seller: string, listed_before: number, listed_after: number, cost: number | string } & Omit<CLIUpgrade, "rarity">>
+				Partial<{ seller: string, listed_before: number, listed_after: number, cost: number | string } & Omit<CliUpgrade, "rarity">>
 			): { i: string, name: string, rarity: Upgrade["rarity"], cost: number }[] | ScriptFailure
 
 			<I extends string>(args: { i: I }): {
@@ -762,7 +762,7 @@ type Cursor = {
 	ObjectId: () => any
 }
 
-type CLIContext = {
+type CliContext = {
 	/** The name of the user who is calling the script. */ caller: string
 	/** The name of this script. */ this_script: string
 	/** The number of columns in the caller’s terminal. */ cols: number
@@ -774,19 +774,19 @@ type CLIContext = {
 	is_brain?: undefined
 }
 
-type SubscriptContext = Replace<CLIContext, {
+type SubscriptContext = Replace<CliContext, {
 	/** The name of the script that directly called this script, or null if called on the command line or as a scriptor.
 	  */
 	calling_script: string
 }>
 
 type ScriptorContext =
-	Replace<CLIContext, { /** Whether the script is being run as a scriptor. */ is_scriptor: true }>
+	Replace<CliContext, { /** Whether the script is being run as a scriptor. */ is_scriptor: true }>
 
 type BrainContext =
-	Replace<CLIContext, { /** Whether the script is being run via a bot brain. */ is_brain: true }>
+	Replace<CliContext, { /** Whether the script is being run via a bot brain. */ is_brain: true }>
 
-type Context = CLIContext | SubscriptContext | ScriptorContext | BrainContext
+type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 
 /** Subscript space that can call FULLSEC scripts. */ declare const $fs: Fullsec
 
