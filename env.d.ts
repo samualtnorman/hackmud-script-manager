@@ -1,4 +1,4 @@
-type Replace<T, R> = Omit<T, Extract<keyof R, keyof T>> & R
+type Replace<A, B> = Omit<A, keyof B> & B
 type ScriptSuccess<T = object> = { ok: true } & T
 type ScriptFailure = { ok: false, msg?: string }
 type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
