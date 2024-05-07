@@ -353,7 +353,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			  * const arr = [ 1, 2, 2, 3, 2 ]
 			  *
 			  * $D(uniq(arr)) // [ 1, 2, 3, 2 ] */
-			uniq: (array: T[]) => T[]
+			uniq: <T>(array: T[]) => T[]
 
 			/** Sorts an array of numbers or number-coercible strings in descending order. */
 			u_sort_num_arr_desc: <T>(array: T[]) => T[]
