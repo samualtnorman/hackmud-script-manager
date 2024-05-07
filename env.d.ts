@@ -829,6 +829,8 @@ declare const $0s: typeof $ns
   * } */
 declare const $s: Nullsec
 
+type ObjectId = { $oid: string }
+
 declare const $db: {
 	/** Insert a document or documents into a collection.
 	  * @param documents A document or array of documents to insert into the collection. */
@@ -922,6 +924,8 @@ declare const $db: {
 			signature: { hash: "Undefined Conversion", keyId: "Undefined Conversion" }
 		}
 	}
+
+	ObjectId: () => ObjectId
 }
 
 /** Debug Log.
@@ -958,7 +962,7 @@ declare const $FMCL: undefined | true
   * @example
   * if (!$G.dbCache)
   * 	$G.dbCache = $db.f({ whatever: true }).first() */
-declare const $G: any
+declare const $G: Record<string | symbol, any>
 
 /** This contains a JS timestamp (not Date) set immediately before your code begins running.
   * @example
@@ -1007,3 +1011,14 @@ declare const _FULL_SCRIPT_NAME: string
   *
   * In rare cases where it's not known at build time, it's `-1`. */
 declare const _SECLEVEL: -1 | 0 | 1 | 2 | 3 | 4
+
+type DeepFreeze<T> = { readonly [P in keyof T]: DeepFreeze<T[P]> }
+
+/** Recursively
+  * [`Object.freeze()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze)
+  * an object and its properties' objects and its properties' objects and so on.
+  *
+  * [Official Hackmud Wiki](https://wiki.hackmud.com/scripting/extensions/deep_freeze) */
+declare const DEEP_FREEZE: <T>(value: T) => DeepFreeze<T>
+
+declare const _RUN_ID: string
