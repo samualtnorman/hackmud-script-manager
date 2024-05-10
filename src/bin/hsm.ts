@@ -167,7 +167,7 @@ switch (commands[0]) {
 			break
 		}
 
-		const { push } = await pushModule
+		const { push, MissingSourceFolderError, MissingHackmudFolderError } = await pushModule
 
 		const infos = await push(sourcePath, hackmudPath, {
 			scripts,
@@ -177,9 +177,20 @@ switch (commands[0]) {
 			forceQuineCheats: shouldforceQuineCheats
 		})
 
-		if (infos instanceof Error)
+		if (infos instanceof Error) {
 			logError(infos.message)
-		else if (!infos.length)
+
+			if (infos instanceof MissingSourceFolderError) {
+				console.log()
+				logHelp()
+			} else if (infos instanceof MissingHackmudFolderError) {
+				log(
+					`\
+If this is not where your hackmud folder is, you can specify it with the
+${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKMUD_PATH`)} environment variable`
+				)
+			}
+		} else if (!infos.length)
 			logError(`Could not find any scripts to push`)
 	} break
 
