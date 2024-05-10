@@ -37,6 +37,12 @@ Object.defineProperty(MissingSourceFolderError.prototype, `name`, { value: `Miss
 export class MissingHackmudFolderError extends Error {}
 Object.defineProperty(MissingHackmudFolderError.prototype, `name`, { value: `MissingHackmudFolderError` })
 
+export class NoUsersError extends Error {}
+Object.defineProperty(NoUsersError.prototype, `name`, { value: `NoUsersError` })
+
+export class NoScriptsError extends Error {}
+Object.defineProperty(NoScriptsError.prototype, `name`, { value: `NoScriptsError` })
+
 /** Push scripts from a source directory to the hackmud directory.
   *
   * Pushes files directly in the source folder to all users
@@ -80,8 +86,11 @@ export async function push(
 			.filter(({ stats, name }) => stats.isFile() && name.endsWith(`.key`)).map(({ name }) => name.slice(0, -4))
 	])
 
-	if (!allUsers.size)
-		throw Error(`Could not find any users. Either provide the names of your users or log into a user in hackmud.`)
+	if (!allUsers.size) {
+		return new NoUsersError(
+			`Could not find any users. Either provide the names of your users or log into a user in hackmud`
+		)
+	}
 
 	const usersToScriptsToPush =
 		new Cache((_user: string) => new Map</* script name */ string, /* script path */ string>)
@@ -135,7 +144,7 @@ export async function push(
 	for (const [ scriptName, users ] of scriptNamesToUsers) {
 		for (const user of users) {
 			if (!usersToScriptsToPush.get(user).has(scriptName))
-				throw Error(`Could not find script ${user}.${scriptName} to push`)
+				return new NoScriptsError(`Could not find script ${user}.${scriptName} to push`)
 		}
 	}
 
