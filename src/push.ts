@@ -31,6 +31,12 @@ export type PushOptions = LaxPartial<{
 	forceQuineCheats: boolean
 }>
 
+export class MissingSourceFolderError extends Error {}
+Object.defineProperty(MissingSourceFolderError.prototype, `name`, { value: `MissingSourceFolderError` })
+
+export class MissingHackmudFolderError extends Error {}
+Object.defineProperty(MissingHackmudFolderError.prototype, `name`, { value: `MissingHackmudFolderError` })
+
 /** Push scripts from a source directory to the hackmud directory.
   *
   * Pushes files directly in the source folder to all users
@@ -43,8 +49,26 @@ export async function push(
 	hackmudPath: string,
 	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats }: PushOptions = {}
 ) {
-	const [ sourceFolder, hackmudFolder ] =
-		await Promise.all([ readDirectoryWithStats(sourcePath), readDirectoryWithStats(hackmudPath) ])
+	const [ sourceFolder, hackmudFolder ] = await Promise.all([
+		readDirectoryWithStats(sourcePath).catch(error => {
+			if (error && (error as NodeJS.ErrnoException).code == "ENOENT")
+				return new MissingSourceFolderError(`There is no folder at ${sourcePath}`)
+			
+			throw error
+		}),
+		readDirectoryWithStats(hackmudPath).catch(error => {
+			if (error && (error as NodeJS.ErrnoException).code == "ENOENT")
+				return new MissingHackmudFolderError(`There is no folder at ${hackmudPath}`)
+			
+			throw error
+		})
+	])
+
+	if (sourceFolder instanceof Error)
+		return sourceFolder
+
+	if (hackmudFolder instanceof Error)
+		return hackmudFolder
 
 	const sourceFolderFolders = sourceFolder.filter(({ stats }) => stats.isDirectory())
 

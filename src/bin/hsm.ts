@@ -177,7 +177,9 @@ switch (commands[0]) {
 			forceQuineCheats: shouldforceQuineCheats
 		})
 
-		if (!infos.length)
+		if (infos instanceof Error)
+			logError(infos.message)
+		else if (!infos.length)
 			logError(`Could not find any scripts to push`)
 	} break
 
