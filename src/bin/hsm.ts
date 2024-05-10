@@ -167,7 +167,7 @@ switch (commands[0]) {
 			break
 		}
 
-		const { push, MissingSourceFolderError, MissingHackmudFolderError } = await pushModule
+		const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
 
 		const infos = await push(sourcePath, hackmudPath, {
 			scripts,
@@ -180,7 +180,7 @@ switch (commands[0]) {
 		if (infos instanceof Error) {
 			logError(infos.message)
 
-			if (infos instanceof MissingSourceFolderError) {
+			if (infos instanceof MissingSourceFolderError || infos instanceof NoUsersError) {
 				console.log()
 				logHelp()
 			} else if (infos instanceof MissingHackmudFolderError) {
