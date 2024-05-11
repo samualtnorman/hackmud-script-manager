@@ -151,7 +151,16 @@ type Fullsec = Subscripts & PlayerFullsec & {
 	market: {
 		/** **FULLSEC** */ browse: {
 			(args:
-				Partial<{ seller: string, listed_before: number, listed_after: number, cost: number | string } & Omit<CliUpgrade, "rarity">>
+				Partial<{
+					seller: string | MongoQuerySelector<string>,
+					listed_before: number | MongoQuerySelector<number>,
+					listed_after: number,
+					cost: number | MongoQuerySelector<number> | string,
+					rarity: UpgradeRarityNumber | MongoQuerySelector<UpgradeRarityNumber>,
+					name: string | MongoQuerySelector<string>
+				} & Omit<{
+					[k in keyof CliUpgrade]: CliUpgrade[k] | MongoQuerySelector<CliUpgrade[k]>
+				}, "rarity">>
 			): { i: string, name: string, rarity: Upgrade["rarity"], cost: number }[] | ScriptFailure
 
 			<I extends string>(args: { i: I }): {
@@ -710,10 +719,72 @@ type Nullsec = Lowsec & PlayerNullsec & {
 	}
 }
 
+const MongoTypes = {
+	"minKey": -1,
+	"double": 1,
+	"string": 2,
+	"object": 3,
+	"array": 4,
+	"binData": 5,
+	"undefined": 6, /** deprecated */
+	"objectId": 7,
+	"bool": 8,
+	"date": 9,
+	"null": 10,
+	"regex": 11,
+	"dbPointer": 12, /** deprecated */
+	"javascript": 13,
+	"symbol": 14, /** deprecated */
+	"int": 16,
+	"timestamp": 17,
+	"long": 18,
+	"decimal": 19,
+	"maxKey": 127
+} as const;
+
+type MongoTypeString = keyof typeof MongoTypes;
+type MongoTypeNumber = typeof MongoTypes[keyof typeof MongoTypes];
+
 type MongoValue = string | number | boolean | Date | MongoValue[] | { [key: string]: MongoValue } | null
 
 type MongoCommandValue = string | number | boolean | Date | MongoCommandValue[] | { [key: string]: MongoCommandValue } |
-	null | undefined
+null | undefined
+
+/**
+ * Currently unused
+ */
+type MongoLogicalSelectors<T extends MongoValue = MongoValue> = {
+	$not: T | MongoComparisonSelectors<T> | MongoLogicalSelectors<T>
+	$nor: T[]
+	$or: T[]
+	$and: T[]
+}
+
+type MongoArraySelectors<T extends Array<MongoValue> = Array<MongoValue>> = {
+	$all: T
+	$elemMatch: T
+	$size: number
+}
+
+type MongoComparisonSelectors<T extends MongoValue = MongoValue> = {
+	$eq: T
+	$gt: T
+	$gte: T
+	$in: T[]
+	$lt: T
+	$lte: T
+	$ne: T
+	$nin: T[]
+}
+
+type MongoElementSelectors = {
+	$exists: boolean
+	$type: MongoTypeNumber | MongoTypeString
+}
+
+type MongoQuerySelector<T extends MongoValue = MongoValue> = Partial<T extends MongoValue[] ?
+	(MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>) :
+	(MongoElementSelectors & MongoComparisonSelectors<T>)>
 
 type Query = { [key: string]: MongoValue | Query } & { _id?: Id, $in?: MongoValue[] }
 type Projection = Record<string, boolean | 0 | 1>
