@@ -140,7 +140,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 	market: {
 		/** **FULLSEC** */ browse: {
 			(args:
-				{ seller: string, listed_before: number, listed_after: number, cost: number | string } & CLIUpgrade
+				Partial<{ seller: string, listed_before: number, listed_after: number, cost: number | string } & Omit<CLIUpgrade, "rarity">>
 			): { i: string, name: string, rarity: Upgrade["rarity"], cost: number }[] | ScriptFailure
 
 			<I extends string>(args: { i: I }): {
