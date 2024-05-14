@@ -719,31 +719,9 @@ type Nullsec = Lowsec & PlayerNullsec & {
 	}
 }
 
-const MongoTypes = {
-	"minKey": -1,
-	"double": 1,
-	"string": 2,
-	"object": 3,
-	"array": 4,
-	"binData": 5,
-	"undefined": 6, /** deprecated */
-	"objectId": 7,
-	"bool": 8,
-	"date": 9,
-	"null": 10,
-	"regex": 11,
-	"dbPointer": 12, /** deprecated */
-	"javascript": 13,
-	"symbol": 14, /** deprecated */
-	"int": 16,
-	"timestamp": 17,
-	"long": 18,
-	"decimal": 19,
-	"maxKey": 127
-} as const;
-
-type MongoTypeString = keyof typeof MongoTypes;
-type MongoTypeNumber = typeof MongoTypes[keyof typeof MongoTypes];
+type MongoTypeString = "minKey" | "double" | "string" | "object" | "array" | "binData" | "undefined" | "objectId" |
+	"bool" | "date" | "null" | "regex" | "dbPointer" | "javascript" | "symbol" | "int" | "timestamp" | "long" | "decimal" | "maxKey";
+type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127;
 
 type MongoValue = string | number | boolean | Date | MongoValue[] | { [key: string]: MongoValue } | null
 
