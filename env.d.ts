@@ -720,10 +720,9 @@ type MongoTypeString = "minKey" | "double" | "string" | "object" | "array" | "bi
 	"bool" | "date" | "null" | "regex" | "dbPointer" | "javascript" | "symbol" | "int" | "timestamp" | "long" | "decimal" | "maxKey";
 type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127;
 
-type MongoValue = string | number | boolean | Date | MongoValue[] | { [key: string]: MongoValue } | null
+type MongoValue = string | number | boolean | Date | MongoValue[] | Record<string, MongoValue> | null
 
-type MongoCommandValue = string | number | boolean | Date | MongoCommandValue[] | { [key: string]: MongoCommandValue } |
-null | undefined
+type MongoCommandValue = string | number | boolean | Date | MongoCommandValue[] | Record<string, MongoCommandValue> | null | undefined;
 
 /**
  * Currently unused
@@ -761,46 +760,62 @@ type MongoQuerySelector<T extends MongoValue = MongoValue> = Partial<T extends M
 	(MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>) :
 	(MongoElementSelectors & MongoComparisonSelectors<T>)>
 
-type Query = { [key: string]: MongoValue | Query } & { _id?: Id, $in?: MongoValue[] }
-type Projection = Record<string, boolean | 0 | 1>
+//type Query = { [key: string]: MongoValue | Query } & { _id?: Id, $in?: MongoValue[] }
+type Query<Schema extends object> = Partial<{[key in keyof Schema]: MongoValue | MongoQuerySelector}> & {
+	_id?: Id
+};
 
-type MongoCommand = MongoCommandValue & Partial<
-	{ $set: Record<string, MongoCommandValue>, $push: Record<string, MongoCommandValue>, $unset: Record<string, ""> }
->
+type Projection<Schema extends object> = Partial<{
+	[key in keyof Schema]: boolean | 0 | 1
+}>
+
+type MongoCommand<Schema extends object> = Partial<{
+	$set: Partial<Record<string, MongoCommandValue> & {
+		[K in keyof Schema]: Schema[K]
+	}>,
+	$push: Partial<Record<string, MongoCommandValue>  & {
+		[K in keyof Schema]: Schema[K]
+	}>,
+	$unset: Partial<Record<string, "">  & {
+		[K in keyof Schema]: ""
+	}>
+}>
 
 type Id = string | number | boolean | Date | Record<string, MongoValue>
-type MongoDocument = { [key: string]: MongoValue, _id: Id }
+type MongoDocument<Schema extends object = object> = {
+	[K in keyof Schema]: Schema[K]
+} & { _id: Id }
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
-type Cursor = {
-	/** Returns the first document that satisfies the query. */ first: () => MongoDocument | null
-	/** Returns an array of documents that satisfy the query. */ array: () => MongoDocument[]
+type Cursor<Doc extends MongoDocument = MongoDocument> = {
+	/** Returns the first document that satisfies the query. */ first: () => Doc | null
+	/** Returns an array of documents that satisfy the query. */ array: () => Doc[]
 	/** Returns the number of documents that match the query. */ count: () => number
 
 	/** Returns the first document that satisfies the query. Also makes cursor unusable. */
-	first_and_close: () => MongoDocument
+	first_and_close: () => Doc
 
 	/** Returns an array of documents that satisfy the query. Also makes cursor unusable. */
-	array_and_close: () => MongoDocument[]
+	array_and_close: () => Doc[]
 
 	/** Returns the number of documents that match the query. Also makes cursor unusable. */
 	count_and_close: () => number
 
 	/** Run `callback` on each document that satisfied the query. */
-	each: (callback: (document: MongoDocument) => void) => null
+	each: (callback: (document: Doc) => void) => null
 
 	/** Returns a new cursor with documents sorted as specified.
 	  * A value of 1 sorts the property ascending, and -1 descending.
 	  * @param order The way the documents are to be sorted. */
-	sort: (order?: SortOrder) => Cursor
+	sort: (order?: SortOrder) => Cursor<Doc>
 
 	/** Returns a new cursor without the first number of documents.
 	  * @param count Number of documents to skip. */
-	skip: (count: number) => Cursor
+	skip: (count: number) => Cursor<Doc>
 
 	/** Returns a new cursor limited to a number of documents as specified.
 	  * @param count Number of documents. */
-	limit: (count: number) => Cursor
+	limit: (count: number) => Cursor<Doc>
 
 	/** @param key The key of the documents. */ distinct: ((key: string) => MongoValue[]) & ((key: "_id") => Id[])
 	/** Make cursor unusable. */ close: () => null
@@ -880,7 +895,7 @@ type ObjectId = { $oid: string }
 declare const $db: {
 	/** Insert a document or documents into a collection.
 	  * @param documents A document or array of documents to insert into the collection. */
-	i: (documents: object | object[]) => {
+	i: <T extends object = object>(documents: (T & { _id?: Id })  | (T & { _id?: Id })[]) => {
 		ok: 1
 		n: number
 		opTime: { ts: "Undefined Conversion", t: number }
@@ -894,7 +909,7 @@ declare const $db: {
 
 	/** Remove documents from a collection.
 	  * @param query Specifies deletion criteria using query operators. */
-	r: (query: Query) => {
+	r: <T extends object = object>(query: Query<T>) => {
 		ok: 0 | 1
 		n: number
 		opTime: { ts: "Undefined Conversion", t: number }
@@ -909,13 +924,13 @@ declare const $db: {
 	/** Find documents in a collection or view and returns a cursor to the selected documents.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param projection Specifies the fields to return in the documents that match the query filter. */
-	f: (query?: Query, projection?: Projection) => Cursor
+	f: <T extends object = object>(query?: Query<T>, projection?: Projection<T>) => Cursor<T>
 
-	/** Update an existing documents in a collection.
+	/** Update existing documents in a collection.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: (query: Query | Query[], command: MongoCommand) => {
+	u: <T extends MongoDocument = MongoDocument>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
@@ -932,7 +947,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u1: (query: Query | Query[], command: MongoCommand) => {
+	u1: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
@@ -951,14 +966,14 @@ declare const $db: {
 		}
 	}
 
-	/** Update or insert or insert document.
+	/** Update or insert document.
 	  * Same as Update, but if no documents match the query, one document will be inserted based on the properties in
 	  * both the query and the command.
 	  * The `$setOnInsert` operator is useful to set defaults.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: (query: Query | Query[], command: MongoCommand) => {
+	us: <T extends MongoDocument = MongoDocument>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
