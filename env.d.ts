@@ -763,7 +763,6 @@ type MongoQuerySelector<T extends MongoValue = MongoValue> = Partial<T extends M
 	(MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>) :
 	(MongoElementSelectors & MongoComparisonSelectors<T>)>
 
-//type Query = { [key: string]: MongoValue | Query } & { _id?: Id, $in?: MongoValue[] }
 type Query<Schema extends object> = Partial<{[key in keyof Schema]: MongoValue | MongoQuerySelector}> & {
 	_id?: Id
 };
@@ -933,7 +932,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: <T extends MongoDocument = MongoDocument>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
+	u: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
@@ -976,7 +975,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: <T extends MongoDocument = MongoDocument>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
+	us: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
