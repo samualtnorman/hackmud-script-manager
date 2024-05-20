@@ -402,7 +402,7 @@ export async function processScript(code: string, {
 		)
 	}
 
-	code = postprocess(code, seclevel, uniqueId)
+	code = postprocess(code, uniqueId)
 
 	if (includesIllegalString(code)) {
 		throw Error(

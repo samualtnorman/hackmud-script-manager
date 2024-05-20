@@ -141,39 +141,39 @@ export function transform(
 		}
 	}
 
-	const neededSubscriptLets = new Set<string>()
+	const neededSubscriptLets = new Map<string, number>()
 	let detectedSeclevel = 4
 
 	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName))
-			processFakeSubscriptObject(fakeSubscriptObjectName)
+			processFakeSubscriptObject(fakeSubscriptObjectName, 4)
 	}
 
 	for (const fakeSubscriptObjectName of [ `$hs`, `$3s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 3
-			processFakeSubscriptObject(fakeSubscriptObjectName)
+			processFakeSubscriptObject(fakeSubscriptObjectName, 3)
 		}
 	}
 
 	for (const fakeSubscriptObjectName of [ `$ms`, `$2s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 2
-			processFakeSubscriptObject(fakeSubscriptObjectName)
+			processFakeSubscriptObject(fakeSubscriptObjectName, 2)
 		}
 	}
 
 	for (const fakeSubscriptObjectName of [ `$ls`, `$1s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 1
-			processFakeSubscriptObject(fakeSubscriptObjectName)
+			processFakeSubscriptObject(fakeSubscriptObjectName, 1)
 		}
 	}
 
 	for (const fakeSubscriptObjectName of [ `$ns`, `$0s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName)) {
 			detectedSeclevel = 0
-			processFakeSubscriptObject(fakeSubscriptObjectName)
+			processFakeSubscriptObject(fakeSubscriptObjectName, 0)
 		}
 	}
 
@@ -633,12 +633,12 @@ export function transform(
 	if (neededSubscriptLets.size) {
 		mainFunction.body.body.unshift(t.variableDeclaration(
 			`let`,
-			[ ...neededSubscriptLets ].map(name => t.variableDeclarator(
+			[ ...neededSubscriptLets.entries() ].map(([name, secLevel]) => t.variableDeclarator(
 				t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`),
 				t.arrowFunctionExpression(
 					[ t.restElement(t.identifier(`args`)) ],
 					t.callExpression(
-						t.identifier(`$${uniqueId}$SUBSCRIPT$${name}$`),
+						t.identifier(`$${uniqueId}$${secLevel}$SUBSCRIPT$${name}$`),
 						[ t.spreadElement(t.identifier(`args`)) ]
 					)
 				)
@@ -780,7 +780,7 @@ export function transform(
 		)
 	}
 
-	function processFakeSubscriptObject(fakeSubscriptObjectName: string) {
+	function processFakeSubscriptObject(fakeSubscriptObjectName: string, secLevel: number) {
 		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
 			assert(referencePath.parent.type == `MemberExpression`, HERE)
 			assert(referencePath.parent.property.type == `Identifier`)
@@ -799,7 +799,7 @@ export function transform(
 
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
 				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$SUBSCRIPT$${
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$${secLevel}$SUBSCRIPT$${
 					referencePath.parent.property.name
 				}$${referencePath.parentPath.parentPath.node.property.name}$`))
 			} else {
@@ -807,7 +807,8 @@ export function transform(
 					`${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
 
 				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`))
-				neededSubscriptLets.add(name)
+				const maxSecLevel = Math.max(neededSubscriptLets.get(name) || 0, secLevel)
+				neededSubscriptLets.set(name, maxSecLevel)
 			}
 		}
 	}
