@@ -772,10 +772,6 @@ type Projection<Schema extends MongoSchema> = Partial<{
 	[key in keyof Schema]: boolean | 0 | 1
 }>
 
-/*
-	rename
-	addToSet
-*/
 
 type MongoUpdateOperators<Schema extends MongoSchema> = Partial<{
 	/* Universal operators */
@@ -807,7 +803,8 @@ type MongoUpdateOperators<Schema extends MongoSchema> = Partial<{
 			| MongoUpdateArrayOperatorModifiers<Schema[key]>
 	}>
 	$addToSet: Partial<Record<string, MongoCommandValue> & {
-		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key] | MongoUpdateArrayOperatorUniversalModifiers<Schema[key]>
+		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: (Schema[key] extends (infer U)[] ? U : never)
+			| MongoUpdateArrayOperatorUniversalModifiers<Schema[key]>
 	}>
 	$pull: Partial<Record<string, MongoCommandValue> & {
 		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: (Schema[key] extends (infer U)[] ? U : never)
