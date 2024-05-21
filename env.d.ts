@@ -771,22 +771,44 @@ type Projection<Schema extends object> = Partial<{
 	[key in keyof Schema]: boolean | 0 | 1
 }>
 
-type MongoCommand<Schema extends object> = Partial<{
-	$set: Partial<Record<string, MongoCommandValue> & {
-		[K in keyof Schema]: Schema[K]
-	}>,
-	$push: Partial<Record<string, MongoCommandValue>  & {
-		[K in keyof Schema]: Schema[K]
-	}>,
-	$unset: Partial<Record<string, "">  & {
-		[K in keyof Schema]: ""
-	}>
+
+type MongoUpdateOperators<Schema extends object> = Partial<{
+    $set: Partial<Record<string, MongoCommandValue> & Schema>;
+    $setOnInsert: Partial<Record<string, MongoCommandValue> & Schema>;
+    $unset: Partial<Record<string, ""> & Schema>;
+    $rename: Partial<Record<string, string> & Schema>;
+	$inc: Partial<Record<string, number> & {
+		[key in keyof Schema as Schema[key] extends number | Date ? key : never]: Schema[key] extends number ? number : Date;
+	}>;
+	$mul: Partial<Record<string, number> & {
+		[key in keyof Schema as Schema[key] extends number ? key : never]: number;
+	}>;
+	$min: Partial<Record<string, number> & {
+		[key in keyof Schema as Schema[key] extends number ? key : never]: number;
+	}>;
+	$max: Partial<Record<string, number> & {
+		[key in keyof Schema as Schema[key] extends number ? key : never]: number;
+	}>;
 }>
 
+/*
+type MongoUpdateArrayOperators<T extends Array> = {
+	$pop: -1 | 1,
+	$pull: Query<T>,
+}
+*/
+
+type MongoUpdateArrayOperatorModifiers<Schema extends Array> = {
+	$each: Schema,
+	$position: number,
+	$slice: number,
+	$sort: SortOrder | 1 | -1
+}
+
+type MongoUpdateCommand<Schema extends object> = MongoUpdateOperators<Schema>
+
 type Id = string | number | boolean | Date | Record<string, MongoValue>
-type MongoDocument<Schema extends object = object> = {
-	[K in keyof Schema]: Schema[K]
-} & { _id: Id }
+type MongoDocument<Schema extends object = object> = Schema & { _id: Id }
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
 type Cursor<Doc extends MongoDocument = MongoDocument> = {
@@ -932,7 +954,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
+	u: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
@@ -949,7 +971,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u1: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
+	u1: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
@@ -975,7 +997,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoCommand<MongoDocument<T>>) => {
+	us: <T extends object = object>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) => {
 		ok: 0 | 1
 		nModified: number
 		n: number
