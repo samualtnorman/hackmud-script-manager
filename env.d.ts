@@ -773,22 +773,31 @@ type Projection<Schema extends object> = Partial<{
 
 
 type MongoUpdateOperators<Schema extends object> = Partial<{
-    $set: Partial<Record<string, MongoCommandValue> & Schema>;
-    $setOnInsert: Partial<Record<string, MongoCommandValue> & Schema>;
-    $unset: Partial<Record<string, ""> & Schema>;
-    $rename: Partial<Record<string, string> & Schema>;
+    $set: Partial<Record<string, MongoCommandValue> & Schema>
+    $setOnInsert: Partial<Record<string, MongoCommandValue> & Schema>
+    $unset: Partial<Record<string, ""> & Schema>
+    $rename: Partial<Record<string, string> & Schema>
 	$inc: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number | Date ? key : never]: Schema[key] extends number ? number : Date;
-	}>;
+		[key in keyof Schema as Schema[key] extends number | Date ? key : never]: Schema[key] extends number ? number : Date
+	}>
 	$mul: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number ? key : never]: number;
-	}>;
+		[key in keyof Schema as Schema[key] extends number ? key : never]: number
+	}>
 	$min: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number ? key : never]: number;
-	}>;
+		[key in keyof Schema as Schema[key] extends number ? key : never]: number
+	}>
 	$max: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number ? key : never]: number;
-	}>;
+		[key in keyof Schema as Schema[key] extends number ? key : never]: number
+	}>
+	$pop: Partial<Record<string, -1 | 1> & {
+		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: -1 | 1
+	}>
+	$push: Partial<Record<string, MongoCommandValue> & {
+		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key] | MongoUpdateArrayOperatorModifiers<Schema[key]>
+	}>
+	$addToSet: Partial<Record<string, MongoCommandValue> & {
+		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key] | MongoUpdateArrayOperatorUniversalModifiers<Schema[key]>
+	}>
 }>
 
 /*
@@ -798,12 +807,15 @@ type MongoUpdateArrayOperators<T extends Array> = {
 }
 */
 
-type MongoUpdateArrayOperatorModifiers<Schema extends Array> = {
-	$each: Schema,
-	$position: number,
-	$slice: number,
-	$sort: SortOrder | 1 | -1
-}
+type MongoUpdateArrayOperatorUniversalModifiers<T> = Partial<{
+	$each: T extends Array<infer U> ? T : T[]
+}>
+
+type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalModifiers<T> & Partial<{
+	$position: number
+	$slice: number
+	$sort: 1 | -1
+}>
 
 type MongoUpdateCommand<Schema extends object> = MongoUpdateOperators<Schema>
 
