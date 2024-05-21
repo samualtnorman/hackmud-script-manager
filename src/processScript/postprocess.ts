@@ -5,7 +5,6 @@ export const postprocess = (code: string, uniqueId: string) => code
 	.replace(new RegExp(`\\$${uniqueId}\\$\\\\(?:\\\\)?\\$D\\$`, `g`), `_\\_D_S`)
 	.replace(new RegExp(`\\$${uniqueId}\\$\\\\(?:\\\\)?\\$FMCL\\$`, `g`), `_\\_FMCL_`)
 	.replace(new RegExp(`\\$${uniqueId}\\$\\\\(?:\\\\)?\\$G\\$`, `g`), `_\\_G_`)
-	.replace(new RegExp(`\\$${uniqueId}\\$SUBSCRIPT\\$(\\w+)\\$(\\w+)\\$`, `g`), `#fs.$1.$2`)
 	.replace(new RegExp(`\\$${uniqueId}\\$(\\d)\\$SUBSCRIPT\\$(\\w+)\\$(\\w+)\\$`, `g`), `#$1s.$2.$3`)
 	.replace(new RegExp(`\\$${uniqueId}\\$DEBUG\\$`, `g`), `#D`)
 	.replace(new RegExp(`\\$${uniqueId}\\$FMCL\\$`, `g`), `#FMCL`)
