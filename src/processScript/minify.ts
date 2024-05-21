@@ -377,7 +377,7 @@ export async function minify(
 							t.memberExpression(
 								t.taggedTemplateExpression(
 									t.memberExpression(
-										t.callExpression(t.identifier(`$${uniqueId}$SUBSCRIPT$scripts$quine$`), []),
+										t.callExpression(t.identifier(`$${uniqueId}$4$SUBSCRIPT$scripts$quine$`), []),
 										t.identifier(`split`)
 									),
 									t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
@@ -403,7 +403,7 @@ export async function minify(
 								t.memberExpression(
 									t.taggedTemplateExpression(
 										t.memberExpression(
-											t.callExpression(t.identifier(`$${uniqueId}$SUBSCRIPT$scripts$quine$`), []),
+											t.callExpression(t.identifier(`$${uniqueId}$4$SUBSCRIPT$scripts$quine$`), []),
 											t.identifier(`split`)
 										),
 										t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
@@ -431,7 +431,7 @@ export async function minify(
 							t.memberExpression(
 								t.taggedTemplateExpression(
 									t.memberExpression(
-										t.callExpression(t.identifier(`$${uniqueId}$SUBSCRIPT$scripts$quine$`), []),
+										t.callExpression(t.identifier(`$${uniqueId}$4$SUBSCRIPT$scripts$quine$`), []),
 										t.identifier(`split`)
 									),
 									t.templateLiteral([ t.templateElement({ raw: `\t`, cooked: `\t` }, true) ], [])
