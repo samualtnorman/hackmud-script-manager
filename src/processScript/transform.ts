@@ -633,12 +633,12 @@ export function transform(
 	if (neededSubscriptLets.size) {
 		mainFunction.body.body.unshift(t.variableDeclaration(
 			`let`,
-			[ ...neededSubscriptLets.entries() ].map(([name, secLevel]) => t.variableDeclarator(
+			[ ...neededSubscriptLets ].map(([ name, seclevel ]) => t.variableDeclarator(
 				t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`),
 				t.arrowFunctionExpression(
 					[ t.restElement(t.identifier(`args`)) ],
 					t.callExpression(
-						t.identifier(`$${uniqueId}$${secLevel}$SUBSCRIPT$${name}$`),
+						t.identifier(`$${uniqueId}$${seclevel}$SUBSCRIPT$${name}$`),
 						[ t.spreadElement(t.identifier(`args`)) ]
 					)
 				)
@@ -780,7 +780,7 @@ export function transform(
 		)
 	}
 
-	function processFakeSubscriptObject(fakeSubscriptObjectName: string, secLevel: number) {
+	function processFakeSubscriptObject(fakeSubscriptObjectName: string, seclevel: number) {
 		for (const referencePath of getReferencePathsToGlobal(fakeSubscriptObjectName, program)) {
 			assert(referencePath.parent.type == `MemberExpression`, HERE)
 			assert(referencePath.parent.property.type == `Identifier`)
@@ -799,7 +799,7 @@ export function transform(
 
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
 				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$${secLevel}$SUBSCRIPT$${
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$${seclevel}$SUBSCRIPT$${
 					referencePath.parent.property.name
 				}$${referencePath.parentPath.parentPath.node.property.name}$`))
 			} else {
@@ -807,7 +807,7 @@ export function transform(
 					`${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
 
 				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`))
-				const maxSecLevel = Math.max(neededSubscriptLets.get(name) || 0, secLevel)
+				const maxSecLevel = Math.max(neededSubscriptLets.get(name) || 0, seclevel)
 				neededSubscriptLets.set(name, maxSecLevel)
 			}
 		}
