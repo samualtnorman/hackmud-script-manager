@@ -770,10 +770,12 @@ type Projection<Schema extends object> = Partial<{
 
 
 type MongoUpdateOperators<Schema extends object> = Partial<{
+	/* Universal operators */
     $set: Partial<Record<string, MongoCommandValue> & Schema>
     $setOnInsert: Partial<Record<string, MongoCommandValue> & Schema>
     $unset: Partial<Record<string, ""> & Schema>
     $rename: Partial<Record<string, string> & Schema>
+	/* Date & number operators */
 	$inc: Partial<Record<string, number> & {
 		[key in keyof Schema as Schema[key] extends number | Date ? key : never]: Schema[key] extends number ? number : Date
 	}>
@@ -786,6 +788,7 @@ type MongoUpdateOperators<Schema extends object> = Partial<{
 	$max: Partial<Record<string, number> & {
 		[key in keyof Schema as Schema[key] extends number ? key : never]: number
 	}>
+	/* Array operators */
 	$pop: Partial<Record<string, -1 | 1> & {
 		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: -1 | 1
 	}>
@@ -795,14 +798,13 @@ type MongoUpdateOperators<Schema extends object> = Partial<{
 	$addToSet: Partial<Record<string, MongoCommandValue> & {
 		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key] | MongoUpdateArrayOperatorUniversalModifiers<Schema[key]>
 	}>
+	$pull: Partial<Record<string, MongoCommandValue> & {
+		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key] extends (infer U)[] ? U : Schema[key] | MongoQuerySelector<Schema[key]>
+	}>
+	$pullAll: Partial<Record<string, MongoCommandValue> & {
+		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key]
+	}>
 }>
-
-/*
-type MongoUpdateArrayOperators<T extends Array> = {
-	$pop: -1 | 1,
-	$pull: Query<T>,
-}
-*/
 
 type MongoUpdateArrayOperatorUniversalModifiers<T> = Partial<{
 	$each: T extends Array<infer U> ? T : T[]
@@ -957,7 +959,7 @@ declare const $db: {
 	/** Find documents in a collection or view and returns a cursor to the selected documents.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param projection Specifies the fields to return in the documents that match the query filter. */
-	f: <T extends object = object>(query?: Query<T>, projection?: Projection<T>) => Cursor<T>
+	f: <T extends object = object>(query?: Query<T>, projection?: Projection<T>) => Cursor<MongoDocument<T>>
 
 	/** Update existing documents in a collection.
 	  * @param query Specifies deletion criteria using query operators.
