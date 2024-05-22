@@ -1,23 +1,22 @@
 {
 	"include": [ "*", "scripts/*", "game-scripts/*" ],
 	"compilerOptions": {
+		"noEmit": true,
+		"lib": [ "es2023" ],
+		"types": [ "node", "@total-typescript/ts-reset" ],
+		"target": "es2022",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"checkJs": true,
+		"skipLibCheck": true,
+		"strict": true,
 		"allowUnreachableCode": false,
 		"allowUnusedLabels": false,
+		"exactOptionalPropertyTypes": true,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitOverride": true,
 		"noUncheckedIndexedAccess": true,
 		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"strict": true,
-		"module": "ESNext",
-		"moduleResolution": "Node",
-		"resolveJsonModule": true,
-		"types": [ "@types/node", "@total-typescript/ts-reset" ],
-		"noEmit": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"target": "ES2022",
-		"skipLibCheck": true
+		"noUnusedParameters": true
 	}
 }
