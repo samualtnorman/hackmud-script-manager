@@ -16,7 +16,7 @@ jobs:
     - run: export PATH=$PWD/node_modules/.bin:$PATH
 
     - name: Publish dev
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || github.event_name == 'pull_request'
       run: scripts/version-dev.js && scripts/package.sh && cd dist && pnpm publish --no-git-checks --tag dev
 
     - name: Publish release
