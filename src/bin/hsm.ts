@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import type { Replace } from "@samual/lib"
 import { Cache } from "@samual/lib/Cache"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
@@ -16,9 +17,9 @@ import { generateTypeDeclaration } from "../generateTypeDeclaration"
 import { pull } from "../pull"
 import { syncMacros } from "../syncMacros"
 
-type ArgumentValue = boolean | number | string
+type OptionValue = boolean | number | string
 
-const options = new Map<string, ArgumentValue>()
+const options = new Map<string, OptionValue>()
 const commands: string[] = []
 
 const userColours = new Cache<string, string>(user => {
@@ -35,7 +36,7 @@ const log = (message: string) => console.log(colourS(message))
 for (const argument of process.argv.slice(2)) {
 	if (argument[0] == `-`) {
 		const [ key, valueRaw ] = argument.split(`=`)
-		let value: ArgumentValue | undefined = valueRaw
+		let value: OptionValue | undefined = valueRaw
 
 		if (value) {
 			if (value == `true`)
@@ -61,11 +62,6 @@ for (const argument of process.argv.slice(2)) {
 		commands.push(argument)
 }
 
-if (commands[0] == `v` || commands[0] == `version` || options.get(`version`) || options.get(`v`)) {
-	console.log(moduleVersion)
-	process.exit()
-}
-
 const pushModule = import(`../push`)
 const processScriptModule = import(`../processScript`)
 const watchModule = import(`../watch`)
@@ -86,7 +82,12 @@ const colourS = chalk.rgb(0x7A, 0xB2, 0xF4)
 const colourV = chalk.rgb(0xFF, 0x00, 0xEC)
 const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
 
-if (options.get(`help`) || options.get(`h`)) {
+if (commands[0] == `v` || commands[0] == `version` || popOption(`version`, `v`)?.value) {
+	console.log(moduleVersion)
+	process.exit()
+}
+
+if (popOption(`help`, `h`)?.value) {
 	logHelp()
 	process.exit()
 }
@@ -94,199 +95,180 @@ if (options.get(`help`) || options.get(`h`)) {
 let autoExit = true
 
 switch (commands[0]) {
-	case `push`: {
-		const hackmudPath = getHackmudPath()
-		const sourcePath = commands[1]
-
-		if (!sourcePath) {
-			logError(`Must provide the directory to push from\n`)
-			logHelp()
-
-			break
-		}
-
-		const scripts = commands.slice(2)
-
-		if (scripts.length) {
-			const invalidScript = scripts
-				.find(script => !/^(?:[a-z_][a-z\d_]{0,24}|\*)\.(?:[a-z_][a-z\d_]{0,24}|\*)$/.test(script))
-
-			if (invalidScript) {
-				logError(`Invalid script name: ${JSON.stringify(invalidScript)}\n`)
-				logHelp()
-
-				break
-			}
-		} else
-			scripts.push(`*.*`)
-
-		const optionsHasNoMinify = options.has(`no-minify`)
-
-		if ((optionsHasNoMinify || options.has(`skip-minify`)) && options.has(`mangle-names`)) {
-			logError(`Options ${colourN(`--mangle-names`)} and ${
-				colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)
-			} are incompatible\n`)
-
-			logHelp()
-
-			break
-		}
-
-		const shouldSkipMinify = options.get(`no-minify`) || options.get(`skip-minify`)
-		let shouldMinify
-
-		if (shouldSkipMinify != undefined) {
-			if (typeof shouldSkipMinify != `boolean`) {
-				logError(`The value for ${colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)} must be ${
-					colourV(`true`)
-				} or ${colourV(`false`)}\n`)
-
-				logHelp()
-
-				break
-			}
-
-			shouldMinify = !shouldSkipMinify
-		}
-
-		const shouldMangleNames = options.get(`mangle-names`)
-
-		if (shouldMangleNames != undefined && typeof shouldMangleNames != `boolean`) {
-			logError(`The value for ${colourN(`--mangle-names`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
-			logHelp()
-
-			break
-		}
-
-		const shouldforceQuineCheats = options.get(`force-quine-cheats`)
-
-		if (shouldforceQuineCheats != undefined && typeof shouldforceQuineCheats != `boolean`) {
-			logError(`The value for ${colourN(`--force-quine-cheats`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
-			logHelp()
-
-			break
-		}
-
-		const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
-
-		const infos = await push(sourcePath, hackmudPath, {
-			scripts,
-			onPush: info => logInfo(info, hackmudPath),
-			minify: shouldMinify,
-			mangleNames: shouldMangleNames,
-			forceQuineCheats: shouldforceQuineCheats
-		})
-
-		if (infos instanceof Error) {
-			logError(infos.message)
-
-			if (infos instanceof MissingSourceFolderError || infos instanceof NoUsersError) {
-				console.log()
-				logHelp()
-			} else if (infos instanceof MissingHackmudFolderError) {
-				log(
-					`\
-If this is not where your hackmud folder is, you can specify it with the
-${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKMUD_PATH`)} environment variable`
-				)
-			}
-		} else if (!infos.length)
-			logError(`Could not find any scripts to push`)
-	} break
-
+	case `push`:
 	case `dev`:
-	case `watch`: {
-		const hackmudPath = getHackmudPath()
-		const sourcePath = commands[1]
+	case `watch`:
+	case `golf`:
+	case `minify`: {
+		const noMinifyOption = popOption(`no-minify`, `skip-minify`)
+		const mangleNamesOption = popOption(`mangle-names`)
+		const forceQuineCheatsOption = popOption(`force-quine-cheats`)
 
-		if (!sourcePath) {
-			logError(`Must provide the directory to watch\n`)
-			logHelp()
+		const noMinifyIncompatibleOption = mangleNamesOption || forceQuineCheatsOption
 
-			break
-		}
-
-		const scripts = commands.slice(2)
-
-		if (scripts.length) {
-			const invalidScript = scripts
-				.find(script => !/^(?:[a-z_][a-z\d_]{0,24}|\*)\.(?:[a-z_][a-z\d_]{0,24}|\*)$/.test(script))
-
-			if (invalidScript) {
-				logError(`Invalid script name: ${JSON.stringify(invalidScript)}\n`)
-				logHelp()
-
-				break
-			}
-		} else
-			scripts.push(`*.*`)
-
-		const optionsHasNoMinify = options.has(`no-minify`)
-
-		if ((optionsHasNoMinify || options.has(`skip-minify`)) && options.has(`mangle-names`)) {
-			logError(`Options ${colourN(`--mangle-names`)} and ${
-				colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)
-			} are incompatible\n`)
-
-			logHelp()
-
-			break
-		}
-
-		const shouldSkipMinify = options.get(`no-minify`) || options.get(`skip-minify`)
-		let shouldMinify
-
-		if (shouldSkipMinify != undefined) {
-			if (typeof shouldSkipMinify != `boolean`) {
-				logError(`The value for ${colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)} must be ${
-					colourV(`true`)
-				} or ${colourV(`false`)}\n`)
-
-				logHelp()
-
-				break
-			}
-
-			shouldMinify = !shouldSkipMinify
-		}
-
-		const shouldMangleNames = options.get(`mangle-names`)
-
-		if (shouldMangleNames != undefined && typeof shouldMangleNames != `boolean`) {
-			logError(`The value for ${colourN(`--mangle-names`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
-			logHelp()
-
-			break
-		}
-
-		const shouldforceQuineCheats = options.get(`force-quine-cheats`)
-
-		if (shouldforceQuineCheats != undefined && typeof shouldforceQuineCheats != `boolean`) {
+		if (noMinifyOption && noMinifyIncompatibleOption) {
 			logError(
-				`The value for ${colourN(`--force-quine-cheats`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`
+				`Options ${colourN(noMinifyOption.name)} and ${colourN(noMinifyIncompatibleOption.name)
+				} are incompatible\n`
 			)
 
 			logHelp()
-
-			break
+			process.exit(1)
 		}
 
-		const { watch } = await watchModule
+		if (noMinifyOption)
+			assertOptionIsBoolean(noMinifyOption)
 
-		watch(sourcePath, hackmudPath, {
-			scripts,
-			onPush: info => logInfo(info, hackmudPath),
-			typeDeclarationPath: (
-				options.get(`type-declaration-path`) || options.get(`type-declaration`) || options.get(`dts`) ||
-					options.get(`gen-types`)
-			)?.toString(),
-			minify: shouldMinify,
-			mangleNames: shouldMangleNames,
-			onReady: () => log(`Watching`),
-			forceQuineCheats: shouldforceQuineCheats
-		})
+		if (mangleNamesOption)
+			assertOptionIsBoolean(mangleNamesOption)
 
-		autoExit = false
+		if (forceQuineCheatsOption)
+			assertOptionIsBoolean(forceQuineCheatsOption)
+
+		if (commands[0] == `golf` || commands[0] == `minify`) {
+			const watchOption = popOption(`watch`)
+			const target = commands[1]
+
+			if (!target) {
+				logError(`Must provide target\n`)
+				logHelp()
+				process.exit(1)
+			}
+
+			const fileExtension = getPathFileExtension(target)
+
+			if (!supportedExtensions.includes(fileExtension)) {
+				logError(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${
+					supportedExtensions.map(extension => chalk.bold(extension)).join(`", "`)
+				}"`)
+
+				process.exit(1)
+			}
+
+			const { processScript } = await processScriptModule
+			const fileBaseName = getPathBaseName(target, fileExtension)
+			const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
+			const scriptName = fileBaseNameEndsWithDotSrc ? fileBaseName.slice(0, -4) : fileBaseName
+
+			const scriptUser = (
+				getPathBaseName(resolvePath(target, `..`)) == `scripts` &&
+				getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
+			) ? getPathBaseName(resolvePath(target, `../..`)) : undefined
+
+			let outputPath = commands[2] || resolvePath(
+				getPathDirectory(target),
+				fileBaseNameEndsWithDotSrc
+					? `${scriptName}.js`
+					: (fileExtension == `.js` ? `${fileBaseName}.min.js` : `${fileBaseName}.js`)
+			)
+
+			const golfFile = () => readFile(target, { encoding: `utf8` }).then(async source => {
+				const timeStart = performance.now()
+
+				const { script, warnings } = await processScript(source, {
+					minify: noMinifyOption && !noMinifyOption.value,
+					scriptUser,
+					scriptName,
+					filePath: target,
+					mangleNames: mangleNamesOption?.value,
+					forceQuineCheats: forceQuineCheatsOption?.value
+				})
+
+				const timeTook = performance.now() - timeStart
+
+				for (const { message, line } of warnings)
+					log(`Warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
+
+				await writeFilePersistent(outputPath, script).catch((error: NodeJS.ErrnoException) => {
+					if (!commands[2] || error.code != `EISDIR`)
+						throw error
+
+					outputPath = resolvePath(outputPath, `${getPathBaseName(target, fileExtension)}.js`)
+
+					return writeFilePersistent(outputPath, script)
+				}).then(() => log(`Wrote ${chalk.bold(countHackmudCharacters(script))} chars to ${
+					chalk.bold(getRelativePath(`.`, outputPath))
+				} | took ${Math.round(timeTook * 100) / 100}ms`))
+			})
+
+			if (watchOption) {
+				const { watch: watchFile } = await chokidarModule
+
+				watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
+					.on(`ready`, () => log(`Watching ${target}`)).on(`change`, golfFile)
+
+				autoExit = false
+			} else
+				await golfFile()
+		} else {
+			const hackmudPath = getHackmudPath()
+			const sourcePath = commands[1]
+
+			if (!sourcePath) {
+				logError(`Must provide the directory to ${commands[0] == `push` ? `push from` : `watch`}\n`)
+				logHelp()
+				process.exit(1)
+			}
+
+			const scripts = commands.slice(2)
+
+			if (scripts.length) {
+				const invalidScript = scripts
+					.find(script => !/^(?:[a-z_][a-z\d_]{0,24}|\*)\.(?:[a-z_][a-z\d_]{0,24}|\*)$/.test(script))
+
+				if (invalidScript) {
+					logError(`Invalid script name: ${JSON.stringify(invalidScript)}\n`)
+					logHelp()
+					process.exit(1)
+				}
+			} else
+				scripts.push(`*.*`)
+
+			if (commands[0] == `push`) {
+				const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
+
+				const infos = await push(sourcePath, hackmudPath, {
+					scripts,
+					onPush: info => logInfo(info, hackmudPath),
+					minify: noMinifyOption && !noMinifyOption.value,
+					mangleNames: mangleNamesOption?.value,
+					forceQuineCheats: forceQuineCheatsOption?.value
+				})
+
+				if (infos instanceof Error) {
+					logError(infos.message)
+
+					if (infos instanceof MissingSourceFolderError || infos instanceof NoUsersError) {
+						console.log()
+						logHelp()
+					} else if (infos instanceof MissingHackmudFolderError) {
+						log(
+							`\
+If this is not where your hackmud folder is, you can specify it with the
+${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKMUD_PATH`)} environment variable`
+						)
+					}
+				} else if (!infos.length)
+					logError(`Could not find any scripts to push`)
+			} else {
+				const typeDeclarationPathOption =
+					popOption(`type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
+
+				const { watch } = await watchModule
+
+				watch(sourcePath, hackmudPath, {
+					scripts,
+					onPush: info => logInfo(info, hackmudPath),
+					typeDeclarationPath: typeDeclarationPathOption?.value.toString(),
+					minify: noMinifyOption && !noMinifyOption.value,
+					mangleNames: mangleNamesOption?.value,
+					onReady: () => log(`Watching`),
+					forceQuineCheats: forceQuineCheatsOption?.value
+				})
+
+				autoExit = false
+			}
+		}
 	} break
 
 	case `pull`: {
@@ -296,8 +278,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 		if (!script) {
 			logError(`Must provide the script to pull\n`)
 			logHelp()
-
-			break
+			process.exit(1)
 		}
 
 		const sourcePath = commands[2] || `.`
@@ -319,20 +300,20 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 	case `gen-type-declaration`:
 	case `gen-dts`:
 	case `gen-types`: {
+		const hackmudPath = getHackmudPath()
 		const target = commands[1]
 
 		if (!target) {
 			logError(`Must provide target directory\n`)
 			logHelp()
-
-			break
+			process.exit(1)
 		}
 
 		const sourcePath = resolvePath(target)
 		const outputPath = commands[2] || `./player.d.ts`
 
 		const typeDeclaration =
-			await generateTypeDeclaration(sourcePath, getHackmudPath())
+			await generateTypeDeclaration(sourcePath, hackmudPath)
 
 		let typeDeclarationPath = resolvePath(outputPath)
 
@@ -353,121 +334,6 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 	case `help`:
 	case `h`: {
 		logHelp()
-	} break
-
-	case `golf`:
-	case `minify`: {
-		const target = commands[1]
-
-		if (!target) {
-			logError(`Must provide target\n`)
-			logHelp()
-
-			break
-		}
-
-		const fileExtension = getPathFileExtension(target)
-
-		if (!supportedExtensions.includes(fileExtension)) {
-			logError(`Unsupported file extension "${chalk.bold(fileExtension)}"\nSupported extensions are "${
-				supportedExtensions.map(extension => chalk.bold(extension)).join(`", "`)
-			}"`)
-
-			break
-		}
-
-		const { processScript } = await processScriptModule
-		const fileBaseName = getPathBaseName(target, fileExtension)
-		// eslint-disable-next-line unicorn/prevent-abbreviations -- the file extension is `src` not `source`
-		const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
-		const scriptName = fileBaseNameEndsWithDotSrc ? fileBaseName.slice(0, -4) : fileBaseName
-
-		const scriptUser = (
-			getPathBaseName(resolvePath(target, `..`)) == `scripts` &&
-			getPathBaseName(resolvePath(target, `../../..`)) == `hackmud`
-		) ? getPathBaseName(resolvePath(target, `../..`)) : undefined
-
-		const optionsHasNoMinify = options.has(`no-minify`)
-
-		if ((optionsHasNoMinify || options.has(`skip-minify`)) && options.has(`mangle-names`)) {
-			logError(`Options ${colourN(`--mangle-names`)} and ${
-				colourN(optionsHasNoMinify ? `--no-minify` : `--skip-minify`)
-			} are incompatible\n`)
-
-			logHelp()
-
-			break
-		}
-
-		const mangleNames_ = options.get(`mangle-names`)
-
-		if (mangleNames_ != undefined && typeof mangleNames_ != `boolean`) {
-			logError(`The value for ${colourN(`--mangle-names`)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
-			logHelp()
-
-			break
-		}
-
-		const mangleNames = mangleNames_
-		const forceQuineCheats_ = options.get(`force-quine-cheats`)
-
-		if (forceQuineCheats_ != undefined && typeof forceQuineCheats_ != `boolean`) {
-			logError(`the value for ${colourN(`--force-quine-cheats`)} must be ${colourV(`true`)} or ${
-				colourV(`false`)
-			}\n`)
-
-			logHelp()
-
-			break
-		}
-
-		const forceQuineCheats = forceQuineCheats_
-
-		let outputPath = commands[2] || resolvePath(
-			getPathDirectory(target),
-			fileBaseNameEndsWithDotSrc
-				? `${scriptName}.js`
-				: (fileExtension == `.js` ? `${fileBaseName}.min.js` : `${fileBaseName}.js`)
-		)
-
-		const golfFile = () => readFile(target, { encoding: `utf8` }).then(async source => {
-			const timeStart = performance.now()
-
-			const { script, warnings } = await processScript(source, {
-				minify: !(options.get(`no-minify`) || options.get(`skip-minify`)),
-				scriptUser,
-				scriptName,
-				filePath: target,
-				mangleNames,
-				forceQuineCheats
-			})
-
-			const timeTook = performance.now() - timeStart
-
-			for (const { message, line } of warnings)
-				log(`Warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
-
-			await writeFilePersistent(outputPath, script).catch((error: NodeJS.ErrnoException) => {
-				if (!commands[2] || error.code != `EISDIR`)
-					throw error
-
-				outputPath = resolvePath(outputPath, `${getPathBaseName(target, fileExtension)}.js`)
-
-				return writeFilePersistent(outputPath, script)
-			}).then(() => log(`Wrote ${chalk.bold(countHackmudCharacters(script))} chars to ${
-				chalk.bold(getRelativePath(`.`, outputPath))
-			} | took ${Math.round(timeTook * 100) / 100}ms`))
-		})
-
-		if (options.get(`watch`)) {
-			const { watch: watchFile } = await chokidarModule
-
-			watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
-				.on(`ready`, () => log(`Watching ${target}`)).on(`change`, golfFile)
-
-			autoExit = false
-		} else
-			await golfFile()
 	} break
 
 	default: {
@@ -646,7 +512,7 @@ function logError(message: string) {
 }
 
 function getHackmudPath() {
-	const hackmudPathOption = options.get(`hackmud-path`)
+	const hackmudPathOption = popOption(`hackmud-path`)
 
 	if (hackmudPathOption != undefined && typeof hackmudPathOption != `string`) {
 		logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption)}\n`)
@@ -658,4 +524,36 @@ function getHackmudPath() {
 		? resolvePath(process.env.APPDATA!, `hackmud`)
 		: resolvePath(getHomeDirectory(), `.config/hackmud`)
 	)
+}
+
+type Option = { name: string, value: OptionValue }
+
+function assertOptionIsBoolean(option: Option): asserts option is Replace<Option, { value: boolean }> {
+	if (typeof option.value != `boolean`) {
+		logError(`The value for ${colourN(option.name)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+		logHelp()
+		process.exit(1)
+	}
+}
+
+function popOption(...names: string[]): Option | undefined {
+	const presentOptionNames = names.filter(name => options.has(name))
+
+	if (!presentOptionNames.length)
+		return undefined
+
+	const presentOptionNamesWithDashDash = presentOptionNames.map(name => colourN(`-${name.length == 1 ? `` : `-`}${name}`))
+
+	if (presentOptionNames.length > 1) {
+		logError(`The options ${presentOptionNamesWithDashDash.join(`, `)
+		} are aliases for each other. Please only specify one`)
+
+		process.exit(1)
+	}
+
+	const value = options.get(presentOptionNames[0]!)!
+
+	options.delete(presentOptionNames[0]!)
+
+	return { name: presentOptionNamesWithDashDash[0]!, value }
 }
