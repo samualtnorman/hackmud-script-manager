@@ -34,8 +34,6 @@ export function transform(
 	{ uniqueId = `00000000000`, scriptUser, scriptName, seclevel = 4 }: TransformOptions
 ) {
 	const topFunctionName = `_${uniqueId}_SCRIPT_`
-	const exports = new Map<string, string>()
-	const liveExports = new Map<string, string>()
 	let program!: NodePath<t.Program>
 
 	traverse(file, {
@@ -277,13 +275,13 @@ export function transform(
 		for (const specifier of lastStatement.specifiers) {
 			assert(specifier.type == `ExportSpecifier`, `${HERE} ${specifier.type} is currently unsupported`)
 
-			const exportedName =
-				specifier.exported.type == `Identifier` ? specifier.exported.name : specifier.exported.value
+			if (
+				(specifier.exported.type == `Identifier` ? specifier.exported.name : specifier.exported.value) !=
+					`default`
+			)
+				throw Error(`Only default exports are supported`)
 
-			if (exportedName == `default`)
-				exportDefaultName = specifier.local.name
-			else
-				exports.set(specifier.local.name, exportedName)
+			exportDefaultName = specifier.local.name
 		}
 	}
 
@@ -317,11 +315,6 @@ export function transform(
 								t.returnStatement(t.callExpression(t.identifier(exportDefaultName), []))
 							])
 						)
-					}
-
-					if (statement.kind != `const` && exports.has(identifierName)) {
-						liveExports.set(identifierName, exports.get(identifierName)!)
-						exports.delete(identifierName)
 					}
 
 					globalBlock.body
@@ -387,21 +380,6 @@ export function transform(
 	program.node.body = [ mainFunction ]
 
 	if (globalBlock.body.length) {
-		if (exports.size || liveExports.size) {
-			mainFunction.body.body.push(t.returnStatement(
-				t.objectExpression([
-					...[ ...exports ]
-						.map(([ local, exported ]) => t.objectProperty(t.identifier(exported), t.identifier(local))),
-					...[ ...liveExports ].map(([ local, exported ]) => t.objectMethod(
-						`get`,
-						t.identifier(exported),
-						[],
-						t.blockStatement([ t.returnStatement(t.identifier(local)) ])
-					))
-				])
-			))
-		}
-
 		program.scope.crawl()
 
 		const globalBlockVariables = new Set<string>()
@@ -540,14 +518,6 @@ export function transform(
 
 					needG = true
 				}
-			}
-		}
-
-		if (program.scope.hasGlobal(`_EXPORTS`)) {
-			for (const referencePath of getReferencePathsToGlobal(`_EXPORTS`, program)) {
-				referencePath.replaceWith(
-					t.arrayExpression([ ...exports.keys(), ...liveExports.keys() ].map(name => t.stringLiteral(name)))
-				)
 			}
 		}
 
