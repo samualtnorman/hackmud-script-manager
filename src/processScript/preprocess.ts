@@ -125,8 +125,9 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 		], t.stringLiteral(resolveModule(`proxy-polyfill/src/proxy.js`, import.meta.url).slice(7))))
 	}
 
-	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`)
-		return { code: `export default ${generate(file).code}` }
+	if (program.node.body.length == 1 && program.node.body[0]!.type == `FunctionDeclaration`) {
+		throw Error(`Scripts that only contain a single function declaration are no longer supported.\nPrefix the function declaration with \`export default\`.`)
+	}
 
 	return { code: generate(file).code }
 }
