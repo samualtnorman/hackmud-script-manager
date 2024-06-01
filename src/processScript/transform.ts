@@ -223,9 +223,11 @@ export function transform(
 			referencePath.replaceWith(t.identifier(`$${uniqueId}$FMCL$`))
 	}
 
-	if (program.scope.hasGlobal(`$G`)) {
+	let needG = program.scope.hasGlobal(`$G`)
+
+	if (needG) {
 		for (const referencePath of getReferencePathsToGlobal(`$G`, program))
-			referencePath.replaceWith(t.identifier(`$${uniqueId}$GLOBAL$`))
+			referencePath.replaceWith(t.identifier(`_${uniqueId}_G_`))
 	}
 
 	if (program.scope.hasGlobal(`_SECLEVEL`)) {
@@ -436,9 +438,11 @@ export function transform(
 							assert(referencePath.node.type == `Identifier`, HERE)
 
 							referencePath.replaceWith(t.memberExpression(
-								t.identifier(`$${uniqueId}$GLOBAL$`),
+								t.identifier(`_${uniqueId}_G_`),
 								t.identifier(referencePath.node.name)
 							))
+
+							needG = true
 						}
 
 						for (const referencePath of binding.constantViolations) {
@@ -451,8 +455,10 @@ export function transform(
 
 									Object.assign(
 										node,
-										t.memberExpression(t.identifier(`$${uniqueId}$GLOBAL$`), t.identifier(name))
+										t.memberExpression(t.identifier(`_${uniqueId}_G_`), t.identifier(name))
 									)
+
+									needG = true
 								}
 							}
 						}
@@ -467,12 +473,14 @@ export function transform(
 								t.expressionStatement(t.assignmentExpression(
 									`=`,
 									t.memberExpression(
-										t.identifier(`$${uniqueId}$GLOBAL$`),
+										t.identifier(`_${uniqueId}_G_`),
 										t.identifier(declarator.id.name)
 									),
 									declarator.init
 								))
 							)
+
+							needG = true
 						}
 					} else {
 						globalBlockPath.remove()
@@ -502,9 +510,11 @@ export function transform(
 						assert(referencePath.node.type == `Identifier`, HERE)
 
 						referencePath.replaceWith(t.memberExpression(
-							t.identifier(`$${uniqueId}$GLOBAL$`),
+							t.identifier(`_${uniqueId}_G_`),
 							t.identifier(referencePath.node.name)
 						))
+
+						needG = true
 					}
 
 					globalBlockPath.remove()
@@ -516,7 +526,7 @@ export function transform(
 						t.expressionStatement(t.assignmentExpression(
 							`=`,
 							t.memberExpression(
-								t.identifier(`$${uniqueId}$GLOBAL$`),
+								t.identifier(`_${uniqueId}_G_`),
 								t.identifier(globalBlockStatement.id.name)
 							),
 							t.classExpression(
@@ -527,6 +537,8 @@ export function transform(
 							)
 						))
 					)
+
+					needG = true
 				}
 			}
 		}
@@ -643,6 +655,13 @@ export function transform(
 					)
 				)
 			))
+		))
+	}
+
+	if (needG) {
+		mainFunction.body.body.unshift(t.variableDeclaration(
+			`let`,
+			[ t.variableDeclarator(t.identifier(`_${uniqueId}_G_`), t.identifier(`$${uniqueId}$GLOBAL$`)) ]
 		))
 	}
 

@@ -99,18 +99,6 @@ export async function minify(
 		))
 	}
 
-	const hashGReferencePaths = getReferencePathsToGlobal(`$${uniqueId}$GLOBAL$`, program)
-
-	if (hashGReferencePaths.length > 3) {
-		for (const path of hashGReferencePaths)
-			path.replaceWith(t.identifier(`_${uniqueId}_G_`))
-
-		mainFunctionPath.node.body.body.unshift(t.variableDeclaration(
-			`let`,
-			[ t.variableDeclarator(t.identifier(`_${uniqueId}_G_`), t.identifier(`$${uniqueId}$GLOBAL$`)) ]
-		))
-	}
-
 	const jsonValues: any[] = []
 	// this needs `as boolean` because typescript is dumb
 	let undefinedIsReferenced = false as boolean
