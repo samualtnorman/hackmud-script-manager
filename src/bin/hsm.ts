@@ -73,6 +73,7 @@ const colourA = chalk.rgb(0xFF, 0xFF, 0xFF)
 const colourB = chalk.rgb(0xCA, 0xCA, 0xCA)
 const colourC = chalk.rgb(0x9B, 0x9B, 0x9B)
 const colourD = chalk.rgb(0xFF, 0x00, 0x00)
+const colourF = chalk.rgb(0xFF, 0x80, 0x00)
 const colourJ = chalk.rgb(0xFF, 0xF4, 0x04)
 const colourK = chalk.rgb(0xF3, 0xF9, 0x98)
 const colourL = chalk.rgb(0x1E, 0xFF, 0x00)
@@ -81,6 +82,14 @@ const colourN = chalk.rgb(0x00, 0xFF, 0xFF)
 const colourS = chalk.rgb(0x7A, 0xB2, 0xF4)
 const colourV = chalk.rgb(0xFF, 0x00, 0xEC)
 const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
+
+if (process.version.startsWith(`v21.`)) {
+	console.warn(colourF(`\
+Warning: Support for Node.js 21 will be dropped in the next minor version of HSM
+         You should update your version of Node.js
+         https://nodejs.org/en/download/package-manager`
+	))
+}
 
 if (commands[0] == `v` || commands[0] == `version` || popOption(`version`, `v`)?.value) {
 	console.log(moduleVersion)
