@@ -154,6 +154,8 @@ switch (commands[0]) {
 				process.exit(1)
 			}
 
+			complainAboutUnrecognisedOptions()
+
 			const { processScript } = await processScriptModule
 			const fileBaseName = getPathBaseName(target, fileExtension)
 			const fileBaseNameEndsWithDotSrc = fileBaseName.endsWith(`.src`)
@@ -236,6 +238,8 @@ switch (commands[0]) {
 			if (commands[0] == `push`) {
 				const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
 
+				complainAboutUnrecognisedOptions()
+
 				const infos = await push(sourcePath, hackmudPath, {
 					scripts,
 					onPush: info => logInfo(info, hackmudPath),
@@ -262,6 +266,8 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 			} else {
 				const typeDeclarationPathOption =
 					popOption(`type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
+
+				complainAboutUnrecognisedOptions()
 
 				const { watch } = await watchModule
 
@@ -290,6 +296,8 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 			process.exit(1)
 		}
 
+		complainAboutUnrecognisedOptions()
+
 		const sourcePath = commands[2] || `.`
 
 		await pull(sourcePath, hackmudPath, script).catch(error => {
@@ -300,6 +308,9 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 
 	case `sync-macros`: {
 		const hackmudPath = getHackmudPath()
+
+		complainAboutUnrecognisedOptions()
+
 		const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
 
 		log(`Synced ${macrosSynced} macros to ${usersSynced} users`)
@@ -317,6 +328,8 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 			logHelp()
 			process.exit(1)
 		}
+
+		complainAboutUnrecognisedOptions()
 
 		const sourcePath = resolvePath(target)
 		const outputPath = commands[2] || `./player.d.ts`
@@ -565,4 +578,14 @@ function popOption(...names: string[]): Option | undefined {
 	options.delete(presentOptionNames[0]!)
 
 	return { name: presentOptionNamesWithDashDash[0]!, value }
+}
+
+function complainAboutUnrecognisedOptions(): void {
+	if (options.size) {
+		logError(
+			`Unrecognised option${options.size > 1 ? `s` : ``}: ${[ ...options.keys() ].map(formatOption).join(`, `)}`
+		)
+
+		process.exit(1)
+	}
 }
