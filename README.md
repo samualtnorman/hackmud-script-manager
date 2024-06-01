@@ -20,6 +20,10 @@ You can read about how HSM works [in my blog post](https://samual.uk/blog/js-cod
 > ```
 > You will need to run `Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser` in PowerShell as an administrator. For more information, see [Microsoft's page about Execution Policies](https://learn.microsoft.com/en-gb/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.4).
 
+![image](https://github.com/samualtnorman/hackmud-script-manager/assets/18307063/69a371fe-f8c8-43fe-b3c7-39f3735ce6fb)
+![image](https://github.com/samualtnorman/hackmud-script-manager/assets/18307063/08103f9e-74fa-4a56-a739-94858ba8c139)
+![image](https://github.com/samualtnorman/hackmud-script-manager/assets/18307063/25ccb86d-1fe3-4632-b703-ac47f5b32c9c)
+
 ## Features
 - Minification
     - This includes auto quine cheating.
