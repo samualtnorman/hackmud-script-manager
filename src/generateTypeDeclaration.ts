@@ -1,5 +1,6 @@
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { basename as getBaseName, resolve as resolvePath } from "path"
+import * as PathPosix from "path/posix"
 
 export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string) {
 	const users = new Set<string>()
@@ -43,7 +44,7 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 		}
 	}))
 
-	sourceDirectory = resolvePath(sourceDirectory)
+	sourceDirectory = PathPosix.resolve(sourceDirectory)
 
 	let o = ``
 
