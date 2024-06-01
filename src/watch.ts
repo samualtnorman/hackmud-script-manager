@@ -5,7 +5,7 @@ import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { watch as watchDirectory } from "chokidar"
-import { readFile, writeFile } from "fs/promises"
+import { stat as getFileStats, readFile, writeFile } from "fs/promises"
 import { extname as getFileExtension, basename as getPathBaseName, resolve as resolvePath } from "path"
 import { supportedExtensions } from "./constants"
 import { generateTypeDeclaration } from "./generateTypeDeclaration"
@@ -36,6 +36,11 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 }: WatchOptions = {}) {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
+
+	const sourceFolderStats = await getFileStats(sourceDirectory)
+
+	if (!sourceFolderStats.isDirectory())
+		throw Error(`Target folder must be a folder`)
 
 	const scriptNamesToUsers = new Cache((_scriptName: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
