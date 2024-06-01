@@ -19,6 +19,7 @@ import { syncMacros } from "../syncMacros"
 
 type OptionValue = boolean | number | string
 
+const formatOption = (name: string) => colourN(`-${name.length == 1 ? `` : `-`}${name}`)
 const options = new Map<string, OptionValue>()
 const commands: string[] = []
 
@@ -112,12 +113,11 @@ switch (commands[0]) {
 		const noMinifyOption = popOption(`no-minify`, `skip-minify`)
 		const mangleNamesOption = popOption(`mangle-names`)
 		const forceQuineCheatsOption = popOption(`force-quine-cheats`)
-
 		const noMinifyIncompatibleOption = mangleNamesOption || forceQuineCheatsOption
 
 		if (noMinifyOption && noMinifyIncompatibleOption) {
 			logError(
-				`Options ${colourN(noMinifyOption.name)} and ${colourN(noMinifyIncompatibleOption.name)
+				`Options ${formatOption(noMinifyOption.name)} and ${formatOption(noMinifyIncompatibleOption.name)
 				} are incompatible\n`
 			)
 
@@ -539,7 +539,7 @@ type Option = { name: string, value: OptionValue }
 
 function assertOptionIsBoolean(option: Option): asserts option is Replace<Option, { value: boolean }> {
 	if (typeof option.value != `boolean`) {
-		logError(`The value for ${colourN(option.name)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
+		logError(`The value for ${formatOption(option.name)} must be ${colourV(`true`)} or ${colourV(`false`)}\n`)
 		logHelp()
 		process.exit(1)
 	}
@@ -551,7 +551,7 @@ function popOption(...names: string[]): Option | undefined {
 	if (!presentOptionNames.length)
 		return undefined
 
-	const presentOptionNamesWithDashDash = presentOptionNames.map(name => colourN(`-${name.length == 1 ? `` : `-`}${name}`))
+	const presentOptionNamesWithDashDash = presentOptionNames.map(formatOption)
 
 	if (presentOptionNames.length > 1) {
 		logError(`The options ${presentOptionNamesWithDashDash.join(`, `)
