@@ -751,21 +751,11 @@ export function transform(
 	return { file, seclevel }
 
 	function createGetFunctionPrototypeNode() {
-		for (const globalFunction of globalFunctionsUnder7Characters) {
-			if (!program.scope.hasOwnBinding(globalFunction)) {
-				return t.memberExpression(
-					t.memberExpression(t.identifier(globalFunction), t.identifier(`constructor`)),
-					t.identifier(`prototype`)
-				)
-			}
-		}
+		const name = globalFunctionsUnder7Characters.find(name => !program.scope.hasOwnBinding(name))
 
 		return t.memberExpression(
-			t.memberExpression(
-				t.arrowFunctionExpression([ t.identifier(`_`) ], t.identifier(`_`)),
-				t.identifier(`constructor`)
-			),
-			t.identifier(`prototype`)
+			name ? t.identifier(name) : t.arrowFunctionExpression([ t.identifier(`_`) ], t.identifier(`_`)),
+			t.identifier(`__proto__`)
 		)
 	}
 
