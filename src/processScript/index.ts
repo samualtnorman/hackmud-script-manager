@@ -252,6 +252,7 @@ export async function processScript(code: string, {
 	const bundle = await rollup({
 		input: filePathResolved,
 		plugins: [
+			rollupPluginJSON({ preferConst: true }),
 			{
 				name: `hackmud-script-manager`,
 				async transform(code, id) {
@@ -288,8 +289,7 @@ export async function processScript(code: string, {
 				extensions
 			}),
 			rollupPluginCommonJS(),
-			rollupPluginNodeResolve({ extensions }),
-			rollupPluginJSON()
+			rollupPluginNodeResolve({ extensions })
 		],
 		treeshake: { moduleSideEffects: false }
 	})
