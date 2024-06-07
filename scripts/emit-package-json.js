@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { mkdirSync as makeDirectorySync, writeFileSync } from "fs"
-import packageJson_ from "../package.json" assert { type: "json" }
+import packageJson_ from "../package.json" with { type: "json" }
 
 const { private: _, devDependencies, engines: { pnpm, ...engines }, ...packageJson } = packageJson_
 

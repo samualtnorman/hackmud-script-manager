@@ -4,7 +4,9 @@
 		"declaration": true,
 		"outDir": "../dist",
 		"types": [ "node", "@total-typescript/ts-reset", "babel-plugin-here/env" ],
-		"rootDir": "."
+		"rootDir": ".",
+		"module": "es2022",
+		"moduleResolution": "bundler"
 	},
 	"include": [ "**/*" ]
 }
