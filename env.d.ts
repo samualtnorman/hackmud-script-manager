@@ -717,153 +717,112 @@ type Nullsec = Lowsec & PlayerNullsec & {
 }
 
 type MongoTypeString = "minKey" | "double" | "string" | "object" | "array" | "binData" | "undefined" | "objectId" |
-	"bool" | "date" | "null" | "regex" | "dbPointer" | "javascript" | "symbol" | "int" | "timestamp" | "long" | "decimal" | "maxKey";
-type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127;
+	"bool" | "date" | "null" | "regex" | "dbPointer" | "javascript" | "symbol" | "int" | "timestamp" | "long" |
+	"decimal" | "maxKey"
 
-type MongoValue = string | number | boolean | Date | MongoValue[] | { [key: string]: MongoValue } | null
+type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127
+type MongoPrimitive = null | boolean | number | Date | string
+type MongoValue = MongoPrimitive | MongoValue[] | MongoObject
+type MongoObject = { [k: string]: MongoValue }
+type MongoCommandValue = MongoPrimitive | MongoCommandValue[] | { [k: string]: MongoCommandValue }
+type MongoArraySelectors<T extends MongoValue[] = MongoValue[]> = { $all: T, $elemMatch: T, $size: number }
 
-type MongoCommandValue = string | number | boolean | Date | MongoCommandValue[] | { [key: string]: MongoCommandValue } | null | undefined;
+type MongoComparisonSelectors<T extends MongoValue = MongoValue> =
+	{ $eq: T, $gt: T, $gte: T, $in: T[], $lt: T, $lte: T, $ne: T, $nin: T[] }
 
-type MongoSchema = {
-	[key: string]: MongoValue
-}
+type MongoElementSelectors = { $exists: boolean, $type: MongoTypeNumber | MongoTypeString }
 
-/**
- * Currently unused
- */
-type MongoLogicalSelectors<T extends MongoValue = MongoValue> = {
-	$not: T | MongoComparisonSelectors<T> | MongoLogicalSelectors<T>
-	$nor: T[]
-	$or: T[]
-	$and: T[]
-}
+type MongoQuerySelector<T extends MongoValue> = Partial<
+	T extends []
+		? MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>
+		: MongoElementSelectors & MongoComparisonSelectors<T>
+>
 
-type MongoArraySelectors<T extends Array<MongoValue> = Array<MongoValue>> = {
-	$all: T
-	$elemMatch: T
-	$size: number
-}
+type Query<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySelector<T[K]> } & { _id?: MongoId }
+type Projection<T extends MongoObject> = { [K in keyof T]?: boolean | 0 | 1 }
 
-type MongoComparisonSelectors<T extends MongoValue = MongoValue> = {
-	$eq: T
-	$gt: T
-	$gte: T
-	$in: T[]
-	$lt: T
-	$lte: T
-	$ne: T
-	$nin: T[]
-}
-
-type MongoElementSelectors = {
-	$exists: boolean
-	$type: MongoTypeNumber | MongoTypeString
-}
-
-type MongoQuerySelector<T extends MongoValue = MongoValue> = Partial<T extends MongoValue[] ?
-	(MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>) :
-	(MongoElementSelectors & MongoComparisonSelectors<T>)>
-
-type Query<Schema extends MongoSchema> = Partial<{[key in keyof Schema]: MongoValue | MongoQuerySelector<Schema[key]>}> & {
-	_id?: Id
-};
-
-type Projection<Schema extends MongoSchema> = Partial<{
-	[key in keyof Schema]: boolean | 0 | 1
-}>
-
-
-type MongoUpdateOperators<Schema extends MongoSchema> = Partial<{
+type MongoUpdateOperators<T extends MongoObject> = Partial<{
 	/* Universal operators */
-    $set: Partial<Record<string, MongoCommandValue> & Schema>
-    $setOnInsert: Partial<Record<string, MongoCommandValue> & Schema>
-    $unset: Partial<Record<string, ""> & Schema>
-    $rename: Partial<Record<string, string> & {
-		[key in keyof Schema]: string
-	}>
+	$set: Partial<Record<string, MongoCommandValue> & T>
+	$setOnInsert: Partial<Record<string, MongoCommandValue> & T>
+	$unset: Partial<Record<string, ""> & T>
+
+	$rename: Partial<Record<string, string> & { [key in keyof T]: string }>
+
 	/* Date & number operators */
-	$inc: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number | Date ? key : never]: Schema[key] extends number ? number : Date
-	}>
-	$mul: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number ? key : never]: number
-	}>
-	$min: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number ? key : never]: number
-	}>
-	$max: Partial<Record<string, number> & {
-		[key in keyof Schema as Schema[key] extends number ? key : never]: number
-	}>
+	$inc: Record<string, number> &
+		{ [K in keyof T as T[K] extends number | Date ? K : never]?: T[K] extends number ? number : Date }
+
+	$mul: Record<string, number> & { [K in keyof T as T[K] extends number ? K : never]?: number }
+	$min: Record<string, number> & { [K in keyof T as T[K] extends number ? K : never]?: number }
+	$max: Record<string, number> & { [K in keyof T as T[K] extends number ? K : never]?: number }
+
 	/* Array operators */
-	$pop: Partial<Record<string, -1 | 1> & {
-		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: -1 | 1
-	}>
-	$push: Partial<Record<string, MongoCommandValue> & {
-		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: (Schema[key] extends (infer U)[] ? U : never)
-			| MongoUpdateArrayOperatorModifiers<Schema[key]>
-	}>
+	$pop: Record<string, -1 | 1> & { [K in keyof T as T[K] extends [] ? K : never]?: -1 | 1 }
+
+	$push: Record<string, MongoCommandValue> & {
+		[K in keyof T as T[K] extends [] ? K : never]?: (T[K] extends (infer U)[] ? U : never)
+			| MongoUpdateArrayOperatorModifiers<T[K]>
+	}
+
 	$addToSet: Partial<Record<string, MongoCommandValue> & {
-		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: (Schema[key] extends (infer U)[] ? U : never)
-			| MongoUpdateArrayOperatorUniversalModifiers<Schema[key]>
+		[K in keyof T as T[K] extends [] ? K : never]: (T[K] extends (infer U)[] ? U : never)
+			| MongoUpdateArrayOperatorUniversalModifiers<T[K]>
 	}>
+
 	$pull: Partial<Record<string, MongoCommandValue> & {
-		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: (Schema[key] extends (infer U)[] ? U : never)
-			| MongoQuerySelector<Schema[key]>
+		[K in keyof T as T[K] extends [] ? K : never]: (T[K] extends (infer U)[] ? U : never)
+			| MongoQuerySelector<T[K]>
 	}>
-	$pullAll: Partial<Record<string, MongoCommandValue> & {
-		[key in keyof Schema as Schema[key] extends Array<infer U> ? key : never]: Schema[key]
-	}>
+
+	$pullAll: Record<string, MongoCommandValue> & { [K in keyof T as T[K] extends [] ? K : never]?: T[K] }
 }>
 
-type MongoUpdateArrayOperatorUniversalModifiers<T> = Partial<{
-	$each: T extends Array<infer U> ? T : T[]
-}>
+type MongoUpdateArrayOperatorUniversalModifiers<T> = { $each?: T extends [] ? T : T[] }
 
-type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalModifiers<T> & Partial<{
-	$position: number
-	$slice: number
-	$sort: 1 | -1
-}>
+type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalModifiers<T> &
+	{ $position?: number, $slice?: number, $sort?: 1 | -1 }
 
-type MongoUpdateCommand<Schema extends MongoSchema> = MongoUpdateOperators<Schema>
+type MongoUpdateCommand<Schema extends MongoObject> = MongoUpdateOperators<Schema>
 
-type Id = string | number | boolean | Date | Record<string, MongoValue>
-type MongoDocument<Schema extends object = object> = Schema & { _id: Id }
+type MongoId = Exclude<MongoPrimitive, null> | MongoObject
+type MongoDocument<T extends MongoObject> = T & { _id?: MongoId }
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
-type Cursor<Doc extends MongoDocument = MongoDocument> = {
-	/** Returns the first document that satisfies the query. */ first: () => Doc | null
-	/** Returns an array of documents that satisfy the query. */ array: () => Doc[]
+type Cursor<T extends MongoObject> = {
+	/** Returns the first document that satisfies the query. */ first: () => MongoDocument<T> | null
+	/** Returns an array of documents that satisfy the query. */ array: () => MongoDocument<T>[]
 	/** Returns the number of documents that match the query. */ count: () => number
 
 	/** Returns the first document that satisfies the query. Also makes cursor unusable. */
-	first_and_close: () => Doc
+	first_and_close: () => MongoDocument<T>
 
 	/** Returns an array of documents that satisfy the query. Also makes cursor unusable. */
-	array_and_close: () => Doc[]
+	array_and_close: () => MongoDocument<T>[]
 
 	/** Returns the number of documents that match the query. Also makes cursor unusable. */
 	count_and_close: () => number
 
 	/** Run `callback` on each document that satisfied the query. */
-	each: (callback: (document: Doc) => void) => null
+	each: (callback: (document: MongoDocument<T>) => void) => null
 
 	/** Returns a new cursor with documents sorted as specified.
 	  * A value of 1 sorts the property ascending, and -1 descending.
 	  * @param order The way the documents are to be sorted. */
-	sort: (order?: SortOrder) => Cursor<Doc>
+	sort: (order?: SortOrder) => Cursor<T>
 
 	/** Returns a new cursor without the first number of documents.
 	  * @param count Number of documents to skip. */
-	skip: (count: number) => Cursor<Doc>
+	skip: (count: number) => Cursor<T>
 
 	/** Returns a new cursor limited to a number of documents as specified.
 	  * @param count Number of documents. */
-	limit: (count: number) => Cursor<Doc>
+	limit: (count: number) => Cursor<T>
 
-	/** @param key The key of the documents. */ distinct: ((key: string) => MongoValue[]) & ((key: "_id") => Id[])
+	/** @param key The key of the documents. */ distinct: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
 	/** Make cursor unusable. */ close: () => null
 	NumberLong: (number: number) => number
+	// TODO what actually is the type here?
 	ObjectId: () => any
 }
 
@@ -874,7 +833,9 @@ type CliContext = {
 	/** The number of rows in the caller’s terminal. */ rows: number
 
 	/** The name of the script that directly called this script, or null if called on the command line or as a
-	  * scriptor. */ calling_script: null
+	  * scriptor. */
+	calling_script: null
+
 	is_scriptor?: undefined
 	is_brain?: undefined
 }
@@ -885,12 +846,8 @@ type SubscriptContext = Replace<CliContext, {
 	calling_script: string
 }>
 
-type ScriptorContext =
-	Replace<CliContext, { /** Whether the script is being run as a scriptor. */ is_scriptor: true }>
-
-type BrainContext =
-	Replace<CliContext, { /** Whether the script is being run via a bot brain. */ is_brain: true }>
-
+type ScriptorContext = Replace<CliContext, { /** Whether the script is being run as a scriptor. */ is_scriptor: true }>
+type BrainContext = Replace<CliContext, { /** Whether the script is being run via a bot brain. */ is_brain: true }>
 type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 
 /** Subscript space that can call FULLSEC scripts. */ declare const $fs: Fullsec
@@ -939,76 +896,31 @@ type ObjectId = { $oid: string }
 declare const $db: {
 	/** Insert a document or documents into a collection.
 	  * @param documents A document or array of documents to insert into the collection. */
-	i: <T extends MongoSchema = MongoSchema>(documents: (T & { _id?: Id })  | (T & { _id?: Id })[]) => {
-		ok: 1
-		n: number
-		opTime: { ts: "Undefined Conversion", t: number }
-		electionId: "Undefined Conversion"
-		operationTime: "Undefined Conversion"
-		$clusterTime: {
-			clusterTime: "Undefined Conversion"
-			signature: { hash: "Undefined Conversion", keyId: "Undefined Conversion" }
-		}
-	}
+	i: <T extends MongoObject>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) =>
+		{ n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
 	/** Remove documents from a collection.
 	  * @param query Specifies deletion criteria using query operators. */
-	r: <T extends MongoSchema = MongoSchema>(query: Query<T>) => {
-		ok: 0 | 1
-		n: number
-		opTime: { ts: "Undefined Conversion", t: number }
-		electionId: "Undefined Conversion"
-		operationTime: "Undefined Conversion"
-		$clusterTime: {
-			clusterTime: "Undefined Conversion"
-			signature: { hash: "Undefined Conversion", keyId: "Undefined Conversion" }
-		}
-	}
+	r: <T extends MongoObject>(query: Query<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
 	/** Find documents in a collection or view and returns a cursor to the selected documents.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param projection Specifies the fields to return in the documents that match the query filter. */
-	f: <T extends MongoSchema = MongoSchema>(query?: Query<T>, projection?: Projection<T>) => Cursor<MongoDocument<T>>
+	f: <T extends MongoObject>(query?: Query<T>, projection?: Projection<T>) => Cursor<T>
 
 	/** Update existing documents in a collection.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: <T extends MongoSchema = MongoSchema>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) => {
-		ok: 0 | 1
-		nModified: number
-		n: number
-		opTime: { ts: "Undefined Conversion", t: number }
-		electionId: "Undefined Conversion"
-		operationTime: "Undefined Conversion"
-		$clusterTime: {
-			clusterTime: "Undefined Conversion"
-			signature: { hash: "Undefined Conversion", keyId: "Undefined Conversion" }
-		}
-	}
+	u: <T extends MongoObject>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) =>
+		{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
 
 	/** Updates one document within the collection based on the filter.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u1: <T extends MongoSchema = MongoSchema>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) => {
-		ok: 0 | 1
-		nModified: number
-		n: number
-		opTime: {
-			ts: "Undefined Conversion"
-			t: number
-		}
-		electionId: "Undefined Conversion"
-		operationTime: "Undefined Conversion"
-		$clusterTime: {
-			clusterTime: "Undefined Conversion"
-			signature: {
-				hash: "Undefined Conversion"
-				keyId: "Undefined Conversion"
-			}
-		}
-	}
+	u1: <T extends MongoObject>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) =>
+		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 	/** Update or insert document.
 	  * Same as Update, but if no documents match the query, one document will be inserted based on the properties in
@@ -1017,18 +929,8 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: <T extends MongoSchema = MongoSchema>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) => {
-		ok: 0 | 1
-		nModified: number
-		n: number
-		opTime: { ts: "Undefined Conversion", t: number }
-		electionId: "Undefined Conversion"
-		operationTime: "Undefined Conversion"
-		$clusterTime: {
-			clusterTime: "Undefined Conversion"
-			signature: { hash: "Undefined Conversion", keyId: "Undefined Conversion" }
-		}
-	}
+	us: <T extends MongoObject>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) =>
+		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 	ObjectId: () => ObjectId
 }
