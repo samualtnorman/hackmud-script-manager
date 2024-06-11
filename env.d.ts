@@ -28,8 +28,8 @@ interface PlayerLowsec {}
 interface PlayerNullsec {}
 
 type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
-type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5;
-type UpgradeRarity = UpgradeRarityString | UpgradeRarityNumber;
+type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5
+type UpgradeRarity = UpgradeRarityString | UpgradeRarityNumber
 
 type UpgradeBase = {
 	name: string
@@ -45,10 +45,8 @@ type UpgradeBase = {
 
 type Upgrade = UpgradeBase & Record<string, null | boolean | number | string>
 
-type CliUpgrade = Omit<UpgradeBase, `rarity`> & {
-	[x: string]: null | boolean | number | string
-	rarity: UpgradeRarityString
-}
+type CliUpgrade = Omit<UpgradeBase, `rarity`> &
+	{ [k: string]: null | boolean | number | string, rarity: UpgradeRarityString }
 
 type UsersTopItem<R> = { rank: R, name: string, last_activity: string, balance: string }
 type CorpsTopItem<R> = { rank: R, name: string, worth: string }
@@ -126,21 +124,11 @@ type Fullsec = Subscripts & PlayerFullsec & {
 	}
 
 	escrow: {
-		/** **FULLSEC** */ charge: (args: {
-			cost: number | string
-			is_unlim?: boolean
-		}) => null | ScriptFailure
-
+		/** **FULLSEC** */ charge: (args: { cost: number | string, is_unlim?: boolean }) => null | ScriptFailure
 		confirm: never
 	}
 
-	gui: {
-		chats: never
-		quiet: never
-		size: never
-		vfx: never
-		vol: never
-	}
+	gui: { chats: never, quiet: never, size: never, vfx: never, vol: never }
 
 	market: {
 		/** **FULLSEC** */ browse: {
@@ -459,7 +447,10 @@ type Highsec = Fullsec & PlayerHighsec & {
 		/** **HIGHSEC**
 		  * @returns GC balance as number if `is_script` is true (default).
 		  * @returns GC balance as string if `is_script` is false. */
-		balance: ((args?: { is_script?: true }) => number) & ((args: { is_script: false }) => string)
+		balance: {
+			(args?: { is_script?: true }): number
+			(args: { is_script: false }): string
+		}
 
 		/** **HIGHSEC**
 		 * @returns Transaction history according to filter.
@@ -716,14 +707,51 @@ type Nullsec = Lowsec & PlayerNullsec & {
 	}
 }
 
-type MongoTypeString = "minKey" | "double" | "string" | "object" | "array" | "binData" | "undefined" | "objectId" |
-	"bool" | "date" | "null" | "regex" | "dbPointer" | "javascript" | "symbol" | "int" | "timestamp" | "long" |
-	"decimal" | "maxKey"
-
-type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127
+// database
 type MongoPrimitive = null | boolean | number | Date | string
 type MongoValue = MongoPrimitive | MongoValue[] | MongoObject
 type MongoObject = { [k: string]: MongoValue }
+
+type MongoTypeStringsToTypes = {
+	minKey: unknown
+	double: unknown
+	string: string
+	object: MongoObject
+	array: MongoValue[]
+	binData: unknown
+	undefined: unknown
+	objectId: unknown
+	bool: boolean
+	date: Date
+	null: null
+	regex: unknown
+	dbPointer: unknown
+	javascript: unknown
+	symbol: unknown
+	int: unknown
+	timestamp: unknown
+	long: unknown
+	decimal: unknown
+	maxKey: unknown
+}
+
+type MongoTypeString = keyof MongoTypeStringsToTypes
+type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127
+type MongoId = Exclude<MongoPrimitive, null> | MongoObject
+type MongoDocument = MongoObject & { _id?: MongoId }
+type MongoQuery = MongoObject & Record<string, { $type: MongoTypeString }>
+
+type MongoQueryType<TQuery extends MongoQuery> = {
+	[K in keyof TQuery]:
+		TQuery[K] extends infer V
+			? V extends MongoPrimitive ? V
+			: V extends { $type: infer InferredTypeString } ? MongoTypeStringsToTypes[InferredTypeString]
+			: V extends { [`$${string}`]: any } ? never
+			: V extends MongoObject ? MongoQueryType<V>
+			: never
+		: never
+}
+
 type MongoCommandValue = MongoPrimitive | MongoCommandValue[] | { [k: string]: MongoCommandValue }
 type MongoArraySelectors<T extends MongoValue[] = MongoValue[]> = { $all: T, $elemMatch: T, $size: number }
 
@@ -785,39 +813,37 @@ type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalMod
 
 type MongoUpdateCommand<Schema extends MongoObject> = MongoUpdateOperators<Schema>
 
-type MongoId = Exclude<MongoPrimitive, null> | MongoObject
-type MongoDocument<T extends MongoObject> = T & { _id?: MongoId }
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
-type Cursor<T extends MongoObject> = {
-	/** Returns the first document that satisfies the query. */ first: () => MongoDocument<T> | null
-	/** Returns an array of documents that satisfy the query. */ array: () => MongoDocument<T>[]
+type Cursor<TDocument extends MongoDocument> = {
+	/** Returns the first document that satisfies the query. */ first: () => TDocument | null
+	/** Returns an array of documents that satisfy the query. */ array: () => TDocument[]
 	/** Returns the number of documents that match the query. */ count: () => number
 
 	/** Returns the first document that satisfies the query. Also makes cursor unusable. */
-	first_and_close: () => MongoDocument<T>
+	first_and_close: () => TDocument
 
 	/** Returns an array of documents that satisfy the query. Also makes cursor unusable. */
-	array_and_close: () => MongoDocument<T>[]
+	array_and_close: () => TDocument[]
 
 	/** Returns the number of documents that match the query. Also makes cursor unusable. */
 	count_and_close: () => number
 
 	/** Run `callback` on each document that satisfied the query. */
-	each: (callback: (document: MongoDocument<T>) => void) => null
+	each: (callback: (document: TDocument) => void) => null
 
 	/** Returns a new cursor with documents sorted as specified.
 	  * A value of 1 sorts the property ascending, and -1 descending.
 	  * @param order The way the documents are to be sorted. */
-	sort: (order?: SortOrder) => Cursor<T>
+	sort: (order?: SortOrder) => Cursor<TDocument>
 
 	/** Returns a new cursor without the first number of documents.
 	  * @param count Number of documents to skip. */
-	skip: (count: number) => Cursor<T>
+	skip: (count: number) => Cursor<TDocument>
 
 	/** Returns a new cursor limited to a number of documents as specified.
 	  * @param count Number of documents. */
-	limit: (count: number) => Cursor<T>
+	limit: (count: number) => Cursor<TDocument>
 
 	/** @param key The key of the documents. */ distinct: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
 	/** Make cursor unusable. */ close: () => null
@@ -896,30 +922,30 @@ type ObjectId = { $oid: string }
 declare const $db: {
 	/** Insert a document or documents into a collection.
 	  * @param documents A document or array of documents to insert into the collection. */
-	i: <T extends MongoObject>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) =>
+	i: <T extends MongoDocument>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) =>
 		{ n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
 	/** Remove documents from a collection.
 	  * @param query Specifies deletion criteria using query operators. */
-	r: <T extends MongoObject>(query: Query<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
+	r: <T extends MongoDocument>(query: Query<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
 	/** Find documents in a collection or view and returns a cursor to the selected documents.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param projection Specifies the fields to return in the documents that match the query filter. */
-	f: <T extends MongoObject>(query?: Query<T>, projection?: Projection<T>) => Cursor<T>
+	f: <T extends MongoDocument>(query?: Query<T>, projection?: Projection<T>) => Cursor<T>
 
 	/** Update existing documents in a collection.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: <T extends MongoObject>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) =>
+	u: <T extends MongoDocument>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<T>) =>
 		{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
 
 	/** Updates one document within the collection based on the filter.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u1: <T extends MongoObject>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) =>
+	u1: <T extends MongoDocument>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<T>) =>
 		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 	/** Update or insert document.
@@ -929,7 +955,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: <T extends MongoObject>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<MongoDocument<T>>) =>
+	us: <T extends MongoDocument>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<T>) =>
 		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 	ObjectId: () => ObjectId
