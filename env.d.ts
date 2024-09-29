@@ -739,16 +739,19 @@ type MongoTypeString = keyof MongoTypeStringsToTypes
 type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127
 type MongoId = Exclude<MongoPrimitive, null> | MongoObject
 type MongoDocument = MongoObject & { _id?: MongoId }
-type MongoQuery = MongoObject & Record<string, { $type: MongoTypeString }>
+//type MongoQueryValue = MongoPrimitive | MongoQueryValue[] | MongoQuery
+//type MongoQuery = { [k: string]: MongoQueryValue }
 
-type MongoQueryType<TQuery extends MongoQuery> = {
+type MongoQueryType<TQuery extends MongoObject> = { [k: string]: MongoValue } & {
 	[K in keyof TQuery]:
-		TQuery[K] extends infer V
-			? V extends MongoPrimitive ? V
-			: V extends { $type: infer InferredTypeString } ? MongoTypeStringsToTypes[InferredTypeString]
-			: V extends { [`$${string}`]: any } ? never
-			: V extends MongoObject ? MongoQueryType<V>
-			: never
+		TQuery[K] extends MongoPrimitive ?
+			TQuery[K]
+		: TQuery[K] extends { $type: keyof MongoTypeStringsToTypes } ?
+			MongoTypeStringsToTypes[TQuery[K]["$type"]]
+		: { [k: `$${string}`]: any } extends TQuery[K] ?
+			never
+		: TQuery[K] extends MongoObject ?
+			MongoQueryType<TQuery[K]>
 		: never
 }
 
@@ -767,7 +770,7 @@ type MongoQuerySelector<T extends MongoValue> = Partial<
 >
 
 type Query<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySelector<T[K]> } & { _id?: MongoId }
-type Projection<T extends MongoObject> = { [K in keyof T]?: boolean | 0 | 1 }
+type Projection = Record<string, boolean | 0 | 1>
 
 type MongoUpdateOperators<T extends MongoObject> = Partial<{
 	/* Universal operators */
@@ -815,35 +818,35 @@ type MongoUpdateCommand<Schema extends MongoObject> = MongoUpdateOperators<Schem
 
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
-type Cursor<TDocument extends MongoDocument> = {
-	/** Returns the first document that satisfies the query. */ first: () => TDocument | null
-	/** Returns an array of documents that satisfy the query. */ array: () => TDocument[]
+type Cursor<T> = {
+	/** Returns the first document that satisfies the query. */ first: () => T | null
+	/** Returns an array of documents that satisfy the query. */ array: () => T[]
 	/** Returns the number of documents that match the query. */ count: () => number
 
 	/** Returns the first document that satisfies the query. Also makes cursor unusable. */
-	first_and_close: () => TDocument
+	first_and_close: () => T
 
 	/** Returns an array of documents that satisfy the query. Also makes cursor unusable. */
-	array_and_close: () => TDocument[]
+	array_and_close: () => T[]
 
 	/** Returns the number of documents that match the query. Also makes cursor unusable. */
 	count_and_close: () => number
 
 	/** Run `callback` on each document that satisfied the query. */
-	each: (callback: (document: TDocument) => void) => null
+	each: (callback: (document: T) => void) => null
 
 	/** Returns a new cursor with documents sorted as specified.
 	  * A value of 1 sorts the property ascending, and -1 descending.
 	  * @param order The way the documents are to be sorted. */
-	sort: (order?: SortOrder) => Cursor<TDocument>
+	sort: (order?: SortOrder) => Cursor<T>
 
 	/** Returns a new cursor without the first number of documents.
 	  * @param count Number of documents to skip. */
-	skip: (count: number) => Cursor<TDocument>
+	skip: (count: number) => Cursor<T>
 
 	/** Returns a new cursor limited to a number of documents as specified.
 	  * @param count Number of documents. */
-	limit: (count: number) => Cursor<TDocument>
+	limit: (count: number) => Cursor<T>
 
 	/** @param key The key of the documents. */ distinct: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
 	/** Make cursor unusable. */ close: () => null
@@ -919,6 +922,20 @@ declare const $s: Nullsec
 
 type ObjectId = { $oid: string }
 
+type MongoProject<TDocument, TProjection> = TDocument
+// can't use keyof because it evaluates to `string | number`
+/*{
+	[K in keyof TDocument | keyof TProjection]:
+		keyof TDocument
+		//K extends keyof TProjection ?
+			//"A"
+			//TProjection[K] extends false | 0 ?
+			//	undefined
+			//: TDocument[K]
+		//: TDocument[K]
+		//: keyof TProjection
+}*/
+
 declare const $db: {
 	/** Insert a document or documents into a collection.
 	  * @param documents A document or array of documents to insert into the collection. */
@@ -932,7 +949,15 @@ declare const $db: {
 	/** Find documents in a collection or view and returns a cursor to the selected documents.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param projection Specifies the fields to return in the documents that match the query filter. */
-	f: <T extends MongoDocument>(query?: Query<T>, projection?: Projection<T>) => Cursor<T>
+	f: <
+		const TQuery extends MongoObject & { _id?: MongoId },
+		const TProjection extends { [k: string]: boolean | 0 | 1 } & { [K in keyof TQuery]?: boolean | 0 | 1 }
+	>(query: TQuery, projection?: TProjection) =>
+		Cursor<MongoProject<
+			MongoQueryType<TQuery> &
+				(TQuery extends { _id: any } ? {} : { _id?: MongoId }),
+			TProjection
+		>>
 
 	/** Update existing documents in a collection.
 	  * @param query Specifies deletion criteria using query operators.
