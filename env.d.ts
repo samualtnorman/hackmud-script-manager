@@ -631,7 +631,7 @@ type Lowsec = Midsec & PlayerLowsec & {
 		}
 		/** **LOWSEC**  */ expose_access_log: (args: { target: string }) => ScriptResponse
 		/** **LOWSEC** */ xfer_gc_from: (args: { target: string, amount: number | string }) => ScriptResponse
-		/** **LOWSEC */ expose_balance: (args: { target: string }) => ScriptResponse
+		/** **LOWSEC** */ expose_balance: (args: { target: string }) => ScriptResponse
 	}
 }
 
