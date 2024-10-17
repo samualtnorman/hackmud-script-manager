@@ -629,6 +629,7 @@ type Lowsec = Midsec & PlayerLowsec & {
 			(args: { i: number | number[], to: string, memo?: string }): ScriptResponse
 			(args: { sn: string | string[], to: string, memo?: string }): ScriptResponse
 		}
+		/** ** LOWSEC**  */ expose_access_log: (args: { target: string }) => ScriptResponse
 	}
 }
 
