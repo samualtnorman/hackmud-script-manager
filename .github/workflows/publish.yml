@@ -1,5 +1,5 @@
 name: Publish
-on: { push: { branches: [ main, "0.20" ] }, pull_request: { branches: [ "*" ] }, release: { types: [ created ] } }
+on: { push: { branches: [ main, "0.20" ] }, release: { types: [ created ] } }
 
 jobs:
   publish:
