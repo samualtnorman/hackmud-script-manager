@@ -8,4 +8,4 @@ declare module "@babel/plugin-*" {
 /** `performance` is a global reference for `require('perf_hooks').performance`
   * https://nodejs.org/api/globals.html#performance
   * @since v16.0.0 */
-var performance: typeof globalThis extends { onmessage: any, performance: infer T } ? T : typeof import("perf_hooks").performance
+declare var performance: typeof globalThis extends { onmessage: any, performance: infer T } ? T : typeof import("perf_hooks").performance
