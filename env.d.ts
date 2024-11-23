@@ -908,8 +908,8 @@ declare const $0s: typeof $ns
 
 /** Subscript space that can call any script. Uses seclevel provided in comment before script (defaults to NULLSEC)
   * @example
-  * // @ seclevel MIDSEC
-  * // remove the space betwen "@" and "s", there's only a space because otherwise vscode breaks
+  * // @​seclevel MIDSEC
+  * // note, do NOT copy paste the above line because there is a zero-width space inserted between "@" and "s"
   * export function script() {
   * 	$s.foo.bar() // will be converted to #ms.foo.bar()
   * } */
