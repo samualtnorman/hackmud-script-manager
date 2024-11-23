@@ -234,6 +234,7 @@ export function transform(
 	}
 
 	let needGetPrototypeOf = false
+	let needHasOwn = false
 
 	if (program.scope.hasGlobal(`Object`)) {
 		for (const referencePath of getReferencePathsToGlobal(`Object`, program)) {
@@ -243,6 +244,9 @@ export function transform(
 				if (referencePath.parent.property.name == `getPrototypeOf`) {
 					referencePath.parentPath.replaceWith(t.identifier(`_${uniqueId}_GET_PROTOTYPE_OF_`))
 					needGetPrototypeOf = true
+				} else if (referencePath.parent.property.name == `hasOwn`) {
+					referencePath.parentPath.replaceWith(t.identifier(`_${uniqueId}_HAS_OWN_`))
+					needHasOwn = true
 				}
 			}
 		}
@@ -563,6 +567,31 @@ export function transform(
 						t.identifier(`bind`)
 					),
 					[ t.identifier(`_${uniqueId}_DUNDER_PROTO_GETTER_`) ]
+				)
+			)
+		]))
+	}
+
+	if (needHasOwn) {
+		mainFunction.body.body.unshift(t.variableDeclaration(`let`, [
+			t.variableDeclarator(
+				t.identifier(`_${uniqueId}_HAS_OWN_`),
+				t.callExpression(
+					t.memberExpression(
+						t.memberExpression(
+							t.identifier(
+								globalFunctionsUnder7Characters.find(name => !program.scope.hasOwnBinding(name))!
+							),
+							t.identifier(`call`)
+						),
+						t.identifier(`bind`)
+					),
+					[
+						t.memberExpression(
+							t.memberExpression(t.identifier(`Object`), t.identifier(`prototype`)),
+							t.identifier(`hasOwnProperty`)
+						)
+					]
 				)
 			)
 		]))
