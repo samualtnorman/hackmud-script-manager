@@ -1,5 +1,5 @@
 import type { LaxPartial } from "@samual/lib"
-import { Cache } from "@samual/lib/Cache"
+import { AutoMap } from "@samual/lib/AutoMap"
 import { assert, ensure } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
@@ -59,13 +59,13 @@ export async function push(
 		readDirectoryWithStats(sourcePath).catch(error => {
 			if (error && (error as NodeJS.ErrnoException).code == "ENOENT")
 				return new MissingSourceFolderError(`There is no folder at ${sourcePath}`)
-			
+
 			throw error
 		}),
 		readDirectoryWithStats(hackmudPath).catch(error => {
 			if (error && (error as NodeJS.ErrnoException).code == "ENOENT")
 				return new MissingHackmudFolderError(`There is no folder at ${hackmudPath}`)
-			
+
 			throw error
 		})
 	])
@@ -93,11 +93,11 @@ export async function push(
 	}
 
 	const usersToScriptsToPush =
-		new Cache((_user: string) => new Map</* script name */ string, /* script path */ string>)
+		new AutoMap((_user: string) => new Map</* script name */ string, /* script path */ string>)
 
 	// const usersToScriptNames = new Cache((_user: string) => new Set)
 	// const pushEverything_ = scripts.includes(`*.*`)
-	const scriptNamesToUsers = new Cache((_scriptName: string) => new Set<string>)
+	const scriptNamesToUsers = new AutoMap((_scriptName: string) => new Set<string>)
 
 	for (const script of scripts) {
 		const [ user, scriptName ] = script.split(`.`)
@@ -148,7 +148,7 @@ export async function push(
 		}
 	}
 
-	const pathsToUsers = new Cache((_path: string) => new Set<string>)
+	const pathsToUsers = new AutoMap((_path: string) => new Set<string>)
 
 	for (const [ user, scriptsToPush ] of usersToScriptsToPush) {
 		for (const path of scriptsToPush.values())

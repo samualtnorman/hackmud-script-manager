@@ -1,5 +1,5 @@
 import type { LaxPartial } from "@samual/lib"
-import { Cache } from "@samual/lib/Cache"
+import { AutoMap } from "@samual/lib/AutoMap"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
@@ -42,7 +42,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	if (!sourceFolderStats.isDirectory())
 		throw Error(`Target folder must be a folder`)
 
-	const scriptNamesToUsers = new Cache((_scriptName: string) => new Set<string>())
+	const scriptNamesToUsers = new AutoMap((_scriptName: string) => new Set<string>())
 	const wildScriptUsers = new Set<string>()
 	const wildUserScripts = new Set<string>()
 	let pushEverything = false
@@ -83,7 +83,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			)
 				return
 
-			const scriptNamesToUsersToSkip = new Cache((_scriptName: string): string[] => [])
+			const scriptNamesToUsersToSkip = new AutoMap((_scriptName: string): string[] => [])
 
 			await Promise.all((await readDirectoryWithStats(sourceDirectory)).map(async ({ stats, name, path }) => {
 				if (stats.isDirectory()) {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import type { Replace } from "@samual/lib"
-import { Cache } from "@samual/lib/Cache"
+import { AutoMap } from "@samual/lib/AutoMap"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
@@ -23,7 +23,7 @@ const formatOption = (name: string) => colourN(`-${name.length == 1 ? `` : `-`}$
 const options = new Map<string, OptionValue>()
 const commands: string[] = []
 
-const userColours = new Cache<string, string>(user => {
+const userColours = new AutoMap<string, string>(user => {
 	let hash = 0
 
 	for (const char of user)
