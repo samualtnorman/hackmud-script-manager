@@ -710,47 +710,42 @@ type Nullsec = Lowsec & PlayerNullsec & {
 // database
 type MongoPrimitive = null | boolean | number | Date | string
 type MongoValue = MongoPrimitive | MongoValue[] | MongoObject
-type MongoObject = { [k: string]: MongoValue }
+type MongoObject = { [k: string]: MongoValue, [k: `$${string}`]: never }
+type MongoQueryValue = MongoPrimitive | MongoQueryValue[] | MongoQueryObject
+
+type MongoQueryObject =
+	{ [k: string]: MongoQueryValue, [k: `$${string}`]: MongoValue, $type?: keyof MongoTypeStringsToTypes | (string & {}) }
 
 type MongoTypeStringsToTypes = {
-	minKey: unknown
-	double: unknown
+	double: number
 	string: string
 	object: MongoObject
 	array: MongoValue[]
-	binData: unknown
-	undefined: unknown
-	objectId: unknown
+	objectId: ObjectId
 	bool: boolean
 	date: Date
 	null: null
-	regex: unknown
-	dbPointer: unknown
-	javascript: unknown
-	symbol: unknown
-	int: unknown
-	timestamp: unknown
-	long: unknown
-	decimal: unknown
-	maxKey: unknown
+	int: number
+	long: number
 }
 
 type MongoTypeString = keyof MongoTypeStringsToTypes
 type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127
 type MongoId = Exclude<MongoPrimitive, null> | MongoObject
+type MongoQueryId = Exclude<MongoPrimitive, null> | MongoQueryObject
 type MongoDocument = MongoObject & { _id?: MongoId }
-//type MongoQueryValue = MongoPrimitive | MongoQueryValue[] | MongoQuery
-//type MongoQuery = { [k: string]: MongoQueryValue }
 
-type MongoQueryType<TQuery extends MongoObject> = { [k: string]: MongoValue } & {
-	[K in keyof TQuery]:
+type MongoQueryType<TQuery extends MongoQueryObject> = {
+	-readonly [K in keyof TQuery]:
 		TQuery[K] extends MongoPrimitive ?
 			TQuery[K]
-		: TQuery[K] extends { $type: keyof MongoTypeStringsToTypes } ?
-			MongoTypeStringsToTypes[TQuery[K]["$type"]]
-		: { [k: `$${string}`]: any } extends TQuery[K] ?
-			never
-		: TQuery[K] extends MongoObject ?
+		: TQuery[K] extends { $type: infer TType } ?
+			TType extends keyof MongoTypeStringsToTypes ? MongoTypeStringsToTypes[TType] : unknown
+		: TQuery[K] extends { $in: (infer TIn)[] } ?
+			TIn
+		: keyof TQuery[K] extends `$${string}` ?
+			unknown
+		: TQuery[K] extends { [k: string]: any } ?
 			MongoQueryType<TQuery[K]>
 		: never
 }
@@ -769,7 +764,7 @@ type MongoQuerySelector<T extends MongoValue> = Partial<
 		: MongoElementSelectors & MongoComparisonSelectors<T>
 >
 
-type Query<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySelector<T[K]> } & { _id?: MongoId }
+type MongoQuery<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySelector<T[K]> } & { _id?: MongoId }
 type Projection = Record<string, boolean | 0 | 1>
 
 type MongoUpdateOperators<T extends MongoObject> = Partial<{
@@ -922,19 +917,23 @@ declare const $s: Nullsec
 
 type ObjectId = { $oid: string }
 
-type MongoProject<TDocument, TProjection> = TDocument
-// can't use keyof because it evaluates to `string | number`
-/*{
-	[K in keyof TDocument | keyof TProjection]:
-		keyof TDocument
-		//K extends keyof TProjection ?
-			//"A"
-			//TProjection[K] extends false | 0 ?
-			//	undefined
-			//: TDocument[K]
-		//: TDocument[K]
-		//: keyof TProjection
-}*/
+// _id is always returned unless _id: false is passed
+// when anyField: true is given, other fields (except _id) are omitted
+
+type MongoProject<TDocument, TProjection> =
+	true extends (1 extends TProjection[keyof TProjection] ? true : TProjection[keyof TProjection]) ?
+		(TProjection extends { _id: false | 0 } ? {} : { _id: TDocument extends { _id: infer TId } ? TId : MongoId }) &
+			{
+				[K in
+					keyof TDocument as K extends keyof TProjection ? TProjection[K] extends true | 1 ? K : never : never
+				]: TDocument[K]
+			} &
+			{
+				-readonly [K in
+					keyof TProjection as TProjection[K] extends true | 1 ? K extends keyof TDocument ? never : K : never
+				]?: MongoValue
+			}
+	: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
 
 declare const $db: {
 	/** Insert a document or documents into a collection.
@@ -944,33 +943,28 @@ declare const $db: {
 
 	/** Remove documents from a collection.
 	  * @param query Specifies deletion criteria using query operators. */
-	r: <T extends MongoDocument>(query: Query<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
+	r: <T extends MongoDocument>(query: MongoQuery<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
 	/** Find documents in a collection or view and returns a cursor to the selected documents.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param projection Specifies the fields to return in the documents that match the query filter. */
 	f: <
-		const TQuery extends MongoObject & { _id?: MongoId },
-		const TProjection extends { [k: string]: boolean | 0 | 1 } & { [K in keyof TQuery]?: boolean | 0 | 1 }
-	>(query: TQuery, projection?: TProjection) =>
-		Cursor<MongoProject<
-			MongoQueryType<TQuery> &
-				(TQuery extends { _id: any } ? {} : { _id?: MongoId }),
-			TProjection
-		>>
+		const TQuery extends MongoQueryObject & { _id?: MongoQueryId },
+		const TProjection extends { [k: string]: boolean | 0 | 1 } = {}
+	>(query: TQuery, projection?: TProjection) => Cursor<MongoProject<MongoQueryType<TQuery>, TProjection>>
 
 	/** Update existing documents in a collection.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: <T extends MongoDocument>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<T>) =>
+	u: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
 		{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
 
 	/** Updates one document within the collection based on the filter.
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u1: <T extends MongoDocument>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<T>) =>
+	u1: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
 		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 	/** Update or insert document.
@@ -980,7 +974,7 @@ declare const $db: {
 	  * @param query Specifies deletion criteria using query operators.
 	  * @param command The modifications to apply.
 	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: <T extends MongoDocument>(query: Query<T> | Query<T>[], command: MongoUpdateCommand<T>) =>
+	us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
 		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 	ObjectId: () => ObjectId
