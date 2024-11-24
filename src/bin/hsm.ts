@@ -534,7 +534,7 @@ function logError(message: string) {
 }
 
 function getHackmudPath() {
-	const hackmudPathOption = popOption(`hackmud-path`)
+	const hackmudPathOption = popOption(`hackmud-path`)?.value
 
 	if (hackmudPathOption != undefined && typeof hackmudPathOption != `string`) {
 		logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption)}\n`)
