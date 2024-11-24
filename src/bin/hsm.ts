@@ -256,8 +256,7 @@ switch (commands[0]) {
 						console.log()
 						logHelp()
 					} else if (infos instanceof MissingHackmudFolderError) {
-						log(
-							`\
+						log(`\
 If this is not where your hackmud folder is, you can specify it with the
 ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKMUD_PATH`)} environment variable`
 						)
@@ -360,7 +359,7 @@ Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will 
 		await writeFile(typeDeclarationPath, typeDeclaration).catch(error => {
 			assert(error instanceof Error, HERE)
 
-			if (!((error as NodeJS.ErrnoException).code == `EISDIR`))
+			if ((error as NodeJS.ErrnoException).code != `EISDIR`)
 				throw error
 
 			typeDeclarationPath = resolvePath(typeDeclarationPath, `player.d.ts`)
