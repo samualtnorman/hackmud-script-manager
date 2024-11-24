@@ -581,10 +581,19 @@ function getHackmudPath() {
 		return hackmudPathOption.value
 	}
 
-	return process.env.HSM_HACKMUD_PATH || (process.platform == `win32`
+	if (process.env.HSM_HACKMUD_PATH != undefined) {
+		if (!process.env.HSM_HACKMUD_PATH) {
+			logError(`Environment variable ${colourN(`HSM_HACKMUD_PATH`)} was specified but empty\n`)
+			logHelp()
+			process.exit(1)
+		}
+
+		return process.env.HSM_HACKMUD_PATH
+	}
+
+	return process.platform == `win32`
 		? resolvePath(process.env.APPDATA!, `hackmud`)
 		: resolvePath(getHomeDirectory(), `.config/hackmud`)
-	)
 }
 
 type Option = { name: string, value: OptionValue }
