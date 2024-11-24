@@ -236,7 +236,9 @@ switch (commands[0]) {
 			} else
 				scripts.push(`*.*`)
 
-			if (commands[0] == `push`) {
+			const watchOption = popOption(`watch`)
+
+			if (commands[0] == `push` && !watchOption?.value) {
 				const dtsPathOption = popOption(`dts-path`)
 
 				complainAboutUnrecognisedOptions()
@@ -463,6 +465,8 @@ ${colourN(`--force-quine-cheats`)}
 ${hackmudPathOption}
 ${colourN(`--dts-path`)}=${colourB(`<path>`)}
     Path to generate a type declaration (.d.ts) file for the scripts
+${colourN(`--watch`)}
+    Watch for changes
 
 ${colourA(`Examples:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)}
@@ -553,8 +557,6 @@ ${colourN(`Version`) + colourS(`: `) + colourV(moduleVersion)}
 ${colourA(`Commands:`)}
 ${colourL(`push`)}
     ${pushCommandDescription}
-${colourL(`dev`)}
-    ${watchCommandDescription}
 ${colourL(`minify`)}
     ${minifyCommandDescription}
 ${colourL(`emit-dts`)}
