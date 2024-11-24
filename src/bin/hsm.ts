@@ -98,6 +98,8 @@ if (commands[0] == `v` || commands[0] == `version` || popOption(`version`, `v`)?
 	process.exit()
 }
 
+let warnedDeprecatedEmitDtsAlias = false
+
 if (popOption(`help`, `h`)?.value) {
 	logHelp()
 	process.exit()
@@ -374,6 +376,8 @@ Warning: ${formatOption(dtsPathOption.name)} is being deprecated and will be rem
 	case `gen-types`:
 	case `emit-dts`: {
 		if (commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
+			warnedDeprecatedEmitDtsAlias = true
+
 			console.warn(colourF(`\
 Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will be removed
          in the next minor release of HSM
@@ -530,7 +534,7 @@ ${colourN(`--watch`)}
 		case `gen-dts`:
 		case `gen-types`:
 		case `emit-dts`: {
-			if (commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
+			if (!warnedDeprecatedEmitDtsAlias && commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
 				console.warn(colourF(`\
 Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will be removed
          in the next minor release of HSM
