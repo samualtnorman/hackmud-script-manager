@@ -61,10 +61,12 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			scriptNamesToUsers.get(scriptName).add(user)
 	}
 
-	const watcher = watchDirectory(
-		[ `*.ts`, `*.js`, `*/*.ts`, `*/*.js` ],
-		{ cwd: sourceDirectory, awaitWriteFinish: { stabilityThreshold: 100 }, ignored: `*.d.ts` }
-	).on(`change`, async path => {
+	const watcher = watchDirectory(`.`, {
+		cwd: sourceDirectory,
+		awaitWriteFinish: { stabilityThreshold: 100 },
+		ignored: (path, stats) => !!stats?.isFile() &&
+			!((path.endsWith(`.js`) || (path.endsWith(`.ts`) && !path.endsWith(`.d.ts`))))
+	}).on(`change`, async path => {
 		if (path.endsWith(`.d.ts`))
 			return
 
