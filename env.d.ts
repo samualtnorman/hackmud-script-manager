@@ -3,7 +3,6 @@ type ScriptSuccess<T = unknown> = { ok: true } & T
 type ScriptFailure = { ok: false, msg?: string }
 type ScriptResponse<T = unknown> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
-type Scriptor<TArgs extends any[] = any[]> = { name: string, call: (...args: TArgs) => unknown }
 
 type Subscripts = Record<string, Record<string, (...args: any) => any>> & {
 	accts: ErrorScripts
@@ -29,7 +28,6 @@ interface PlayerNullsec {}
 
 type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
 type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5
-type UpgradeRarity = UpgradeRarityString | UpgradeRarityNumber
 
 type UpgradeBase = {
 	name: string
@@ -765,7 +763,6 @@ type MongoQuerySelector<T extends MongoValue> = Partial<
 >
 
 type MongoQuery<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySelector<T[K]> } & { _id?: MongoId }
-type Projection = Record<string, boolean | 0 | 1>
 
 type MongoUpdateOperators<T extends MongoObject> = Partial<{
 	/* Universal operators */
@@ -872,50 +869,6 @@ type SubscriptContext = Replace<CliContext, {
 
 type ScriptorContext = Replace<CliContext, { /** Whether the script is being run as a scriptor. */ is_scriptor: true }>
 type BrainContext = Replace<CliContext, { /** Whether the script is being run via a bot brain. */ is_brain: true }>
-type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
-
-/** Subscript space that can call FULLSEC scripts. */ declare const $fs: Fullsec
-
-/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
-declare const $hs: Highsec
-
-/** Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
-  */
-declare const $ms: Midsec
-
-/** Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
-  */
-declare const $ls: Lowsec
-
-/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
-declare const $ns: Nullsec
-
-/** Subscript space that can call FULLSEC scripts. */ declare const $4s: typeof $fs
-
-/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
-declare const $3s: typeof $hs
-
-/** Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
-  */
-declare const $2s: typeof $ms
-
-/** Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
-  */
-declare const $1s: typeof $ls
-
-/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
-declare const $0s: typeof $ns
-
-/** Subscript space that can call any script. Uses seclevel provided in comment before script (defaults to NULLSEC)
-  * @example
-  * // @​seclevel MIDSEC
-  * // note, do NOT copy paste the above line because there is a zero-width space inserted between "@" and "s"
-  * export function script() {
-  * 	$s.foo.bar() // will be converted to #ms.foo.bar()
-  * } */
-declare const $s: Nullsec
-
-type ObjectId = { $oid: string }
 
 // _id is always returned unless _id: false is passed
 // when anyField: true is given, other fields (except _id) are omitted
@@ -935,142 +888,191 @@ type MongoProject<TDocument, TProjection> =
 			}
 	: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
 
-declare const $db: {
-	/** Insert a document or documents into a collection.
-	  * @param documents A document or array of documents to insert into the collection. */
-	i: <T extends MongoDocument>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) =>
-		{ n: number, opTime: { t: number }, ok: 0 | 1 }[]
-
-	/** Remove documents from a collection.
-	  * @param query Specifies deletion criteria using query operators. */
-	r: <T extends MongoDocument>(query: MongoQuery<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
-
-	/** Find documents in a collection or view and returns a cursor to the selected documents.
-	  * @param query Specifies deletion criteria using query operators.
-	  * @param projection Specifies the fields to return in the documents that match the query filter. */
-	f: <
-		const TQuery extends MongoQueryObject & { _id?: MongoQueryId },
-		const TProjection extends { [k: string]: boolean | 0 | 1 } = {}
-	>(query: TQuery, projection?: TProjection) => Cursor<MongoProject<MongoQueryType<TQuery>, TProjection>>
-
-	/** Update existing documents in a collection.
-	  * @param query Specifies deletion criteria using query operators.
-	  * @param command The modifications to apply.
-	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
-		{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
-
-	/** Updates one document within the collection based on the filter.
-	  * @param query Specifies deletion criteria using query operators.
-	  * @param command The modifications to apply.
-	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	u1: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
-		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
-
-	/** Update or insert document.
-	  * Same as Update, but if no documents match the query, one document will be inserted based on the properties in
-	  * both the query and the command.
-	  * The `$setOnInsert` operator is useful to set defaults.
-	  * @param query Specifies deletion criteria using query operators.
-	  * @param command The modifications to apply.
-	  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-	us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
-		{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
-
-	ObjectId: () => ObjectId
-}
-
-/** Debug Log.
-  *
-  * If `$D()` is called in a script you own, the `return` value of the top level script is suppressed and instead an
-  * array of every `$D()`’d entry is printed.
-  * This lets you use `$D()` like `console.log()`.
-  *
-  * `$D()` in scripts not owned by you are not shown but the `return` value always is.
-  *
-  * `$D()` returns the first argument so `$D("Hello, World!") evaluates to `"Hello, World!"` as if the `$D` text wasn't
-  * there.
-  *
-  * `$D()`’d items are returned even if the script times out or errors. */
-declare function $D<T>(args: T): T
-
-/** Function Multi-Call Lock.
-  *
-  * This is used by escrow to ensure that it is only used once in script execution.
-  *
-  * The first time (per-script) `$FMCL` is encountered, it returns `undefined`, every other time it `return`s `true`.
-  *
-  * @example
-  * if ($FMCL)
-  * 	return { ok: false, msg: "This script can only be used once per script execution." }
-  *
-  * // all code here will only run once */
-declare const $FMCL: undefined | true
-
-/** Per-script mutable "global" persistent object that is discarded at the end of top level script execution.
-  *
-  * `$G` persists between script calls until the end of the main script run making it useful for caching db entries when
-  * your script is a subscript.
-  * @example
-  * if (!$G.dbCache)
-  * 	$G.dbCache = $db.f({ whatever: true }).first() */
-declare const $G: Record<string | symbol, any>
-
-/** This contains a JS timestamp (not Date) set immediately before your code begins running.
-  * @example
-  * $D(Date.now() - _START) // milliseconds left of run time
-  */
-declare const _START: number
-
-/** This contains a JS timestamp (not Date) set immediately before your code begins running.
-  * @example
-  * $D(Date.now() - _ST) // milliseconds left of run time */
-declare const _ST: typeof _START
-
-/** JavaScript timestamp for the end of the script run (`_START + _TIMEOUT`). */ declare const _END: number
-
-/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
-declare const _TIMEOUT: number
-
-/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
-declare const _TO: typeof _TIMEOUT
-
-/** The source code of this script as a string. */ declare const _SOURCE: string
-/** A unix timestamp of the date this script was built. */ declare const _BUILD_DATE: number
-
-/** The user this script has been uploaded to.
-  *
-  * Shorter alternative to `context.this_script.split(".")[0].
-  *
-  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
-declare const _SCRIPT_USER: string
-
-/** The name of this script excluding the user and `.`.
-  *
-  * e.g. in the script `foo.bar`, `_SCRIPT_NAME` is `bar`.
-  *
-  * Shorter alternative to `context.this_script.split(".")[1].
-  *
-  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
-declare const _SCRIPT_NAME: string
-
-/** The full name of this script equivilent to `context.this_script` but should use less characters.
-  *
-  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
-declare const _FULL_SCRIPT_NAME: string
-
-/** The seclevel of this script as a number.
-  *
-  * In rare cases where it's not known at build time, it's `-1`. */
-declare const _SECLEVEL: -1 | 0 | 1 | 2 | 3 | 4
-
 type DeepFreeze<T> = { readonly [P in keyof T]: DeepFreeze<T[P]> }
 
-/** Recursively
-  * [`Object.freeze()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze)
-  * an object and its properties' objects and its properties' objects and so on.
-  *
-  * [Official Hackmud Wiki](https://wiki.hackmud.com/scripting/extensions/deep_freeze) */
-declare const DEEP_FREEZE: <T>(value: T) => DeepFreeze<T>
+declare global {
+	type Scriptor<TArgs extends any[] = any[]> = { name: string, call: (...args: TArgs) => unknown }
+	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
+	type ObjectId = { $oid: string }
 
-declare const _RUN_ID: string
+	/** Subscript space that can call FULLSEC scripts. */ const $fs: Fullsec
+
+	/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
+	const $hs: Highsec
+
+	/** Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
+	  */
+	const $ms: Midsec
+
+	/** Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
+	  */
+	const $ls: Lowsec
+
+	/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
+	const $ns: Nullsec
+
+	/** Subscript space that can call FULLSEC scripts. */ const $4s: typeof $fs
+
+	/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
+	const $3s: typeof $hs
+
+	/** Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
+	  */
+	const $2s: typeof $ms
+
+	/** Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
+	  */
+	const $1s: typeof $ls
+
+	/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
+	const $0s: typeof $ns
+
+	/** Subscript space that can call any script. Uses seclevel provided in comment before script (defaults to NULLSEC)
+	  * @example
+	  * // @​seclevel MIDSEC
+	  * // note, do NOT copy paste the above line because there is a zero-width space inserted between "@" and "s"
+	  * export function script() {
+	  * 	$s.foo.bar() // will be converted to #ms.foo.bar()
+	  * } */
+	const $s: Nullsec
+
+	const $db: {
+		/** Insert a document or documents into a collection.
+		  * @param documents A document or array of documents to insert into the collection. */
+		i: <T extends MongoDocument>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) =>
+			{ n: number, opTime: { t: number }, ok: 0 | 1 }[]
+
+		/** Remove documents from a collection.
+		  * @param query Specifies deletion criteria using query operators. */
+		r: <T extends MongoDocument>(query: MongoQuery<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
+
+		/** Find documents in a collection or view and returns a cursor to the selected documents.
+		  * @param query Specifies deletion criteria using query operators.
+		  * @param projection Specifies the fields to return in the documents that match the query filter. */
+		f: <
+			const TQuery extends MongoQueryObject & { _id?: MongoQueryId },
+			const TProjection extends { [k: string]: boolean | 0 | 1 } = {}
+		>(query: TQuery, projection?: TProjection) => Cursor<MongoProject<MongoQueryType<TQuery>, TProjection>>
+
+		/** Update existing documents in a collection.
+		  * @param query Specifies deletion criteria using query operators.
+		  * @param command The modifications to apply.
+		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
+		u: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
+			{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
+
+		/** Updates one document within the collection based on the filter.
+		  * @param query Specifies deletion criteria using query operators.
+		  * @param command The modifications to apply.
+		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
+		u1: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
+			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
+
+		/** Update or insert document.
+		  * Same as Update, but if no documents match the query, one document will be inserted based on the properties in
+		  * both the query and the command.
+		  * The `$setOnInsert` operator is useful to set defaults.
+		  * @param query Specifies deletion criteria using query operators.
+		  * @param command The modifications to apply.
+		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
+		us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
+			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
+
+		ObjectId: () => ObjectId
+	}
+
+	/** Debug Log.
+	  *
+	  * If `$D()` is called in a script you own, the `return` value of the top level script is suppressed and instead an
+	  * array of every `$D()`’d entry is printed.
+	  * This lets you use `$D()` like `console.log()`.
+	  *
+	  * `$D()` in scripts not owned by you are not shown but the `return` value always is.
+	  *
+	  * `$D()` returns the first argument so `$D("Hello, World!") evaluates to `"Hello, World!"` as if the `$D` text wasn't
+	  * there.
+	  *
+	  * `$D()`’d items are returned even if the script times out or errors. */
+	function $D<T>(args: T): T
+
+	/** Function Multi-Call Lock.
+	  *
+	  * This is used by escrow to ensure that it is only used once in script execution.
+	  *
+	  * The first time (per-script) `$FMCL` is encountered, it returns `undefined`, every other time it `return`s `true`.
+	  *
+	  * @example
+	  * if ($FMCL)
+	  * 	return { ok: false, msg: "This script can only be used once per script execution." }
+	  *
+	  * // all code here will only run once */
+	const $FMCL: undefined | true
+
+	/** Per-script mutable "global" persistent object that is discarded at the end of top level script execution.
+	  *
+	  * `$G` persists between script calls until the end of the main script run making it useful for caching db entries when
+	  * your script is a subscript.
+	  * @example
+	  * if (!$G.dbCache)
+	  * 	$G.dbCache = $db.f({ whatever: true }).first() */
+	const $G: Record<string | symbol, any>
+
+	/** This contains a JS timestamp (not Date) set immediately before your code begins running.
+	  * @example
+	  * $D(Date.now() - _START) // milliseconds left of run time
+	  */
+	const _START: number
+
+	/** This contains a JS timestamp (not Date) set immediately before your code begins running.
+	  * @example
+	  * $D(Date.now() - _ST) // milliseconds left of run time */
+	const _ST: typeof _START
+
+	/** JavaScript timestamp for the end of the script run (`_START + _TIMEOUT`). */ const _END: number
+
+	/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
+	const _TIMEOUT: number
+
+	/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
+	const _TO: typeof _TIMEOUT
+
+	/** The source code of this script as a string. */ const _SOURCE: string
+	/** A unix timestamp of the date this script was built. */ const _BUILD_DATE: number
+
+	/** The user this script has been uploaded to.
+	  *
+	  * Shorter alternative to `context.this_script.split(".")[0].
+	  *
+	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
+	const _SCRIPT_USER: string
+
+	/** The name of this script excluding the user and `.`.
+	  *
+	  * e.g. in the script `foo.bar`, `_SCRIPT_NAME` is `bar`.
+	  *
+	  * Shorter alternative to `context.this_script.split(".")[1].
+	  *
+	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
+	const _SCRIPT_NAME: string
+
+	/** The full name of this script equivilent to `context.this_script` but should use less characters.
+	  *
+	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
+	const _FULL_SCRIPT_NAME: string
+
+	/** The seclevel of this script as a number.
+	  *
+	  * In rare cases where it's not known at build time, it's `-1`. */
+	const _SECLEVEL: -1 | 0 | 1 | 2 | 3 | 4
+
+	/** Recursively
+	  * [`Object.freeze()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze)
+	  * an object and its properties' objects and its properties' objects and so on.
+	  *
+	  * [Official Hackmud Wiki](https://wiki.hackmud.com/scripting/extensions/deep_freeze) */
+	const DEEP_FREEZE: <T>(value: T) => DeepFreeze<T>
+
+	const _RUN_ID: string
+}
+
+export {}
