@@ -112,6 +112,15 @@ switch (commands[0]) {
 	case `golf`:
 	case `minify`: {
 		const noMinifyOption = popOption(`no-minify`, `skip-minify`)
+
+		if (noMinifyOption && noMinifyOption.name != `no-minify`) {
+			console.warn(colourF(`\
+Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be removed in the next minor
+         release of HSM
+         You should switch to using its alias ${colourN(`--no-minify`)}\n`
+			))
+		}
+
 		const mangleNamesOption = popOption(`mangle-names`)
 		const forceQuineCheatsOption = popOption(`force-quine-cheats`)
 		const noMinifyIncompatibleOption = mangleNamesOption || forceQuineCheatsOption
