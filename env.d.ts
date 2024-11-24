@@ -17,12 +17,6 @@ type Subscripts = Record<string, Record<string, (...args: any) => any>> & {
 	users: ErrorScripts
 }
 
-interface PlayerFullsec {}
-interface PlayerHighsec {}
-interface PlayerMidsec {}
-interface PlayerLowsec {}
-interface PlayerNullsec {}
-
 type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
 type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5
 
@@ -894,6 +888,12 @@ declare global {
 	type Scriptor<TArgs extends any[] = any[]> = { name: string, call: (...args: TArgs) => unknown }
 	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 	type ObjectId = { $oid: string }
+
+	interface PlayerFullsec {}
+	interface PlayerHighsec {}
+	interface PlayerMidsec {}
+	interface PlayerLowsec {}
+	interface PlayerNullsec {}
 
 	/** Subscript space that can call FULLSEC scripts. */ const $fs: Fullsec
 
