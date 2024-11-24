@@ -265,8 +265,16 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 				} else if (!infos.length)
 					logError(`Could not find any scripts to push`)
 			} else {
-				const typeDeclarationPathOption =
-					popOption(`type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
+				const dtsPathOption =
+					popOption(`dts-path`, `type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
+
+				if (dtsPathOption && dtsPathOption.name != `emit-dts` && dtsPathOption.name != `gen-dts`) {
+					console.warn(colourF(`\
+Warning: ${colourN(dtsPathOption.name)} is being deprecated and will be removed in the
+         next minor release of HSM
+         You should switch to using its alias ${colourN(`--dts-path`)}\n`
+					))
+				}
 
 				complainAboutUnrecognisedOptions()
 
@@ -275,7 +283,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 				watch(sourcePath, hackmudPath, {
 					scripts,
 					onPush: info => logInfo(info, hackmudPath),
-					typeDeclarationPath: typeDeclarationPathOption?.value.toString(),
+					typeDeclarationPath: dtsPathOption?.value.toString(),
 					minify: noMinifyOption && !noMinifyOption.value,
 					mangleNames: mangleNamesOption?.value,
 					onReady: () => log(`Watching`),
@@ -421,7 +429,7 @@ ${colourN(`--mangle-names`)}
 ${colourN(`--force-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
 ${hackmudPathOption}
-${commands[0] == `push` ? `` : `${colourN(`--type-declaration-path`)}=${colourB(`<path>`)}
+${commands[0] == `push` ? `` : `${colourN(`--dts-path`)}=${colourB(`<path>`)}
     Path to generate a type declaration file for the scripts
 `}\
 
