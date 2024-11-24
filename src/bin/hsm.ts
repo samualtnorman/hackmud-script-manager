@@ -117,7 +117,7 @@ switch (commands[0]) {
 
 		if (noMinifyOption && noMinifyOption.name != `no-minify`) {
 			console.warn(colourF(`\
-Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be removed in the next minor
+Warning: ${formatOption(noMinifyOption.name)} is deprecated and will be removed in the next minor
          release of HSM
          You should switch to using its alias ${colourN(`--no-minify`)}\n`
 			))
@@ -329,7 +329,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 
 				if (dtsPathOption && dtsPathOption.name != `dts-path` && dtsPathOption.name != `type-declaration-path`) {
 					console.warn(colourF(`\
-Warning: ${formatOption(dtsPathOption.name)} is being deprecated and will be removed in the
+Warning: ${formatOption(dtsPathOption.name)} is deprecated and will be removed in the
          next minor release of HSM
          You should switch to using its alias ${colourN(`--dts-path`)}\n`
 					))
@@ -393,7 +393,7 @@ Warning: ${formatOption(dtsPathOption.name)} is being deprecated and will be rem
 			warnedDeprecatedEmitDtsAlias = true
 
 			console.warn(colourF(`\
-Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will be removed
+Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
          in the next minor release of HSM
          You should switch to using its alias ${colourC(`hsm`)} ${colourL(`emit-dts`)}\n`
 			))
@@ -550,7 +550,7 @@ ${colourN(`--watch`)}
 		case `emit-dts`: {
 			if (!warnedDeprecatedEmitDtsAlias && commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
 				console.warn(colourF(`\
-Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will be removed
+Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
          in the next minor release of HSM
          You should switch to using its alias ${colourC(`hsm`)} ${colourL(`emit-dts`)}\n`
 				))
