@@ -54,7 +54,7 @@ export async function push(
 	sourcePath: string,
 	hackmudPath: string,
 	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats }: PushOptions = {}
-) {
+): Promise<MissingSourceFolderError | MissingHackmudFolderError | NoUsersError | NoScriptsError | Info[]> {
 	const [ sourceFolder, hackmudFolder ] = await Promise.all([
 		readDirectoryWithStats(sourcePath).catch(error => {
 			if (error && (error as NodeJS.ErrnoException).code == "ENOENT")

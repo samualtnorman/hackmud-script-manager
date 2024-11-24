@@ -32,7 +32,8 @@ export function transform(
 	file: File,
 	sourceCode: string,
 	{ uniqueId = `00000000000`, scriptUser, scriptName, seclevel = 4 }: TransformOptions
-) {
+): { file: File; seclevel: number, warnings: { message: string }[] } {
+	const warnings: { message: string }[] = []
 	const topFunctionName = `_${uniqueId}_SCRIPT_`
 	let program!: NodePath<t.Program>
 
