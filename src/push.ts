@@ -162,12 +162,12 @@ export async function push(
 
 		const uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
-		const { script: minifiedCode } = await processScript(
+		const { script: minifiedCode, warnings } = await processScript(
 			await readFile(path, { encoding: `utf8` }),
 			{ minify, scriptUser: true, scriptName, uniqueId, filePath: path, mangleNames, forceQuineCheats }
 		)
 
-		const info: Info = { path, users, characterCount: countHackmudCharacters(minifiedCode), error: undefined }
+		const info: Info = { path, users, characterCount: countHackmudCharacters(minifiedCode), error: undefined, warnings }
 
 		await Promise.all(users.map(user => writeFilePersistent(
 			resolvePath(hackmudPath, user, `scripts/${scriptName}.js`),

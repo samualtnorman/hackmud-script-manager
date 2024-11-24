@@ -73,7 +73,7 @@ export async function processScript(code: string, {
 	filePath,
 	mangleNames = false,
 	forceQuineCheats
-}: ProcessOptions): Promise<{ script: string, warnings: { message: string, line: number }[] }> {
+}: ProcessOptions): Promise<{ script: string, warnings: { message: string }[] }> {
 	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
 	const sourceCode = code
@@ -298,7 +298,7 @@ export async function processScript(code: string, {
 
 	code = (await bundle.generate({})).output[0].code
 
-	const { file, seclevel } =
+	const { file, seclevel, warnings } =
 		transform(parse(code, { sourceType: `module` }), sourceCode, { uniqueId, scriptUser, scriptName })
 
 	if (statedSeclevel != undefined && seclevel < statedSeclevel) {
@@ -410,5 +410,5 @@ export async function processScript(code: string, {
 		)
 	}
 
-	return { script: code, warnings: [] }
+	return { script: code, warnings }
 }

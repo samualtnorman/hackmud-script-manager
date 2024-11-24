@@ -9,4 +9,5 @@ export { watch } from "./watch"
 // TODO `clean()` function that delete all scripts in hackmud directory #70
 // TODO optional argument (defaults to false) for `clean()` that makes it keep scripts with a source file #70
 
-export type Info = { path: string, users: string[], characterCount: number, error: Error | undefined }
+export type Info =
+	{ path: string, users: string[], characterCount: number, error: Error | undefined, warnings: { message: string }[] }

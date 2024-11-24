@@ -130,7 +130,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			const usersToPushTo = [ ...usersToPushToSet ].filter(user => !scriptNamesToUsersToSkip.has(user))
 
 			if (!usersToPushTo.length) {
-				onPush?.({ path, users: [], characterCount: 0, error: new Error(`no users to push to`) })
+				onPush?.({ path, users: [], characterCount: 0, error: new Error(`no users to push to`), warnings: [] })
 
 				return
 			}
@@ -138,15 +138,16 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			const uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 			const filePath = resolvePath(sourceDirectory, path)
 			let minifiedCode: string
+			let warnings
 
 			try {
-				({ script: minifiedCode } = await processScript(
+				({ script: minifiedCode, warnings } = await processScript(
 					await readFile(filePath, { encoding: `utf8` }),
 					{ minify, scriptUser: true, scriptName, uniqueId, filePath, mangleNames, forceQuineCheats }
 				))
 			} catch (error) {
 				assert(error instanceof Error, HERE)
-				onPush?.({ path, users: [], characterCount: 0, error })
+				onPush?.({ path, users: [], characterCount: 0, error, warnings: [] })
 
 				return
 			}
@@ -157,9 +158,13 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 					.replace(new RegExp(`\\$${uniqueId}\\$FULL_SCRIPT_NAME\\$`, `g`), `${user}.${scriptName}`)
 			)))
 
-			onPush?.(
-				{ path, users: usersToPushTo, characterCount: countHackmudCharacters(minifiedCode), error: undefined }
-			)
+			onPush?.({
+				path,
+				users: usersToPushTo,
+				characterCount: countHackmudCharacters(minifiedCode),
+				error: undefined,
+				warnings
+			})
 
 			return
 		}
@@ -174,21 +179,22 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 		const filePath = resolvePath(sourceDirectory, path)
 		const sourceCode = await readFile(filePath, { encoding: `utf8` })
 		let script
+		let warnings
 
 		try {
-			({ script } = await processScript(
+			({ script, warnings } = await processScript(
 				sourceCode,
 				{ minify, scriptUser: user, scriptName, filePath, mangleNames, forceQuineCheats }
 			))
 		} catch (error) {
 			assert(error instanceof Error, HERE)
-			onPush?.({ path, users: [], characterCount: 0, error })
+			onPush?.({ path, users: [], characterCount: 0, error, warnings: [] })
 
 			return
 		}
 
 		await writeFilePersistent(resolvePath(hackmudDirectory, user, `scripts`, `${scriptName}.js`), script)
-		onPush?.({ path, users: [ user ], characterCount: countHackmudCharacters(script), error: undefined })
+		onPush?.({ path, users: [ user ], characterCount: countHackmudCharacters(script), error: undefined, warnings })
 	})
 
 	if (onReady)

@@ -213,8 +213,8 @@ Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be re
 
 				const timeTook = performance.now() - timeStart
 
-				for (const { message, line } of warnings)
-					log(`Warning "${chalk.bold(message)}" on line ${chalk.bold(String(line))}`)
+				for (const { message } of warnings)
+					log(`Warning: ${chalk.bold(message)}`)
 
 				await writeFilePersistent(outputPath, script).catch((error: NodeJS.ErrnoException) => {
 					if (!commands[2] || error.code != `EISDIR`)
@@ -601,7 +601,7 @@ ${colourN(`--help`)}
 	}
 }
 
-function logInfo({ path, users, characterCount, error }: Info, hackmudPath: string) {
+function logInfo({ path, users, characterCount, error, warnings }: Info, hackmudPath: string) {
 	path = getRelativePath(`.`, path)
 
 	if (error) {
@@ -609,6 +609,9 @@ function logInfo({ path, users, characterCount, error }: Info, hackmudPath: stri
 
 		return
 	}
+
+	for (const warning of warnings)
+		console.warn(colourF(`Warning: ${warning.message}`))
 
 	log(`Pushed ${chalk.bold(path)} to ${users.map(user => chalk.bold(userColours.get(user))).join(`, `)} | ${
 		chalk.bold(String(characterCount))

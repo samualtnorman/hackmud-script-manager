@@ -782,7 +782,7 @@ export function transform(
 		}
 	})
 
-	return { file, seclevel }
+	return { file, seclevel, warnings }
 
 	function createGetFunctionPrototypeNode() {
 		const name = globalFunctionsUnder7Characters.find(name => !program.scope.hasOwnBinding(name))
