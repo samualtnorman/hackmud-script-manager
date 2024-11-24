@@ -176,16 +176,22 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 		)
 			return
 
-		const filePath = resolvePath(sourceDirectory, path)
+		const sourceDirectoryResolved = resolvePath(sourceDirectory)
+		const filePath = resolvePath(sourceDirectoryResolved, path)
 		const sourceCode = await readFile(filePath, { encoding: `utf8` })
 		let script
 		let warnings
 
 		try {
-			({ script, warnings } = await processScript(
-				sourceCode,
-				{ minify, scriptUser: user, scriptName, filePath, mangleNames, forceQuineCheats }
-			))
+			({ script, warnings } = await processScript(sourceCode, {
+				minify,
+				scriptUser: user,
+				scriptName,
+				filePath,
+				mangleNames,
+				forceQuineCheats,
+				rootFolderPath: sourceDirectoryResolved
+			}))
 		} catch (error) {
 			assert(error instanceof Error, HERE)
 			onPush?.({ path, users: [], characterCount: 0, error, warnings: [] })

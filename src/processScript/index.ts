@@ -19,13 +19,14 @@ import babelPluginTransformUnicodeSetsRegex from "@babel/plugin-transform-unicod
 import babelTraverse from "@babel/traverse"
 import type { LVal, Program } from "@babel/types"
 import t from "@babel/types"
+import rollupPluginAlias from "@rollup/plugin-alias"
 import { babel as rollupPluginBabel } from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
-import { resolve as resolvePath } from "path"
+import { relative as getRelativePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants"
@@ -60,6 +61,8 @@ export type ProcessOptions = LaxPartial<{
 	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
 	  */
 	forceQuineCheats: boolean
+
+	rootFolderPath: string
 }> & { /** the name of this script (or set to `true` if not yet known) */ scriptName: string | true }
 
 /** Minifies a given script
@@ -72,7 +75,8 @@ export async function processScript(code: string, {
 	scriptName,
 	filePath,
 	mangleNames = false,
-	forceQuineCheats
+	forceQuineCheats,
+	rootFolderPath
 }: ProcessOptions): Promise<{ script: string, warnings: { message: string }[] }> {
 	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
@@ -178,7 +182,7 @@ export async function processScript(code: string, {
 	let filePathResolved
 
 	if (filePath) {
-		filePathResolved = resolvePath(filePath)
+		filePathResolved = getRelativePath(`.`, filePath)
 
 		if (filePath.endsWith(`.ts`)) {
 			plugins.push([
@@ -249,6 +253,8 @@ export async function processScript(code: string, {
 		)
 	}
 
+	console.debug(HERE, extensions)
+
 	const bundle = await rollup({
 		input: filePathResolved,
 		plugins: [
@@ -289,7 +295,8 @@ export async function processScript(code: string, {
 				extensions
 			}),
 			rollupPluginCommonJS(),
-			rollupPluginNodeResolve({ extensions })
+			rollupPluginNodeResolve({ extensions }),
+			!!rootFolderPath && rollupPluginAlias({ entries: [ { find: /^\//, replacement: `${rootFolderPath}/` } ] })
 		],
 		treeshake: { moduleSideEffects: false }
 	})

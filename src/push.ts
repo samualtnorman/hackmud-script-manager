@@ -156,16 +156,23 @@ export async function push(
 	}
 
 	const allInfo: Info[] = []
+	const sourcePathResolved = resolvePath(sourcePath)
 
 	await Promise.all([ ...pathsToUsers ].map(async ([ path, [ ...users ] ]) => {
 		const scriptName = getBaseName(path.slice(0, -3))
 
 		const uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
-		const { script: minifiedCode, warnings } = await processScript(
-			await readFile(path, { encoding: `utf8` }),
-			{ minify, scriptUser: true, scriptName, uniqueId, filePath: path, mangleNames, forceQuineCheats }
-		)
+		const { script: minifiedCode, warnings } = await processScript(await readFile(path, { encoding: `utf8` }), {
+			minify,
+			scriptUser: true,
+			scriptName,
+			uniqueId,
+			filePath: path,
+			mangleNames,
+			forceQuineCheats,
+			rootFolderPath: sourcePathResolved
+		})
 
 		const info: Info = { path, users, characterCount: countHackmudCharacters(minifiedCode), error: undefined, warnings }
 

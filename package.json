@@ -59,6 +59,7 @@
 		"@babel/traverse": "^7.25.9",
 		"@babel/types": "^7.26.0",
 		"@bloomberg/record-tuple-polyfill": "^0.0.4",
+		"@rollup/plugin-alias": "^5.1.1",
 		"@rollup/plugin-babel": "^6.0.4",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-json": "^6.1.0",
