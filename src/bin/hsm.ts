@@ -399,7 +399,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)}
 		case `dev`:
 		case `watch`:
 		case `push`: {
-			console.log(colourS(`
+			console.log(colourS(`\
 ${colourJ(commands[0] == `push` ? pushCommandDescription : watchCommandDescription)}
 
 ${colourA(`Usage:`)}
@@ -443,7 +443,7 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${col
 		} break
 
 		case `pull`: {
-			console.log(colourS(`
+			console.log(colourS(`\
 ${colourJ(pullCommandDescription)}
 
 ${colourA(`Usage:`)}
@@ -456,7 +456,7 @@ ${hackmudPathOption}`
 
 		case `minify`:
 		case `golf`: {
-			console.log(colourS(`
+			console.log(colourS(`\
 ${colourJ(minifyCommandDescription)}
 
 ${colourA(`Usage:`)}
@@ -499,7 +499,7 @@ ${hackmudPathOption}`
 		} break
 
 		case `sync-macros`: {
-			console.log(colourS(`
+			console.log(colourS(`\
 ${colourJ(syncMacrosCommandDescription)}
 
 ${colourA(`Options:`)}
