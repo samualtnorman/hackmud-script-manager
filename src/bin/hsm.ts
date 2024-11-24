@@ -430,7 +430,7 @@ ${colourN(`--force-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
 ${hackmudPathOption}
 ${commands[0] == `push` ? `` : `${colourN(`--dts-path`)}=${colourB(`<path>`)}
-    Path to generate a type declaration file for the scripts
+    Path to generate a type declaration (.d.ts) file for the scripts
 `}\
 
 ${colourA(`Examples:`)}
