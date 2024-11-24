@@ -237,9 +237,9 @@ switch (commands[0]) {
 				scripts.push(`*.*`)
 
 			if (commands[0] == `push`) {
-				const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
-
 				complainAboutUnrecognisedOptions()
+
+				const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
 
 				const infos = await push(sourcePath, hackmudPath, {
 					scripts,
