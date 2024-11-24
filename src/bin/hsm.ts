@@ -386,8 +386,6 @@ function logHelp() {
 ${colourN(`--hackmud-path`)}=${colourB(`<path>`)}
     Override hackmud path`
 
-	console.log(colourN(`Version`) + colourS(`: `) + colourV(moduleVersion))
-
 	switch (commands[0]) {
 		case `dev`:
 		case `watch`:
@@ -492,8 +490,9 @@ ${hackmudPathOption}`
 		} break
 
 		default: {
-			console.log(colourS(`
+			console.log(colourS(`\
 ${colourJ(`Hackmud Script Manager`)}
+${colourN(`Version`) + colourS(`: `) + colourV(moduleVersion)}
 
 ${colourA(`Commands:`)}
 ${colourL(`push`)}
