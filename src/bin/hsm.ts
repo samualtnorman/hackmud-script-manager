@@ -125,11 +125,22 @@ Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be re
 
 		const mangleNamesOption = popOption(`mangle-names`)
 		const forceQuineCheatsOption = popOption(`force-quine-cheats`)
-		const noMinifyIncompatibleOption = mangleNamesOption || forceQuineCheatsOption
+		const noQuineCheatsOptions = popOption(`no-quine-cheats`)
+		const noMinifyIncompatibleOption = mangleNamesOption || forceQuineCheatsOption || noQuineCheatsOptions
 
 		if (noMinifyOption && noMinifyIncompatibleOption) {
 			logError(
 				`Options ${formatOption(noMinifyOption.name)} and ${formatOption(noMinifyIncompatibleOption.name)
+				} are incompatible\n`
+			)
+
+			logHelp()
+			process.exit(1)
+		}
+
+		if (forceQuineCheatsOption && noQuineCheatsOptions) {
+			logError(
+				`Options ${formatOption(forceQuineCheatsOption.name)} and ${formatOption(noQuineCheatsOptions.name)
 				} are incompatible\n`
 			)
 
@@ -145,6 +156,9 @@ Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be re
 
 		if (forceQuineCheatsOption)
 			assertOptionIsBoolean(forceQuineCheatsOption)
+
+		if (noQuineCheatsOptions)
+			assertOptionIsBoolean(noQuineCheatsOptions)
 
 		if (commands[0] == `golf` || commands[0] == `minify`) {
 			const watchOption = popOption(`watch`)
@@ -194,7 +208,7 @@ Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be re
 					scriptName,
 					filePath: target,
 					mangleNames: mangleNamesOption?.value,
-					forceQuineCheats: forceQuineCheatsOption?.value
+					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value
 				})
 
 				const timeTook = performance.now() - timeStart
@@ -289,7 +303,7 @@ Warning: ${formatOption(noMinifyOption.name)} is being deprecated and will be re
 					onPush: info => logInfo(info, hackmudPath),
 					minify: noMinifyOption && !noMinifyOption.value,
 					mangleNames: mangleNamesOption?.value,
-					forceQuineCheats: forceQuineCheatsOption?.value
+					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value
 				})
 
 				if (infos instanceof Error) {
@@ -332,7 +346,7 @@ Warning: ${formatOption(dtsPathOption.name)} is being deprecated and will be rem
 					minify: noMinifyOption && !noMinifyOption.value,
 					mangleNames: mangleNamesOption?.value,
 					onReady: () => log(`Watching`),
-					forceQuineCheats: forceQuineCheatsOption?.value
+					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value
 				})
 
 				autoExit = false
@@ -443,7 +457,7 @@ function logHelp() {
 
 	const noMinifyOptionDescription = `Skip minification to produce a "readable" script`
 	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
-	const forceQuineCheatsOptionDescription = `Force quine cheats on. Use ${colourN(`--force-quine-cheats`)}=${colourV(`false`)} to force off`
+	const forceQuineCheatsOptionDescription = `Force quine cheats on or off`
 
 	const hackmudPathOption = `\
 ${colourN(`--hackmud-path`)}=${colourB(`<path>`)}
@@ -473,7 +487,7 @@ ${colourN(`--no-minify`)}
     ${noMinifyOptionDescription}
 ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
-${colourN(`--force-quine-cheats`)}
+${colourN(`--force-quine-cheats`)}, ${colourN(`--no-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
 ${hackmudPathOption}
 ${colourN(`--dts-path`)}=${colourB(`<path>`)}
@@ -522,7 +536,7 @@ ${colourN(`--no-minify`)}
     ${noMinifyOptionDescription}
 ${colourN(`--mangle-names`)}
     ${mangleNamesOptionDescription}
-${colourN(`--force-quine-cheats`)}
+${colourN(`--force-quine-cheats`)}, ${colourN(`--no-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
 ${colourN(`--watch`)}
     Watch for changes`
