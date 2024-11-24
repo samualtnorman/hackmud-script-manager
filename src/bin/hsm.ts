@@ -517,7 +517,7 @@ ${colourL(`push`)}
     ${pushCommandDescription}
 ${colourL(`dev`)}
     ${watchCommandDescription}
-${colourL(`golf`)}
+${colourL(`minify`)}
     ${minifyCommandDescription}
 ${colourL(`emit-dts`)}
     ${generateTypeDeclarationCommandDescription}
