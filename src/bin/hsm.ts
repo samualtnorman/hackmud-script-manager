@@ -363,8 +363,7 @@ Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will 
 		log(`Wrote type declaration to ${chalk.bold(typeDeclarationPath)}`)
 	} break
 
-	case `help`:
-	case `h`: {
+	case `help`: {
 		logHelp()
 	} break
 
