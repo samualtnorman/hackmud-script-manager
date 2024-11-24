@@ -1,7 +1,7 @@
 type Replace<A, B> = Omit<A, keyof B> & B
-type ScriptSuccess<T = object> = { ok: true } & T
+type ScriptSuccess<T = unknown> = { ok: true } & T
 type ScriptFailure = { ok: false, msg?: string }
-type ScriptResponse<T = object> = ScriptSuccess<T> | ScriptFailure
+type ScriptResponse<T = unknown> = ScriptSuccess<T> | ScriptFailure
 type ErrorScripts = Record<string, () => ScriptFailure>
 type Scriptor<TArgs extends any[] = any[]> = { name: string, call: (...args: TArgs) => unknown }
 
