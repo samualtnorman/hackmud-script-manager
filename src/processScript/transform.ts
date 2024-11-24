@@ -70,6 +70,8 @@ export function transform(
 	}
 
 	if (program.scope.hasGlobal(`_SCRIPT_NAME`)) {
+		warnings.push({ message: `Global _SCRIPT_NAME is deprecated and will be removed in the next minor release of HSM, use _SCRIPT_SUBNAME instead` })
+
 		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_NAME`, program))
 			referencePath.replaceWith(t.stringLiteral(scriptName == true ? `$${uniqueId}$SCRIPT_NAME$` : scriptName))
 	}
