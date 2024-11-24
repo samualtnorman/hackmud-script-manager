@@ -1,7 +1,4 @@
-type Replace<A, B> = Omit<A, keyof B> & B
-type ScriptSuccess<T = unknown> = { ok: true } & T
-type ScriptFailure = { ok: false, msg?: string }
-type ScriptResponse<T = unknown> = ScriptSuccess<T> | ScriptFailure
+type Replace<A, B> = Omit<A, keyof B> & BigInt
 type ErrorScripts = Record<string, () => ScriptFailure>
 
 type Subscripts = Record<string, Record<string, (...args: any) => any>> & {
@@ -891,6 +888,9 @@ type MongoProject<TDocument, TProjection> =
 type DeepFreeze<T> = { readonly [P in keyof T]: DeepFreeze<T[P]> }
 
 declare global {
+	type ScriptSuccess<T = unknown> = { ok: true } & T
+	type ScriptFailure = { ok: false, msg?: string }
+	type ScriptResponse<T = unknown> = ScriptSuccess<T> | ScriptFailure
 	type Scriptor<TArgs extends any[] = any[]> = { name: string, call: (...args: TArgs) => unknown }
 	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 	type ObjectId = { $oid: string }
