@@ -320,7 +320,16 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 	case `generate-type-declaration`:
 	case `gen-type-declaration`:
 	case `gen-dts`:
-	case `gen-types`: {
+	case `gen-types`:
+	case `emit-dts`: {
+		if (commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
+			console.warn(colourF(`\
+Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will be removed
+         in the next minor release of HSM
+         You should switch to using its alias ${colourC(`hsm`)} ${colourL(`emit-dts`)}\n`
+			))
+		}
+
 		const hackmudPath = getHackmudPath()
 		const target = commands[1]
 
@@ -468,7 +477,16 @@ ${colourN(`--watch`)}
 		case `generate-type-declaration`:
 		case `gen-type-declaration`:
 		case `gen-dts`:
-		case `gen-types`: {
+		case `gen-types`:
+		case `emit-dts`: {
+			if (commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
+				console.warn(colourF(`\
+Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is being deprecated and will be removed
+         in the next minor release of HSM
+         You should switch to using its alias ${colourC(`hsm`)} ${colourL(`emit-dts`)}\n`
+				))
+			}
+
 			console.log(colourS(`\
 ${colourJ(generateTypeDeclarationCommandDescription)}
 
@@ -501,7 +519,7 @@ ${colourL(`dev`)}
     ${watchCommandDescription}
 ${colourL(`golf`)}
     ${minifyCommandDescription}
-${colourL(`gen-dts`)}
+${colourL(`emit-dts`)}
     ${generateTypeDeclarationCommandDescription}
 ${colourL(`sync-macros`)}
     ${syncMacrosCommandDescription}
