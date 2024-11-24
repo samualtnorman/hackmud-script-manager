@@ -87,6 +87,7 @@ const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
 if (process.version.startsWith(`v21.`)) {
 	console.warn(colourF(`\
 Warning: Support for Node.js 21 will be dropped in the next minor version of HSM
+         Your current version of Node.js is ${chalk.bold(process.version)}
          You should update your version of Node.js
          https://nodejs.org/en/download/package-manager`
 	))
