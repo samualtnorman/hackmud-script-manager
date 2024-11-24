@@ -300,7 +300,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 				const dtsPathOption =
 					popOption(`dts-path`, `type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
 
-				if (dtsPathOption && dtsPathOption.name != `emit-dts` && dtsPathOption.name != `gen-dts`) {
+				if (dtsPathOption && dtsPathOption.name != `dts-path` && dtsPathOption.name != `type-declaration-path`) {
 					console.warn(colourF(`\
 Warning: ${colourN(dtsPathOption.name)} is being deprecated and will be removed in the
          next minor release of HSM
