@@ -1046,6 +1046,9 @@ declare global {
 	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
 	const _SCRIPT_USER: string
 
+	/** @deprecated Use `_SCRIPT_SUBNAME` instead. */
+	const _SCRIPT_NAME: string
+
 	/** The name of this script excluding the user and `.`.
 	  *
 	  * e.g. in the script `foo.bar`, `_SCRIPT_NAME` is `bar`.
@@ -1053,7 +1056,7 @@ declare global {
 	  * Shorter alternative to `context.this_script.split(".")[1].
 	  *
 	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
-	const _SCRIPT_NAME: string
+	const _SCRIPT_SUBNAME: string
 
 	/** The full name of this script equivilent to `context.this_script` but should use less characters.
 	  *
