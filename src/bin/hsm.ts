@@ -531,7 +531,11 @@ ${colourL(`emit-dts`)}
 ${colourL(`sync-macros`)}
     ${syncMacrosCommandDescription}
 ${colourL(`pull`)}
-    ${pullCommandDescription}`
+    ${pullCommandDescription}
+
+${colourA(`Options:`)}
+${colourN(`--help`)}
+    Can be used on any command e.g. ${colourC(`hsm`)} ${colourL(`push`)} ${colourN(`--help`)} to show helpful information`
 			))
 		}
 	}
