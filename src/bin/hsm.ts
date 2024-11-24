@@ -246,7 +246,7 @@ switch (commands[0]) {
 				if (dtsPathOption) {
 					if (typeof dtsPathOption.value != `string`) {
 						logError(
-							`Option ${colourN(dtsPathOption.name)} must be a string, got ${colourV(dtsPathOption.value)
+							`Option ${formatOption(dtsPathOption.name)} must be a string, got ${colourV(dtsPathOption.value)
 								}\n`
 						)
 
@@ -302,7 +302,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 
 				if (dtsPathOption && dtsPathOption.name != `dts-path` && dtsPathOption.name != `type-declaration-path`) {
 					console.warn(colourF(`\
-Warning: ${colourN(dtsPathOption.name)} is being deprecated and will be removed in the
+Warning: ${formatOption(dtsPathOption.name)} is being deprecated and will be removed in the
          next minor release of HSM
          You should switch to using its alias ${colourN(`--dts-path`)}\n`
 					))
@@ -643,10 +643,8 @@ function popOption(...names: string[]): Option | undefined {
 	if (!presentOptionNames.length)
 		return undefined
 
-	const presentOptionNamesWithDashDash = presentOptionNames.map(formatOption)
-
 	if (presentOptionNames.length > 1) {
-		logError(`The options ${presentOptionNamesWithDashDash.join(`, `)
+		logError(`The options ${presentOptionNames.map(formatOption).join(`, `)
 		} are aliases for each other. Please only specify one`)
 
 		process.exit(1)
@@ -656,7 +654,7 @@ function popOption(...names: string[]): Option | undefined {
 
 	options.delete(presentOptionNames[0]!)
 
-	return { name: presentOptionNamesWithDashDash[0]!, value }
+	return { name: presentOptionNames[0]!, value }
 }
 
 function complainAboutUnrecognisedOptions(): void {
