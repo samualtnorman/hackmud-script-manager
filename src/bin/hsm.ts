@@ -17,7 +17,7 @@ import { generateTypeDeclaration } from "../generateTypeDeclaration"
 import { pull } from "../pull"
 import { syncMacros } from "../syncMacros"
 
-type OptionValue = boolean | number | string
+type OptionValue = boolean | string
 
 const formatOption = (name: string) => colourN(`-${name.length == 1 ? `` : `-`}${name}`)
 const options = new Map<string, OptionValue>()
@@ -36,22 +36,22 @@ const log = (message: string) => console.log(colourS(message))
 
 for (const argument of process.argv.slice(2)) {
 	if (argument[0] == `-`) {
-		const [ key, valueRaw ] = argument.split(`=`)
-		let value: OptionValue | undefined = valueRaw
+		const argumentEqualsIndex = argument.indexOf(`=`)
+		let key
+		let value
 
-		if (value) {
+		if (argumentEqualsIndex == -1) {
+			key = argument
+			value = true
+		} else {
+			key = argument.slice(0, argumentEqualsIndex)
+			value = argument.slice(argumentEqualsIndex + 1)
+
 			if (value == `true`)
 				value = true
 			else if (value == `false`)
 				value = false
-			else {
-				const number = Number(value)
-
-				if (isFinite(number))
-					value = number
-			}
-		} else
-			value = true
+		}
 
 		if (argument[1] == `-`)
 			options.set(key!.slice(2), value)
