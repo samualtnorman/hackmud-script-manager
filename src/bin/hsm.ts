@@ -563,15 +563,25 @@ function logError(message: string) {
 }
 
 function getHackmudPath() {
-	const hackmudPathOption = popOption(`hackmud-path`)?.value
+	const hackmudPathOption = popOption(`hackmud-path`)
 
-	if (hackmudPathOption != undefined && typeof hackmudPathOption != `string`) {
-		logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption)}\n`)
-		logHelp()
-		process.exit(1)
+	if (hackmudPathOption) {
+		if (typeof hackmudPathOption.value != `string`) {
+			logError(`Option ${colourN(`--hackmud-path`)} must be a string, got ${colourV(hackmudPathOption.value)}\n`)
+			logHelp()
+			process.exit(1)
+		}
+
+		if (!hackmudPathOption.value) {
+			logError(`Option ${colourN(`--hackmud-path`)} was specified but empty\n`)
+			logHelp()
+			process.exit(1)
+		}
+
+		return hackmudPathOption.value
 	}
 
-	return hackmudPathOption || process.env.HSM_HACKMUD_PATH || (process.platform == `win32`
+	return process.env.HSM_HACKMUD_PATH || (process.platform == `win32`
 		? resolvePath(process.env.APPDATA!, `hackmud`)
 		: resolvePath(getHomeDirectory(), `.config/hackmud`)
 	)
