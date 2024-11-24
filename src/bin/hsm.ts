@@ -237,7 +237,37 @@ switch (commands[0]) {
 				scripts.push(`*.*`)
 
 			if (commands[0] == `push`) {
+				const dtsPathOption = popOption(`dts-path`)
+
 				complainAboutUnrecognisedOptions()
+
+				let declarationPathPromise
+
+				if (dtsPathOption) {
+					if (typeof dtsPathOption.value != `string`) {
+						logError(
+							`Option ${colourN(dtsPathOption.name)} must be a string, got ${colourV(dtsPathOption.value)
+								}\n`
+						)
+
+						logHelp()
+						process.exit(1)
+					}
+
+					let typeDeclarationPath = resolvePath(dtsPathOption.value)
+					const typeDeclaration = await generateTypeDeclaration(sourcePath, hackmudPath)
+
+					declarationPathPromise = writeFile(typeDeclarationPath, typeDeclaration).catch(error => {
+						assert(error instanceof Error, HERE)
+
+						if ((error as NodeJS.ErrnoException).code != `EISDIR`)
+							throw error
+
+						typeDeclarationPath = resolvePath(typeDeclarationPath, `player.d.ts`)
+
+						return writeFile(typeDeclarationPath, typeDeclaration)
+					}).then(() => typeDeclarationPath)
+				}
 
 				const { push, MissingSourceFolderError, MissingHackmudFolderError, NoUsersError } = await pushModule
 
@@ -263,6 +293,9 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 					}
 				} else if (!infos.length)
 					logError(`Could not find any scripts to push`)
+
+				if (declarationPathPromise)
+					log(`Wrote type declaration to ${chalk.bold(await declarationPathPromise)}`)
 			} else {
 				const dtsPathOption =
 					popOption(`dts-path`, `type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
@@ -428,9 +461,8 @@ ${colourN(`--mangle-names`)}
 ${colourN(`--force-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
 ${hackmudPathOption}
-${commands[0] == `push` ? `` : `${colourN(`--dts-path`)}=${colourB(`<path>`)}
+${colourN(`--dts-path`)}=${colourB(`<path>`)}
     Path to generate a type declaration (.d.ts) file for the scripts
-`}\
 
 ${colourA(`Examples:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)}
