@@ -73,6 +73,11 @@ export function transform(
 			referencePath.replaceWith(t.stringLiteral(scriptName == true ? `$${uniqueId}$SCRIPT_NAME$` : scriptName))
 	}
 
+	if (program.scope.hasGlobal(`_SCRIPT_SUBNAME`)) {
+		for (const referencePath of getReferencePathsToGlobal(`_SCRIPT_SUBNAME`, program))
+			referencePath.replaceWith(t.stringLiteral(scriptName == true ? `$${uniqueId}$SCRIPT_NAME$` : scriptName))
+	}
+
 	if (program.scope.hasGlobal(`_FULL_SCRIPT_NAME`)) {
 		for (const referencePath of getReferencePathsToGlobal(`_FULL_SCRIPT_NAME`, program)) {
 			if (scriptUser == true || scriptName == true)
