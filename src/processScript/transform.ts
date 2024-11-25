@@ -150,6 +150,12 @@ export function transform(
 	const neededSubscriptLets = new Map<string, number>()
 	let detectedSeclevel = 4
 
+	if (program.scope.hasGlobal(`$s`)) {
+		warnings.push({
+			message: `Subscripts in the form of $s.foo.bar() and #s.foo.bar() are deprecated. Use explicit seclevels instead.`
+		})
+	}
+
 	for (const fakeSubscriptObjectName of [ `$fs`, `$4s`, `$s` ]) {
 		if (program.scope.hasGlobal(fakeSubscriptObjectName))
 			processFakeSubscriptObject(fakeSubscriptObjectName, 4)
