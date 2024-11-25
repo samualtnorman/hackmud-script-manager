@@ -16,10 +16,10 @@ export function getReferencePathsToGlobal(name: string, program: NodePath<Progra
 	return binding.referencePaths as NodePath<Identifier>[]
 }
 
-export const includesIllegalString = (toCheck: string) => toCheck.includes(`SC$`) || toCheck.includes(`DB$`) ||
+export const includesIllegalString = (toCheck: string): boolean => toCheck.includes(`SC$`) || toCheck.includes(`DB$`) ||
 	toCheck.includes(`__D_S`) || toCheck.includes(`__FMCL_`) || toCheck.includes(`__G_`)
 
-export const replaceUnsafeStrings = (uniqueId: string, toReplace: string) => toReplace
+export const replaceUnsafeStrings = (uniqueId: string, toReplace: string): string => toReplace
 	.replaceAll(`SC$`, `$${uniqueId}$\\$SC_DOLLAR$`)
 	.replaceAll(`DB$`, `$${uniqueId}$\\$DB_DOLLAR$`)
 	.replaceAll(`__D_S`, `$${uniqueId}$\\$D$`)

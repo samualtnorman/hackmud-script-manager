@@ -42,7 +42,7 @@ const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
 export async function minify(
 	file: File,
 	{ uniqueId = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
-) {
+): Promise<string> {
 	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
 	let program!: NodePath<Program>

@@ -1,2 +1,2 @@
-export const supportedExtensions = [ `.js`, `.ts` ]
-export const validDBMethods = [ `i`, `r`, `f`, `u`, `u1`, `us`, `ObjectId` ]
+export const supportedExtensions: string[] = [ `.js`, `.ts` ]
+export const validDBMethods: string[] = [ `i`, `r`, `f`, `u`, `u1`, `us`, `ObjectId` ]

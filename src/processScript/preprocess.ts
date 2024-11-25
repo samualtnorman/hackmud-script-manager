@@ -18,7 +18,8 @@ export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ unique
 
 /** @param code source code for preprocessing
   * @param options {@link PreprocessOptions details} */
-export async function preprocess(code: string, { uniqueId = `00000000000` }: PreprocessOptions = {}) {
+export async function preprocess(code: string, { uniqueId = `00000000000` }: PreprocessOptions = {})
+: Promise<{ code: string }> {
 	assert(/^\w{11}$/.test(uniqueId), HERE)
 
 	const sourceCode = code

@@ -6,7 +6,9 @@
 		"types": [ "node", "@total-typescript/ts-reset", "babel-plugin-here/env" ],
 		"rootDir": ".",
 		"module": "es2022",
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"isolatedDeclarations": true,
+		"checkJs": false
 	},
 	"include": [ "**/*" ]
 }

@@ -33,7 +33,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	typeDeclarationPath: typeDeclarationPath_,
 	onReady,
 	forceQuineCheats
-}: WatchOptions = {}) {
+}: WatchOptions = {}): Promise<void> {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
 

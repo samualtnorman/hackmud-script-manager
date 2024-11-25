@@ -2,7 +2,7 @@ import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { basename as getBaseName, resolve as resolvePath } from "path"
 import * as PathPosix from "path/posix"
 
-export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string) {
+export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string): Promise<string> {
 	const users = new Set<string>()
 
 	if (hackmudPath) {
