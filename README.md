@@ -60,8 +60,6 @@ You can read about how HSM works [in my blog post](https://samual.uk/blog/js-cod
     - Subscript and `#db` methods names are verified.
     - All references to preprocessor syntax functions not being called are turned into arrow function wrappers e.g. `let debug = #D;` -> `let debug = v => #D(v);`.
     - `_SECLEVEL` is replaced with a number (`0` to `4`) representing the seclevel of the script.
-    - When `export`s are present in the script, it becomes a script that returns an object of the `export`ed values.
-        - `_EXPORTS` becomes an array of the names of the exported values.
 - And Neat Weird Fixes
     - Like `.__proto__` and `.prototype` being converted to `["__proto__"]` and `["prototype"]`.
     - Illegal and unsafe strings.
