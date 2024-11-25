@@ -19,6 +19,7 @@ export type WatchOptions = PushOptions & LaxPartial<{
 	typeDeclarationPath: string
 
 	onReady: () => void
+	rootFolderPath: string
 }>
 
 /** Watches target file or folder for updates and builds and pushes updated file.
@@ -32,7 +33,8 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	mangleNames = false,
 	typeDeclarationPath: typeDeclarationPath_,
 	onReady,
-	forceQuineCheats
+	forceQuineCheats,
+	rootFolderPath
 }: WatchOptions = {}): Promise<void> {
 	if (!scripts.length)
 		throw new Error(`scripts option was an empty array`)
@@ -190,7 +192,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 				filePath,
 				mangleNames,
 				forceQuineCheats,
-				rootFolderPath: sourceDirectoryResolved
+				rootFolderPath
 			}))
 		} catch (error) {
 			assert(error instanceof Error, HERE)

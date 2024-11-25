@@ -29,6 +29,8 @@ export type PushOptions = LaxPartial<{
 	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
 	  */
 	forceQuineCheats: boolean
+
+	rootFolderPath: string
 }>
 
 export class MissingSourceFolderError extends Error {}
@@ -53,7 +55,8 @@ Object.defineProperty(NoScriptsError.prototype, `name`, { value: `NoScriptsError
 export async function push(
 	sourcePath: string,
 	hackmudPath: string,
-	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats }: PushOptions = {}
+	{ scripts = [ `*.*` ], onPush = () => {}, minify = true, mangleNames = false, forceQuineCheats, rootFolderPath }:
+		PushOptions = {}
 ): Promise<MissingSourceFolderError | MissingHackmudFolderError | NoUsersError | NoScriptsError | Info[]> {
 	const [ sourceFolder, hackmudFolder ] = await Promise.all([
 		readDirectoryWithStats(sourcePath).catch(error => {
@@ -156,7 +159,6 @@ export async function push(
 	}
 
 	const allInfo: Info[] = []
-	const sourcePathResolved = resolvePath(sourcePath)
 
 	await Promise.all([ ...pathsToUsers ].map(async ([ path, [ ...users ] ]) => {
 		const scriptName = getBaseName(path.slice(0, -3))
@@ -171,7 +173,7 @@ export async function push(
 			filePath: path,
 			mangleNames,
 			forceQuineCheats,
-			rootFolderPath: sourcePathResolved
+			rootFolderPath
 		})
 
 		const info: Info = { path, users, characterCount: countHackmudCharacters(minifiedCode), error: undefined, warnings }
