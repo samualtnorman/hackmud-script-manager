@@ -86,7 +86,7 @@ const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
 
 if (process.version.startsWith(`v21.`)) {
 	console.warn(colourF(`\
-Warning: Support for Node.js 21 will be dropped in the next minor version of HSM
+${chalk.bold(`Warning:`)} Support for Node.js 21 will be dropped in the next minor version of HSM
          Your current version of Node.js is ${chalk.bold(process.version)}
          You should update your version of Node.js
          https://nodejs.org/en/download/package-manager\n`
@@ -117,7 +117,7 @@ switch (commands[0]) {
 
 		if (noMinifyOption && noMinifyOption.name != `no-minify`) {
 			console.warn(colourF(`\
-Warning: ${formatOption(noMinifyOption.name)} is deprecated and will be removed in the next minor
+${chalk.bold(`Warning:`)} ${formatOption(noMinifyOption.name)} is deprecated and will be removed in the next minor
          release of HSM
          You should switch to using its alias ${colourN(`--no-minify`)}\n`
 			))
@@ -218,7 +218,7 @@ Warning: ${formatOption(noMinifyOption.name)} is deprecated and will be removed 
 				const timeTook = performance.now() - timeStart
 
 				for (const { message } of warnings)
-					log(`Warning: ${chalk.bold(message)}`)
+					console.warn(colourF(`${chalk.bold(`Warning:`)} ${message}`))
 
 				await writeFilePersistent(outputPath, script).catch((error: NodeJS.ErrnoException) => {
 					if (!commands[2] || error.code != `EISDIR`)
@@ -334,7 +334,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 
 				if (dtsPathOption && dtsPathOption.name != `dts-path` && dtsPathOption.name != `type-declaration-path`) {
 					console.warn(colourF(`\
-Warning: ${formatOption(dtsPathOption.name)} is deprecated and will be removed in the
+${chalk.bold(`Warning:`)} ${formatOption(dtsPathOption.name)} is deprecated and will be removed in the
          next minor release of HSM
          You should switch to using its alias ${colourN(`--dts-path`)}\n`
 					))
@@ -399,7 +399,7 @@ Warning: ${formatOption(dtsPathOption.name)} is deprecated and will be removed i
 			warnedDeprecatedEmitDtsAlias = true
 
 			console.warn(colourF(`\
-Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
+${chalk.bold(`Warning:`)} ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
          in the next minor release of HSM
          You should switch to using its alias ${colourC(`hsm`)} ${colourL(`emit-dts`)}\n`
 			))
@@ -560,7 +560,7 @@ ${colourN(`--root-folder-path`)}
 		case `emit-dts`: {
 			if (!warnedDeprecatedEmitDtsAlias && commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
 				console.warn(colourF(`\
-Warning: ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
+${chalk.bold(`Warning:`)} ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
          in the next minor release of HSM
          You should switch to using its alias ${colourC(`hsm`)} ${colourL(`emit-dts`)}\n`
 				))
@@ -621,7 +621,7 @@ function logInfo({ path, users, characterCount, error, warnings }: Info, hackmud
 	}
 
 	for (const warning of warnings)
-		console.warn(colourF(`Warning: ${warning.message}`))
+		console.warn(colourF(`${chalk.bold(`Warning:`)} ${warning.message}`))
 
 	log(`Pushed ${chalk.bold(path)} to ${users.map(user => chalk.bold(userColours.get(user))).join(`, `)} | ${
 		chalk.bold(String(characterCount))
