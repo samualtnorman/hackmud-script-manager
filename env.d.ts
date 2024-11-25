@@ -1,4 +1,4 @@
-type Replace<A, B> = Omit<A, keyof B> & BigInt
+type Replace<A, B> = Omit<A, keyof B> & B
 type ErrorScripts = Record<string, () => ScriptFailure>
 
 type Subscripts = Record<string, Record<string, (...args: any) => any>> & {
