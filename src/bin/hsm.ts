@@ -160,6 +160,9 @@ Warning: ${formatOption(noMinifyOption.name)} is deprecated and will be removed 
 		if (noQuineCheatsOptions)
 			assertOptionIsBoolean(noQuineCheatsOptions)
 
+		const rootFolderPathOption = popOption(`root-folder-path`)
+		const rootFolderPath = rootFolderPathOption && resolvePath(String(rootFolderPathOption.value))
+
 		if (commands[0] == `golf` || commands[0] == `minify`) {
 			const watchOption = popOption(`watch`)
 			const target = commands[1]
@@ -208,7 +211,8 @@ Warning: ${formatOption(noMinifyOption.name)} is deprecated and will be removed 
 					scriptName,
 					filePath: target,
 					mangleNames: mangleNamesOption?.value,
-					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value
+					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value,
+					rootFolderPath
 				})
 
 				const timeTook = performance.now() - timeStart
@@ -303,7 +307,8 @@ Warning: ${formatOption(noMinifyOption.name)} is deprecated and will be removed 
 					onPush: info => logInfo(info, hackmudPath),
 					minify: noMinifyOption && !noMinifyOption.value,
 					mangleNames: mangleNamesOption?.value,
-					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value
+					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value,
+					rootFolderPath
 				})
 
 				if (infos instanceof Error) {
@@ -346,7 +351,8 @@ Warning: ${formatOption(dtsPathOption.name)} is deprecated and will be removed i
 					minify: noMinifyOption && !noMinifyOption.value,
 					mangleNames: mangleNamesOption?.value,
 					onReady: () => log(`Watching`),
-					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value
+					forceQuineCheats: forceQuineCheatsOption?.value ?? !noQuineCheatsOptions?.value,
+					rootFolderPath
 				})
 
 				autoExit = false
@@ -494,6 +500,8 @@ ${colourN(`--dts-path`)}=${colourB(`<path>`)}
     Path to generate a type declaration (.d.ts) file for the scripts
 ${colourN(`--watch`)}
     Watch for changes
+${colourN(`--root-folder-path`)}
+    The folder that root will be aliased to in import statements
 
 ${colourA(`Examples:`)}
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)}
@@ -539,7 +547,9 @@ ${colourN(`--mangle-names`)}
 ${colourN(`--force-quine-cheats`)}, ${colourN(`--no-quine-cheats`)}
     ${forceQuineCheatsOptionDescription}
 ${colourN(`--watch`)}
-    Watch for changes`
+    Watch for changes
+${colourN(`--root-folder-path`)}
+    The folder that root will be aliased to in import statements`
 			))
 		} break
 
