@@ -253,8 +253,6 @@ export async function processScript(code: string, {
 		)
 	}
 
-	console.debug(HERE, extensions)
-
 	const bundle = await rollup({
 		input: filePathResolved,
 		plugins: [
