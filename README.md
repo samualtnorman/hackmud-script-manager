@@ -20,9 +20,9 @@ You can read about how HSM works [in my blog post](https://samual.uk/blog/js-cod
 > ```
 > You will need to run `Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser` in PowerShell as an administrator. For more information, see [Microsoft's page about Execution Policies](https://learn.microsoft.com/en-gb/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.4).
 
-![image](https://github.com/samualtnorman/hackmud-script-manager/assets/18307063/69a371fe-f8c8-43fe-b3c7-39f3735ce6fb)
-![image](https://github.com/samualtnorman/hackmud-script-manager/assets/18307063/08103f9e-74fa-4a56-a739-94858ba8c139)
-![image](https://github.com/samualtnorman/hackmud-script-manager/assets/18307063/25ccb86d-1fe3-4632-b703-ac47f5b32c9c)
+![image](https://github.com/user-attachments/assets/cc97f8a6-82a4-4a66-9785-accc8d774285)
+![image](https://github.com/user-attachments/assets/d0ec9450-4e16-4f8d-82b2-734deaf5abe3)
+![image](https://github.com/user-attachments/assets/a59a6ec4-d268-40f7-8ce2-5fbdbcd40c19)
 
 ## Features
 - Minification
@@ -54,10 +54,9 @@ You can read about how HSM works [in my blog post](https://samual.uk/blog/js-cod
     - `_BUILD_DATE` is replaced with a unix timestamp (`Date.now()`) of the build date of the script.
     - `_SCRIPT_USER` is replaced with a string of the user the script was pushed to.
         - This saves characters compared to `context.this_script.split(".")[0]`.
-    - `_SCRIPT_NAME` is like `_SCRIPT_USER` but for the name of the script.
+    - `_SCRIPT_SUBNAME` is like `_SCRIPT_USER` but for the name of the script.
         - Saves characters compared to `context.this_script.split(".")[1]`.
-    - `_FULL_SCRIPT_NAME` is replaced with what would be `context.this_script`.
-    - `#s.` can be used and it'll automatically have the seclevel inserted.
+    - `_FULL_SCRIPT_NAME` is replaced with what would be in `context.this_script`.
     - Subscript and `#db` methods names are verified.
     - All references to preprocessor syntax functions not being called are turned into arrow function wrappers e.g. `let debug = #D;` -> `let debug = v => #D(v);`.
     - `_SECLEVEL` is replaced with a number (`0` to `4`) representing the seclevel of the script.
