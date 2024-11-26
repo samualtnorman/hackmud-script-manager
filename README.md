@@ -12,7 +12,7 @@ You can read about how HSM works [in my blog post](https://samual.uk/blog/js-cod
 ## Usage
 1. Run `#dir` in game, then `cd` to that folder
 2. Name your source script file to `<name>.src.js`
-3. Run `hsm golf <name>.src.js` and it will create a minified script file called `<name>.js`
+3. Run `hsm minify <name>.src.js` and it will create a minified script file called `<name>.js`
 
 > **NOTE:** If you get an error message that looks like this:
 > ```
