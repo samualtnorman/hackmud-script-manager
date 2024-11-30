@@ -5,10 +5,11 @@ import babelTraverse from "@babel/traverse"
 import type { Program } from "@babel/types"
 import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
-import { assert } from "@samual/lib/assert"
+import { assert, ensure } from "@samual/lib/assert"
 import { spliceString } from "@samual/lib/spliceString"
 import { tokenizer as tokenise, tokTypes as TokenTypes } from "acorn"
 import { resolve as resolveModule } from "import-meta-resolve"
+import { validDBMethods } from "../constants"
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
@@ -16,6 +17,7 @@ const { default: traverse } = babelTraverse as any as typeof import("@babel/trav
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
 
 const SUBSCRIPT_PREFIXES = [ `s`, `fs`, `4s`, `hs`, `3s`, `ms`, `2s`, `ls`, `1s`, `ns`, `0s` ]
+const PREPROCESSOR_NAMES = [ ...SUBSCRIPT_PREFIXES, `D`, `G`, `FMCL`, `db` ]
 
 export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ uniqueId: string }>
 
@@ -25,102 +27,142 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 : Promise<{ code: string }> {
 	assert(/^\w{11}$/.test(uniqueId), HERE)
 
-	const tokensIterable = tokenise(code, { ecmaVersion: `latest` })
+	const sourceCode = code
+	const tokens = [ ...tokenise(code, { ecmaVersion: `latest` }) ]
 
-	for (const token of tokensIterable) {
+	const needExportDefault =
+		ensure(tokens[0], HERE).type == TokenTypes._function && ensure(tokens[1], HERE).type == TokenTypes.parenL
+
+	const maybePrivatePrefix = `$${uniqueId}$MAYBE_PRIVATE$`
+
+	for (const token of [ ...tokens ].reverse()) {
 		assert(`value` in token, HERE)
 
-		if (token.type != TokenTypes.privateId)
-			continue
+		if (token.type == TokenTypes.privateId) {
+			assert(typeof token.value == `string`, HERE)
 
-		assert(typeof token.value == `string`, HERE)
-
-		if (!SUBSCRIPT_PREFIXES.includes(token.value))
-			continue
-
-		const nextToken = tokensIterable.getToken()
-
-		if (nextToken.type != TokenTypes._in && nextToken.type != TokenTypes.dot)
-			throw SyntaxError(`Subscripts must be in the form of #fs.foo.bar`)
+			if (PREPROCESSOR_NAMES.includes(token.value))
+				code = spliceString(code, maybePrivatePrefix + token.value, token.start, token.end - token.start)
+		}
 	}
 
-	const sourceCode = code
-	let lengthBefore
-
-	do {
-		lengthBefore = code.length
-		code = code.replace(/^\s+/, ``).replace(/^\/\/.*/, ``).replace(/^\/\*[\s\S]*?\*\//, ``)
-	} while (code.length != lengthBefore)
-
-	code = code.replace(/^function\s*\(/, `export default function (`)
-
-	let file
-
-	while (true) {
-		let error
-
-		try {
-			file = parse(code, {
-				plugins: [
-					`typescript`,
-					[ `decorators`, { decoratorsBeforeExport: true } ],
-					`doExpressions`,
-					`functionBind`,
-					`functionSent`,
-					`partialApplication`,
-					[ `pipelineOperator`, { proposal: `hack`, topicToken: `%` } ],
-					`throwExpressions`,
-					[ `recordAndTuple`, { syntaxType: `hash` } ],
-					`classProperties`,
-					`classPrivateProperties`,
-					`classPrivateMethods`,
-					`logicalAssignment`,
-					`numericSeparator`,
-					`nullishCoalescingOperator`,
-					`optionalChaining`,
-					`optionalCatchBinding`,
-					`objectRestSpread`
-				],
-				sourceType: `module`
-			})
-
-			break
-		} catch (error_) {
-			assert(error_ instanceof SyntaxError, HERE)
-			error = error_ as SyntaxError & { pos: number, code: string, reasonCode: string }
-		}
-
-		if (error.code != `BABEL_PARSER_SYNTAX_ERROR` || error.reasonCode != `PrivateInExpectedIn`) {
-			console.log((/.+/.exec(code.slice(error.pos)))?.[0])
-
-			throw error
-		}
-
-		const codeSlice = code.slice(error.pos)
-		let match
-
-		if ((match = /^#[0-4fhmln]s\.scripts\.quine\(\)/.exec(codeSlice)))
-			code = spliceString(code, JSON.stringify(sourceCode), error.pos, match[0]!.length)
-		else if ((match = /^#[0-4fhmln]?s\./.exec(codeSlice)))
-			code = spliceString(code, `$`, error.pos, 1)
-		else if ((match = /^#D[^\w$]/.exec(codeSlice)))
-			code = spliceString(code, `$`, error.pos, 1)
-		else if ((match = /^#FMCL/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueId}$FMCL$`, error.pos, match[0]!.length)
-		else if ((match = /^#G/.exec(codeSlice)))
-			code = spliceString(code, `$${uniqueId}$GLOBAL$`, error.pos, match[0]!.length)
-		else if ((match = /^#db\./.exec(codeSlice)))
-			code = spliceString(code, `$`, error.pos, 1)
-		else
-			throw error
-	}
+	if (needExportDefault)
+		code = `export default ${code}`
 
 	let program!: NodePath<Program>
 
-	traverse(file, {
+	traverse(parse(code, {
+		plugins: [
+			`typescript`,
+			[ `decorators`, { decoratorsBeforeExport: true } ],
+			`doExpressions`,
+			`functionBind`,
+			`functionSent`,
+			`partialApplication`,
+			[ `pipelineOperator`, { proposal: `hack`, topicToken: `%` } ],
+			`throwExpressions`,
+			[ `recordAndTuple`, { syntaxType: `hash` } ],
+			`classProperties`,
+			`classPrivateProperties`,
+			`classPrivateMethods`,
+			`logicalAssignment`,
+			`numericSeparator`,
+			`nullishCoalescingOperator`,
+			`optionalChaining`,
+			`optionalCatchBinding`,
+			`objectRestSpread`
+		],
+		sourceType: `module`
+	}), {
 		Program(path) {
 			program = path
-			path.skip()
+		},
+		Identifier(path) {
+			if (!path.node.name.startsWith(maybePrivatePrefix))
+				return
+
+			const name = path.node.name.slice(maybePrivatePrefix.length)
+
+			if (path.parent.type == `ClassProperty` && path.parent.key == path.node) {
+				path.parentPath.replaceWith(t.classPrivateProperty(
+					t.privateName(t.identifier(name)),
+					path.parent.value,
+					path.parent.decorators,
+					path.parent.static
+				))
+			} else if (path.parent.type == `MemberExpression`) {
+				if (path.parent.property == path.node) {
+					assert(!path.parent.computed, HERE)
+					path.replaceWith(t.privateName(t.identifier(name)))
+				} else {
+					assert(path.parent.object == path.node, HERE)
+
+					if (name == `db`) {
+						if (path.parent.computed)
+							throw Error(`Index notation cannot be used on #db, must be in the form of #db.<DB method name>`)
+
+						if (path.parent.property.type != `Identifier`)
+							throw Error(`Expected DB method name to be an Identifier, got ${path.parent.property.type} instead`)
+
+						if (!validDBMethods.includes(path.parent.property.name))
+							throw Error(`Invalid DB method #db.${path.parent.property.name}`)
+
+						path.node.name = `$db`
+					} else {
+						assert(SUBSCRIPT_PREFIXES.includes(name), HERE)
+
+						if (path.parent.computed)
+							throw Error(`Index notation cannot be used for subscripts, must be in the form of #${name}.foo.bar`)
+
+						if (path.parent.property.type != `Identifier`)
+							throw Error(`Expected subscript user name to be Identifier but got ${path.parent.property.type} instead`)
+
+						if (path.parentPath.parent.type != `MemberExpression`)
+							throw Error(`Subscripts must be in the form of #${name}.foo.bar`)
+
+						if (path.parentPath.parent.computed)
+							throw Error(`Index notation cannot be used for subscripts, must be in the form of #${name}.foo.bar`)
+
+						if (path.parentPath.parent.property.type != `Identifier`)
+							throw Error(`Expected subscript subname to be Identifier but got ${path.parent.property.type} instead`)
+
+						if (
+							path.parentPath.parentPath?.parent.type == `CallExpression` &&
+							path.parent.property.name == `scripts` &&
+							path.parentPath.parent.property.name == `quine`
+						)
+							ensure(path.parentPath.parentPath.parentPath, HERE).replaceWith(t.stringLiteral(sourceCode))
+						else
+							path.node.name = `$${name}`
+					}
+				}
+			} else if (path.parent.type == `BinaryExpression` && path.parent.left == path.node && path.parent.operator == `in`)
+				path.replaceWith(t.privateName(t.identifier(name)))
+			else if (path.parent.type == `ClassMethod` && path.parent.key == path.node) {
+				assert(path.parent.kind != `constructor`, HERE)
+
+				path.parentPath.replaceWith(t.classPrivateMethod(
+					path.parent.kind,
+					t.privateName(t.identifier(name)),
+					path.parent.params,
+					path.parent.body,
+					path.parent.static
+				))
+			} else {
+				if (name == `FMCL`)
+					path.node.name = `$${uniqueId}$FMCL$`
+				else if (name == `G`)
+					path.node.name = `$${uniqueId}$GLOBAL$`
+				else if (name == `D`)
+					path.node.name = `$D`
+				else if (name == `db`)
+					throw Error(`Invalid #db syntax, must be in the form of #db.<DB method name>`)
+				else {
+					assert(SUBSCRIPT_PREFIXES.includes(name), `${HERE} ${name}`)
+
+					throw Error(`Invalid subscript syntax, must be in the form of #${name}.foo.bar`)
+				}
+			}
 		}
 	})
 
@@ -128,7 +170,7 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 	const needTuple = program.scope.hasGlobal(`Tuple`)
 
 	if (needRecord || needTuple) {
-		file.program.body.unshift(t.importDeclaration(
+		program.node.body.unshift(t.importDeclaration(
 			needRecord
 				? (needTuple
 					? [
@@ -143,7 +185,7 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 	}
 
 	if (program.scope.hasGlobal(`Proxy`)) {
-		file.program.body.unshift(t.importDeclaration([
+		program.node.body.unshift(t.importDeclaration([
 			t.importDefaultSpecifier(t.identifier(`Proxy`))
 		], t.stringLiteral(resolveModule(`proxy-polyfill/src/proxy.js`, import.meta.url).slice(7))))
 	}
@@ -152,5 +194,5 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 		throw Error(`Scripts that only contain a single function declaration are no longer supported.\nPrefix the function declaration with \`export default\`.`)
 	}
 
-	return { code: generate(file).code }
+	return { code: generate(program.node).code }
 }
