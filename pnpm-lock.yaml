@@ -136,8 +136,8 @@ importers:
         version: 5.36.0
     devDependencies:
       '@samual/rollup-config':
-        specifier: ^0.1.2
-        version: 0.1.2(@babel/core@7.24.4)(@types/babel__core@7.20.5)(prettier@3.3.3)(rollup@4.27.4)
+        specifier: 0.1.3-efb250a
+        version: 0.1.3-efb250a(@babel/core@7.24.4)(@types/babel__core@7.20.5)(prettier@3.3.3)(rollup@4.27.4)
       '@total-typescript/ts-reset':
         specifier: ^0.6.1
         version: 0.6.1
@@ -952,8 +952,8 @@ packages:
     resolution: {integrity: sha512-5uUTQaWsuK0110a0voLpiHn4S+fkGd9s2EkKFg6JGfAP8m9UFmMf55wqw5ycypjhHqLgn6sdZDSKCyeQeVEbdA==}
     engines: {node: ^18.20 || ^20.10 || >=22}
 
-  '@samual/rollup-config@0.1.2':
-    resolution: {integrity: sha512-UVmGQ3wTGPXxqozn7aFqfhzMPoD6ASbu5X5IsRxVDC6uwM4Cd/llDETHalM2sriYr0Me/CxTSuJkeDIKtPfPBA==}
+  '@samual/rollup-config@0.1.3-efb250a':
+    resolution: {integrity: sha512-F5vlWTdZk96duS7FLoC8Pg7uchUN0/RpFmKC2NQ6jHT0sVSTAxbQapQHph8TNXkqH5sc7hDFbj802vpZW37OBw==}
     engines: {node: ^18.20 || ^20.10 || >=22}
 
   '@total-typescript/ts-reset@0.6.1':
@@ -2208,7 +2208,7 @@ snapshots:
 
   '@samual/lib@0.13.0': {}
 
-  '@samual/rollup-config@0.1.2(@babel/core@7.24.4)(@types/babel__core@7.20.5)(prettier@3.3.3)(rollup@4.27.4)':
+  '@samual/rollup-config@0.1.3-efb250a(@babel/core@7.24.4)(@types/babel__core@7.20.5)(prettier@3.3.3)(rollup@4.27.4)':
     dependencies:
       '@babel/preset-env': 7.26.0(@babel/core@7.24.4)
       '@babel/preset-typescript': 7.26.0(@babel/core@7.24.4)
