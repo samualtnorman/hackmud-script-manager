@@ -85,6 +85,8 @@ const colourV = chalk.rgb(0xFF, 0x00, 0xEC)
 const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
 
 if (process.version.startsWith(`v21.`)) {
+	process.exitCode = 1
+
 	console.warn(colourF(`\
 ${chalk.bold(`Warning:`)} Support for Node.js 21 will be dropped in the next minor version of HSM
          Your current version of Node.js is ${chalk.bold(process.version)}
@@ -116,6 +118,8 @@ switch (commands[0]) {
 		const noMinifyOption = popOption(`no-minify`, `skip-minify`)
 
 		if (noMinifyOption && noMinifyOption.name != `no-minify`) {
+			process.exitCode = 1
+
 			console.warn(colourF(`\
 ${chalk.bold(`Warning:`)} ${formatOption(noMinifyOption.name)} is deprecated and will be removed in the next minor
          release of HSM
@@ -216,6 +220,9 @@ ${chalk.bold(`Warning:`)} ${formatOption(noMinifyOption.name)} is deprecated and
 				})
 
 				const timeTook = performance.now() - timeStart
+
+				if (warnings.length)
+					process.exitCode = 1
 
 				for (const { message } of warnings)
 					console.warn(colourF(`${chalk.bold(`Warning:`)} ${message}`))
@@ -333,6 +340,8 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)} option or ${colourN(`HSM_HACKM
 					popOption(`dts-path`, `type-declaration-path`, `type-declaration`, `dts`, `gen-types`)
 
 				if (dtsPathOption && dtsPathOption.name != `dts-path` && dtsPathOption.name != `type-declaration-path`) {
+					process.exitCode = 1
+
 					console.warn(colourF(`\
 ${chalk.bold(`Warning:`)} ${formatOption(dtsPathOption.name)} is deprecated and will be removed in the
          next minor release of HSM
@@ -397,6 +406,7 @@ ${chalk.bold(`Warning:`)} ${formatOption(dtsPathOption.name)} is deprecated and 
 	case `emit-dts`: {
 		if (commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
 			warnedDeprecatedEmitDtsAlias = true
+			process.exitCode = 1
 
 			console.warn(colourF(`\
 ${chalk.bold(`Warning:`)} ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
@@ -559,6 +569,8 @@ ${colourN(`--root-folder-path`)}
 		case `gen-types`:
 		case `emit-dts`: {
 			if (!warnedDeprecatedEmitDtsAlias && commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
+				process.exitCode = 1
+
 				console.warn(colourF(`\
 ${chalk.bold(`Warning:`)} ${colourC(`hsm`)} ${colourL(commands[0])} is deprecated and will be removed
          in the next minor release of HSM
@@ -619,6 +631,9 @@ function logInfo({ path, users, characterCount, error, warnings }: Info, hackmud
 
 		return
 	}
+
+	if (warnings.length)
+		process.exitCode = 1
 
 	for (const warning of warnings)
 		console.warn(colourF(`${chalk.bold(`Warning:`)} ${warning.message}`))
