@@ -885,7 +885,7 @@ declare global {
 	type ScriptSuccess<T = unknown> = { ok: true } & T
 	type ScriptFailure = { ok: false, msg?: string }
 	type ScriptResponse<T = unknown> = ScriptSuccess<T> | ScriptFailure
-	type Scriptor<TArgs extends any[] = any[]> = { name: string, call: (...args: TArgs) => unknown }
+	type Scriptor<TArgs = any> = { name: string, call: (args: TArgs) => unknown }
 	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 	type ObjectId = { $oid: string }
 
