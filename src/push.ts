@@ -79,7 +79,7 @@ export async function push(
 	if (hackmudFolder instanceof Error)
 		return hackmudFolder
 
-	const sourceFolderFolders = sourceFolder.filter(({ name, stats }) => stats.isDirectory() && /^[_a-z][_a-z0-9]{0,24}$/.test(name))
+	const sourceFolderFolders = sourceFolder.filter(({ name, stats }) => stats.isDirectory() && /^[a-z_][a-z\d_]{0,24}$/.test(name))
 
 	const allUsers = new Set([
 		...scripts.map(scriptName => ensure(scriptName.split(`.`)[0], HERE)).filter(name => name != `*`),
