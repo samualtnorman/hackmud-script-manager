@@ -720,7 +720,7 @@ type MongoTypeStringsToTypes = {
 
 type MongoTypeString = keyof MongoTypeStringsToTypes
 type MongoTypeNumber = -1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 16 | 17 | 18 | 19 | 127
-type MongoId = Exclude<MongoPrimitive, null> | MongoObject
+type MongoId = Exclude<MongoPrimitive, null> | MongoObjectId | MongoObject
 type MongoQueryId = Exclude<MongoPrimitive, null> | MongoQueryObject
 type MongoDocument = MongoObject & { _id?: MongoId }
 
