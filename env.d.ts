@@ -865,8 +865,8 @@ type BrainContext = Replace<CliContext, { /** Whether the script is being run vi
 // when anyField: true is given, other fields (except _id) are omitted
 
 type MongoProject<TDocument, TProjection> =
-	true extends (1 extends TProjection[keyof TProjection] ? true : TProjection[keyof TProjection]) ?
-		(TProjection extends { _id: false | 0 } ? {} : { _id: TDocument extends { _id: infer TId } ? TId : MongoId }) &
+	(TProjection extends { _id: false | 0 } ? {} : { _id: TDocument extends { _id: infer TId } ? TId : MongoId }) & (
+		true extends (1 extends TProjection[keyof TProjection] ? true : TProjection[keyof TProjection]) ?
 			{
 				[K in
 					keyof TDocument as K extends keyof TProjection ? TProjection[K] extends true | 1 ? K : never : never
@@ -877,7 +877,8 @@ type MongoProject<TDocument, TProjection> =
 					keyof TProjection as TProjection[K] extends true | 1 ? K extends keyof TDocument ? never : K : never
 				]?: MongoValue
 			}
-	: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
+		: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
+	)
 
 type DeepFreeze<T> = { readonly [P in keyof T]: DeepFreeze<T[P]> }
 
