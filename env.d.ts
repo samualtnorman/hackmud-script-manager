@@ -710,7 +710,7 @@ type MongoTypeStringsToTypes = {
 	string: string
 	object: MongoObject
 	array: MongoValue[]
-	objectId: ObjectId
+	objectId: MongoObjectId
 	bool: boolean
 	date: Date
 	null: null
@@ -888,7 +888,7 @@ declare global {
 	type ScriptResponse<T = unknown> = ScriptSuccess<T> | ScriptFailure
 	type Scriptor<TArgs = any> = { name: string, call: (args: TArgs) => unknown }
 	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
-	type ObjectId = { $oid: string }
+	type MongoObjectId = { $oid: string }
 
 	interface PlayerFullsec {}
 	interface PlayerHighsec {}
@@ -979,7 +979,7 @@ declare global {
 		us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
 			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
-		ObjectId: () => ObjectId
+		ObjectId: () => MongoObjectId
 	}
 
 	/** Debug Log.
