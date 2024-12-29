@@ -703,7 +703,7 @@ type MongoObject = { [k: string]: MongoValue, [k: `$${string}`]: never }
 type MongoQueryValue = MongoPrimitive | MongoQueryValue[] | MongoQueryObject
 
 type MongoQueryObject =
-	{ [k: string]: MongoQueryValue, [k: `$${string}`]: MongoValue, $type?: keyof MongoTypeStringsToTypes | (string & {}) }
+	{ [k: string]: MongoQueryValue, [k: `$${string}`]: MongoValue } & { $type?: keyof MongoTypeStringsToTypes | (string & {}) }
 
 type MongoTypeStringsToTypes = {
 	double: number
