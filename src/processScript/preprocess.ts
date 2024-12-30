@@ -7,15 +7,12 @@ import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
 import { spliceString } from "@samual/lib/spliceString"
-import { tokenizer as tokenise, tokTypes as TokenTypes } from "acorn"
 import { resolve as resolveModule } from "import-meta-resolve"
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
-
-const SUBSCRIPT_PREFIXES = [ `s`, `fs`, `4s`, `hs`, `3s`, `ms`, `2s`, `ls`, `1s`, `ns`, `0s` ]
 
 export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ uniqueId: string }>
 
@@ -24,25 +21,6 @@ export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ unique
 export async function preprocess(code: string, { uniqueId = `00000000000` }: PreprocessOptions = {})
 : Promise<{ code: string }> {
 	assert(/^\w{11}$/.test(uniqueId), HERE)
-
-	const tokensIterable = tokenise(code, { ecmaVersion: `latest` })
-
-	for (const token of tokensIterable) {
-		assert(`value` in token, HERE)
-
-		if (token.type != TokenTypes.privateId)
-			continue
-
-		assert(typeof token.value == `string`, HERE)
-
-		if (!SUBSCRIPT_PREFIXES.includes(token.value))
-			continue
-
-		const nextToken = tokensIterable.getToken()
-
-		if (nextToken.type != TokenTypes._in && nextToken.type != TokenTypes.dot)
-			throw SyntaxError(`Subscripts must be in the form of #fs.foo.bar`)
-	}
 
 	const sourceCode = code
 	let lengthBefore
