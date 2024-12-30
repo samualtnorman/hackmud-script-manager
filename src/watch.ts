@@ -145,7 +145,16 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 			try {
 				({ script: minifiedCode, warnings } = await processScript(
 					await readFile(filePath, { encoding: `utf8` }),
-					{ minify, scriptUser: true, scriptName, uniqueId, filePath, mangleNames, forceQuineCheats }
+					{
+						minify,
+						scriptUser: true,
+						scriptName,
+						uniqueId,
+						filePath,
+						mangleNames,
+						forceQuineCheats,
+						rootFolderPath
+					}
 				))
 			} catch (error) {
 				assert(error instanceof Error, HERE)
