@@ -270,7 +270,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			map: <T, U>(array: T[], callback: (index: number, value: T) => U) => U[]
 
 			/** @returns A new object derived from `obj` with only the keys specified in `keys`. */
-			pick: <TObj extends object, TKeys extends (keyof TObj)>(obj: TObj, keys: TKeys[]) => TObj[TKeys]
+			pick: <TObj extends object, TKeys extends keyof TObj>(obj: TObj, keys: TKeys[]) => { [K in TKeys]: TObj[K] }
 
 			/** @returns An array with the elements from `array` in a random order. */ shuffle: <T>(array: T[]) => T[]
 
