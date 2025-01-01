@@ -189,7 +189,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 
 			/** @returns A random element from `array`, selected with a random number generated using `rng`
 			  * (defaults to `Math.random`). */
-			sample: (array: any[], rng?: ()=>number) => any
+			sample: <T>(array: T[], rng?: ()=>number) => T
 
 			/** @returns Whether two MongoDB `ObjectId`s are equivalent. */ are_ids_eq: (id1: any, id2: any) => boolean
 			/** Convert a MongoDB `ObjectId` to a string. */ id_to_str: (id: string | {$oid: string}) => any
@@ -270,7 +270,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			map: <T, U>(array: T[], callback: (index: number, value: T) => U) => U[]
 
 			/** @returns A new object derived from `obj` with only the keys specified in `keys`. */
-			pick: (obj: object, keys: string[]) => any
+			pick: <TObj extends object, TKeys extends keyof TObj>(obj: TObj, keys: TKeys[]) => { [K in TKeys]: TObj[K] }
 
 			/** @returns An array with the elements from `array` in a random order. */ shuffle: <T>(array: T[]) => T[]
 
@@ -298,7 +298,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			security_level_names: [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
 
 			/** @returns The string name of a numeric security level. */
-			get_security_level_name: (security_level: number) => any
+			get_security_level_name: (security_level: number) => string
 
 			/** @param result The return value of a call to `$db.i()` or `$db.r()`.
 			  * @param nModified The expected value of `result.nModified`.
