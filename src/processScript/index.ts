@@ -260,7 +260,7 @@ export async function processScript(code: string, {
 			{
 				name: `hackmud-script-manager`,
 				async transform(code, id) {
-					if (!id.includes(`/node_modules/`))
+					if (id.startsWith(`/`) && !id.includes(`/node_modules/`))
 						return (await preprocess(code, { uniqueId })).code
 
 					let program!: NodePath<Program>
