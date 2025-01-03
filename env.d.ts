@@ -959,14 +959,14 @@ declare global {
 		  * @param query Specifies deletion criteria using query operators.
 		  * @param command The modifications to apply.
 		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-		u: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
+		u: <TQuery extends MongoDocument, TCommand extends MongoDocument>(query: MongoQuery<TQuery> | MongoQuery<TQuery>[], command: MongoUpdateCommand<TCommand>) =>
 			{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
 
 		/** Updates one document within the collection based on the filter.
 		  * @param query Specifies deletion criteria using query operators.
 		  * @param command The modifications to apply.
 		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-		u1: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
+		u1: <TQuery extends MongoDocument, TCommand extends MongoDocument>(query: MongoQuery<TQuery> | MongoQuery<TQuery>[], command: MongoUpdateCommand<TCommand>) =>
 			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 		/** Update or insert document.
@@ -976,7 +976,7 @@ declare global {
 		  * @param query Specifies deletion criteria using query operators.
 		  * @param command The modifications to apply.
 		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-		us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
+		us: <TQuery extends MongoDocument, TCommand extends MongoDocument>(query: MongoQuery<TQuery> | MongoQuery<TQuery>[], command: MongoUpdateCommand<TCommand>) =>
 			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 		ObjectId: () => MongoObjectId
