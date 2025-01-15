@@ -755,11 +755,16 @@ type MongoQuerySelector<T extends MongoValue> = Partial<
 
 type MongoQuery<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySelector<T[K]> } & { _id?: MongoId }
 
-type MongoUpdateOperators<T extends MongoObject> = Partial<{
+type MongoUpdateArrayOperatorUniversalModifiers<T> = { $each?: T extends [] ? T : T[] }
+
+type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalModifiers<T> &
+	{ $position?: number, $slice?: number, $sort?: 1 | -1 }
+
+type MongoUpdateCommand<T extends MongoObject> = Partial<{
 	/* Universal operators */
-	$set: Partial<Record<string, MongoCommandValue> & T>
-	$setOnInsert: Partial<Record<string, MongoCommandValue> & T>
-	$unset: Partial<Record<string, ""> & T>
+	$set: Partial<Record<(string & {}) | keyof T, MongoCommandValue>>
+	$setOnInsert: Partial<Record<(string & {}) | keyof T, MongoCommandValue>>
+	$unset: Partial<Record<(string & {}) | keyof T, "">>
 
 	$rename: Partial<Record<string, string> & { [key in keyof T]: string }>
 
@@ -791,13 +796,6 @@ type MongoUpdateOperators<T extends MongoObject> = Partial<{
 
 	$pullAll: Record<string, MongoCommandValue> & { [K in keyof T as T[K] extends [] ? K : never]?: T[K] }
 }>
-
-type MongoUpdateArrayOperatorUniversalModifiers<T> = { $each?: T extends [] ? T : T[] }
-
-type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalModifiers<T> &
-	{ $position?: number, $slice?: number, $sort?: 1 | -1 }
-
-type MongoUpdateCommand<Schema extends MongoObject> = MongoUpdateOperators<Schema>
 
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
