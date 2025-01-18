@@ -699,7 +699,7 @@ type Nullsec = Lowsec & PlayerNullsec & {
 // database
 type MongoPrimitive = null | boolean | number | Date | string
 type MongoValue = MongoPrimitive | MongoValue[] | MongoObject
-type MongoObject = { [k: string]: MongoValue, [k: `$${string}`]: never }
+type MongoObject = Record<string, MongoValue>
 type MongoQueryValue = MongoPrimitive | MongoQueryValue[] | MongoQueryObject
 
 type MongoQueryObject =
