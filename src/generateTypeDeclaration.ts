@@ -17,7 +17,7 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 	const allScripts: Record<string, string[]> = {}
 	const allAnyScripts: Record<string, string[]> = {}
 
-	await Promise.all((await readDirectoryWithStats(sourceDirectory)).map(async ({ stats, name }) => {
+	await Promise.all((await readDirectoryWithStats(sourceDirectory)).filter(({stats, name}) => !stats.isDirectory || /^[a-z_][a-z\d_]{0,24}$/.test(name)).map(async ({ stats, name }) => {
 		if (stats.isFile()) {
 			if (name.endsWith(`.ts`)) {
 				if (!name.endsWith(`.d.ts`))
