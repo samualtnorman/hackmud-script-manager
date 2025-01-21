@@ -26,7 +26,7 @@ import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
-import { relative as getRelativePath } from "path"
+import { relative as getRelativePath, sep as pathSeparator } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants"
@@ -46,6 +46,11 @@ export { minify } from "./minify"
 export { postprocess } from "./postprocess"
 export { preprocess } from "./preprocess"
 export { transform } from "./transform"
+
+function isPath(str: string): boolean {
+	if (pathSeparator == `/`) return str.startsWith(`/`);
+	return /^[A-Z]:\\/.test(str);
+}
 
 export type ProcessOptions = LaxPartial<{
 	/** whether to minify the given code */ minify: boolean
@@ -260,7 +265,7 @@ export async function processScript(code: string, {
 			{
 				name: `hackmud-script-manager`,
 				async transform(code, id) {
-					if (id.startsWith(`/`) && !id.includes(`/node_modules/`))
+					if (isPath(id) && !id.includes(`${pathSeparator}node_modules${pathSeparator}`))
 						return (await preprocess(code, { uniqueId })).code
 
 					let program!: NodePath<Program>
