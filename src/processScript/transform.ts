@@ -714,7 +714,11 @@ export function transform(
 						thisIsReferenced = true
 						path.replaceWith(t.identifier(`_${uniqueId}_THIS_`))
 					},
-					Function: path => path.skip()
+					Function(path) {
+						if (path.node.type != `ArrowFunctionExpression`) {
+							path.skip()
+						}
+					}
 				}, scope)
 
 				if (!methodReferencesThis)
