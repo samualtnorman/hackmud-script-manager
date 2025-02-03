@@ -22,6 +22,8 @@ type OptionValue = boolean | string
 
 const options = new Map<string, OptionValue>
 const commands: string[] = []
+let didParseOption = false
+let didParseOptionAfterCommand = false
 
 for (const argument of process.argv.slice(2)) {
 	if (argument[0] == `-`) {
@@ -48,8 +50,15 @@ for (const argument of process.argv.slice(2)) {
 			for (const option of key!.slice(1))
 				options.set(option, value)
 		}
-	} else
+
+		didParseOption = true
+	} else {
+		if (didParseOption) {
+			didParseOptionAfterCommand = true
+		}
+
 		commands.push(argument)
+	}
 }
 
 const pushModule = import(`../push`)
@@ -82,6 +91,15 @@ const userColours = new AutoMap<string, string>(user => {
 })
 
 const log = (message: string) => console.log(colourS(message))
+
+if (didParseOptionAfterCommand) {
+	process.exitCode = 1
+
+	console.warn(colourF(`\
+${chalk.bold(`Warning:`)} Options should come after commands when calling the script.
+         This warning will become an error in the next minor version of HSM.`
+	))
+}
 
 if (process.version.startsWith(`v21.`)) {
 	process.exitCode = 1
