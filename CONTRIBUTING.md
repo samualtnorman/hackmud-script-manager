@@ -25,8 +25,8 @@ If you get stuck, message me on discord `@samualn`.
 ## Tips and Tricks
 Run `./rollup.config.js` to only recompile.
 
-### Run the Devepment Version of HSM
-You can run the devepment version of HSM by running `node dist/bin/hsm.js`. You can pass it arguments just like you normally would e.g. `node dist/bin/hsm.js --version`.
+### Run the Development Version of HSM
+You can run the development version of HSM by running `node dist/bin/hsm.js`. You can pass it arguments just like you normally would e.g. `node dist/bin/hsm.js --version`.
 
 ### Install the Development Version of the NPM Package in Another Project
 In the other project (e.g. testing with Hackmud Scripting Environment) run `pnpm add ~/path/to/hackmud-script-manager/dist`.
