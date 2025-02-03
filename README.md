@@ -1,6 +1,8 @@
 # Hackmud Script Manager
 Command made for [Hackmud Scripting Environment](https://github.com/samualtnorman/hackmud-environment), which is a scripting environment for hackmud with minification, autocompletes / intellisense, and TypeScript support.
 
+Join [our Discord server](https://discord.gg/RSa4Sc6pNA)!
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R6R0XN5CX)
 
 You can read about how HSM works [in my blog post](https://samual.uk/blog/js-code-transformation-niche-environment/).
