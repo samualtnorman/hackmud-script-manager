@@ -1,6 +1,6 @@
 import type { NodePath } from "@babel/traverse"
 import babelTraverse from "@babel/traverse"
-import type { BlockStatement, CallExpression, File, FunctionDeclaration } from "@babel/types"
+import type { BlockStatement, CallExpression, File, FunctionDeclaration, Identifier } from "@babel/types"
 import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
@@ -696,6 +696,83 @@ export function transform(
 					]))
 				}
 			}
+		},
+		ObjectExpression(path) {
+			const { node: object, scope, parent } = path
+
+			const evenMoreUniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
+
+			// This removes the additional let that would normally be inserted from this sort of construct:
+			// const foo = {
+			//   bar() { this.whatever = 1 }
+			// }
+			const reuseDeclaredName = parent.type == `VariableDeclarator`
+				&& path.parentPath?.parentPath?.node?.type == `VariableDeclaration`
+				&& path.parentPath?.parentPath?.node?.kind == `const` // This is only safe if it's not redeclared!
+				&& parent.id.type == `Identifier`
+
+			let thisId = reuseDeclaredName ? (parent.id as Identifier).name : `_${evenMoreUniqueId}_THIS_`
+
+			let thisIsReferenced = false
+			for (const property of object.properties) {
+				if (property.type != `ObjectMethod`)
+					continue
+
+				traverse(property.body, {
+					ThisExpression(path) {
+						thisIsReferenced = true
+						path.replaceWith(t.identifier(thisId))
+					},
+					Function(path) {
+						if (path.node.type != `ArrowFunctionExpression`) {
+							path.skip()
+						}
+					}
+				}, scope);
+			}
+
+			if (!thisIsReferenced) return
+			if (reuseDeclaredName) return
+
+			path.replaceWith(
+				t.assignmentExpression(`=`, t.identifier(thisId), object)
+			)
+
+			let someBlock = null
+			let currentParent: NodePath<any> | null = path
+			while (currentParent) {
+				if (!currentParent || !currentParent.node) break
+
+				if (t.isBlock(currentParent.node)) {
+					someBlock = currentParent.node
+					break
+				} else if (t.isArrowFunctionExpression(currentParent.parentPath?.node)) {
+					// This means we're in an arrow function like () => 1.
+					// The arrow function can have a block, as a treat
+					currentParent.replaceWith(
+						t.blockStatement([
+							t.returnStatement(
+								currentParent.node,
+							),
+						]),
+					)
+					someBlock = currentParent.node
+					break
+				}
+
+				currentParent = currentParent.parentPath
+			}
+
+			assert(someBlock != null, HERE)
+
+			someBlock!.body.unshift(
+				t.variableDeclaration(`let`, [
+					t.variableDeclarator(
+						t.identifier(thisId),
+						null
+					),
+				]),
+			)
 		},
 		ClassBody({ node: classBody, scope, parent }) {
 			assert(t.isClass(parent), HERE)
