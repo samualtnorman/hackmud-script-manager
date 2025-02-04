@@ -1,6 +1,5 @@
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { basename as getBaseName, resolve as resolvePath } from "path"
-import * as PathPosix from "path/posix"
 
 export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string): Promise<string> {
 	const users = new Set<string>()
@@ -44,12 +43,10 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 		}
 	}))
 
-	sourceDirectory = PathPosix.resolve(sourceDirectory)
-
 	let o = ``
 
 	for (const script of wildScripts)
-		o += `type $${script}$ = typeof import("${sourceDirectory}/${script}").default\n`
+		o += `type $${script}$ = typeof import(${JSON.stringify(resolvePath(sourceDirectory, script))}).default\n`
 
 	o += `\n`
 
@@ -57,7 +54,7 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 		const scripts = allScripts[user]!
 
 		for (const script of scripts)
-			o += `type $${user}$${script}$ = typeof import("${sourceDirectory}/${user}/${script}").default\n`
+			o += `type $${user}$${script}$ = typeof import(${JSON.stringify(resolvePath(sourceDirectory, user, script))}).default\n`
 	}
 
 	// TODO detect security level and generate apropriate code
