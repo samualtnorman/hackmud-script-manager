@@ -1,6 +1,6 @@
-import babelGenerator from "@babel/generator"
+import generate from "@babel/generator"
 import type { NodePath } from "@babel/traverse"
-import babelTraverse from "@babel/traverse"
+import traverse from "@babel/traverse"
 import type { Expression, File, FunctionDeclaration, Program } from "@babel/types"
 import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
@@ -10,11 +10,6 @@ import { spliceString } from "@samual/lib/spliceString"
 import { tokTypes as tokenTypes, tokenizer as tokenize } from "acorn"
 import * as terser from "terser"
 import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings } from "./shared"
-
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 type MinifyOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueId: string

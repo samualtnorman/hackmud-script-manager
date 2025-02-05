@@ -30,3 +30,28 @@ You can run the development version of HSM by running `node dist/bin/hsm.js`. Yo
 
 ### Install the Development Version of the NPM Package in Another Project
 In the other project (e.g. testing with Hackmud Scripting Environment) run `pnpm add ~/path/to/hackmud-script-manager/dist`.
+
+## Tests
+Tests can be run by running `vitest run` (assuming you have followed above setup instructions).
+
+There is currently not enforcement on writing unit tests but if you are going to, the test you write MUST be failing.
+You CANNOT add passing tests. If you are also writing a fix for a new test, ensure that the fix is in a seperate commit
+AFTER the commit the test is added in. This ensures that someone else can checkout the commit with the newly added test
+and verify that it is failing, checkout the commit where the fix is implemented, and verify that the test is now
+passing.
+
+The files in the `game-scripts-test/` folder are the input for testing `processScript()`. They are read by the vitest
+block at the bottom of `src/processScript/index.ts` where they are transformed and evaluated. Support for testing
+subscripts and other preprocessor-related stuff is not yet implemented. If one of these tests is failing, you will see
+the path outputed like so:
+
+```
+ ❯ src/processScript/index.ts (1 test | 1 failed) 6ms
+   × game-scripts-tests/this_function_array.ts 6ms
+     → expected undefined to be [ [Function] ] // Object.is equality
+```
+
+Notice `game-scripts-tests/this_function_array.ts`.
+
+The naming convention uses underscores instead of dashes as if it was the name of a real hackmud script (which cannot
+contain dashes).

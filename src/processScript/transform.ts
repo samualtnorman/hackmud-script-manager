@@ -1,5 +1,5 @@
 import type { NodePath } from "@babel/traverse"
-import babelTraverse from "@babel/traverse"
+import traverse from "@babel/traverse"
 import type { BlockStatement, CallExpression, File, FunctionDeclaration, Identifier } from "@babel/types"
 import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
@@ -7,9 +7,6 @@ import { assert } from "@samual/lib/assert"
 import { clearObject } from "@samual/lib/clearObject"
 import { validDBMethods } from "../constants"
 import { getReferencePathsToGlobal } from "./shared"
-
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export type TransformOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueId: string
