@@ -12,3 +12,4 @@ jobs:
     - run: export PATH=$PWD/node_modules/.bin:$PATH
     - run: scripts/package.sh
     - run: scripts/lint.sh
+    - run: vitest run
