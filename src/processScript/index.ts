@@ -27,7 +27,7 @@ import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
 import { readFile, readdir as readFolder } from "fs/promises"
-import { basename as getPathBasename, relative as getRelativePath, isAbsolute as isAbsolutePath, sep as pathSeparator, resolve as resolvePath } from "path"
+import { basename as getPathBasename, relative as getRelativePath, isAbsolute as isAbsolutePath, sep as pathSeparator, resolve as resolvePath, join as joinPath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants"
@@ -418,12 +418,14 @@ export async function processScript(code: string, {
 if (import.meta.vitest) {
 	const DEBUG_LOG_PROCESSED_SCRIPTS = false
 	const TESTS_FOLDER = `game-scripts-tests`
+	const REASSIGNMENT_TEST_FILE = `reassignment_to_const_is_invalid.ts`
 
 	const { test, expect } = import.meta.vitest
 
 	const testFiles = await Promise.all(
 		(await readFolder(TESTS_FOLDER, { withFileTypes: true }))
 			.filter(dirent => dirent.isFile())
+			.filter(dirent => dirent.name != REASSIGNMENT_TEST_FILE)
 			.map(async dirent => {
 				const filePath = getRelativePath(`.`, resolvePath(TESTS_FOLDER, dirent.name))
 				const source = await readFile(filePath, `utf8`)
@@ -444,4 +446,17 @@ if (import.meta.vitest) {
 			(0, eval)(`(${script})`)(import.meta.vitest)
 		})
 	}
+
+	const reassignmentTestPath = joinPath(TESTS_FOLDER, REASSIGNMENT_TEST_FILE)
+	const reassignmentTestSource = await readFile(reassignmentTestPath, `utf8`)
+
+	const options: ProcessOptions = {
+		scriptName: REASSIGNMENT_TEST_FILE,
+		filePath: reassignmentTestPath,
+		minify: false
+	}
+
+	expect(async () => await processScript(reassignmentTestSource, options))
+		.rejects
+		.toThrowError(`Reassignment to const variable i is not allowed!`)
 }
