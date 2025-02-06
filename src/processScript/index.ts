@@ -1,5 +1,5 @@
 import type { NodePath, PluginItem } from "@babel/core"
-import babelGenerator from "@babel/generator"
+import generate from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
 import babelPluginProposalDestructuringPrivate from "@babel/plugin-proposal-destructuring-private"
@@ -16,7 +16,7 @@ import babelPluginTransformOptionalCatchBinding from "@babel/plugin-transform-op
 import babelPluginTransformOptionalChaining from "@babel/plugin-transform-optional-chaining"
 import babelPluginTransformPrivatePropertyInObject from "@babel/plugin-transform-private-property-in-object"
 import babelPluginTransformUnicodeSetsRegex from "@babel/plugin-transform-unicode-sets-regex"
-import babelTraverse from "@babel/traverse"
+import traverse from "@babel/traverse"
 import type { LVal, Program } from "@babel/types"
 import t from "@babel/types"
 import rollupPluginAlias from "@rollup/plugin-alias"
@@ -26,7 +26,8 @@ import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
 import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
-import { relative as getRelativePath, sep as pathSeparator, isAbsolute as isAbsolutePath } from "path"
+import { readFile, readdir as readFolder } from "fs/promises"
+import { basename as getPathBasename, relative as getRelativePath, isAbsolute as isAbsolutePath, sep as pathSeparator, resolve as resolvePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants"
@@ -37,10 +38,6 @@ import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings 
 import { transform } from "./transform"
 
 const { format } = prettier
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const { default: generate } = babelGenerator as any as typeof import("@babel/generator")
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-const { default: traverse } = babelTraverse as any as typeof import("@babel/traverse")
 
 export { minify } from "./minify"
 export { postprocess } from "./postprocess"
@@ -162,21 +159,21 @@ export async function processScript(code: string, {
 	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
 	const plugins: PluginItem[] = [
-		[ babelPluginProposalDecorators.default, { decoratorsBeforeExport: true } ],
-		[ babelPluginTransformClassProperties.default ],
-		[ babelPluginTransformClassStaticBlock.default ],
-		[ babelPluginTransformPrivatePropertyInObject.default ],
-		[ babelPluginTransformLogicalAssignmentOperators.default ],
-		[ babelPluginTransformNumericSeparator.default ],
-		[ babelPluginTransformNullishCoalescingOperator.default ],
-		[ babelPluginTransformOptionalChaining.default ],
-		[ babelPluginTransformOptionalCatchBinding.default ],
-		[ babelPluginTransformJsonStrings.default ],
-		[ babelPluginTransformObjectRestSpread.default ],
-		[ babelPluginTransformExponentiationOperator.default ],
-		[ babelPluginTransformUnicodeSetsRegex.default ],
-		[ babelPluginProposalDestructuringPrivate.default ],
-		[ babelPluginProposalExplicitResourceManagement.default ]
+		[ babelPluginProposalDecorators, { decoratorsBeforeExport: true } ],
+		[ babelPluginTransformClassProperties ],
+		[ babelPluginTransformClassStaticBlock ],
+		[ babelPluginTransformPrivatePropertyInObject ],
+		[ babelPluginTransformLogicalAssignmentOperators ],
+		[ babelPluginTransformNumericSeparator ],
+		[ babelPluginTransformNullishCoalescingOperator ],
+		[ babelPluginTransformOptionalChaining ],
+		[ babelPluginTransformOptionalCatchBinding ],
+		[ babelPluginTransformJsonStrings ],
+		[ babelPluginTransformObjectRestSpread ],
+		[ babelPluginTransformExponentiationOperator ],
+		[ babelPluginTransformUnicodeSetsRegex ],
+		[ babelPluginProposalDestructuringPrivate ],
+		[ babelPluginProposalExplicitResourceManagement ]
 	]
 
 	let filePathResolved
@@ -186,7 +183,7 @@ export async function processScript(code: string, {
 
 		if (filePath.endsWith(`.ts`)) {
 			plugins.push([
-				(await import(`@babel/plugin-transform-typescript`)).default,
+				(await import(`@babel/plugin-transform-typescript`)),
 				{ allowDeclareFields: true, optimizeConstEnums: true }
 			])
 		} else {
@@ -209,13 +206,13 @@ export async function processScript(code: string, {
 			])
 
 			plugins.push(
-				[ babelPluginProposalDoExpressions.default ],
-				[ babelPluginProposalFunctionBind.default ],
-				[ babelPluginProposalFunctionSent.default ],
-				[ babelPluginProposalPartialApplication.default ],
-				[ babelPluginProposalPipelineOperator.default, { proposal: `hack`, topicToken: `%` } ],
-				[ babelPluginProposalThrowExpressions.default ],
-				[ babelPluginProposalRecordAndTuple.default, { syntaxType: `hash`, importPolyfill: true } ]
+				[ babelPluginProposalDoExpressions ],
+				[ babelPluginProposalFunctionBind ],
+				[ babelPluginProposalFunctionSent ],
+				[ babelPluginProposalPartialApplication ],
+				[ babelPluginProposalPipelineOperator, { proposal: `hack`, topicToken: `%` } ],
+				[ babelPluginProposalThrowExpressions ],
+				[ babelPluginProposalRecordAndTuple, { syntaxType: `hash`, importPolyfill: true } ]
 			)
 		}
 	} else {
@@ -242,14 +239,14 @@ export async function processScript(code: string, {
 		])
 
 		plugins.push(
-			[ babelPluginTransformTypescript.default, { allowDeclareFields: true, optimizeConstEnums: true } ],
-			[ babelPluginProposalDoExpressions.default ],
-			[ babelPluginProposalFunctionBind.default ],
-			[ babelPluginProposalFunctionSent.default ],
-			[ babelPluginProposalPartialApplication.default ],
-			[ babelPluginProposalPipelineOperator.default, { proposal: `hack`, topicToken: `%` } ],
-			[ babelPluginProposalThrowExpressions.default ],
-			[ babelPluginProposalRecordAndTuple.default, { syntaxType: `hash`, importPolyfill: true } ]
+			[ babelPluginTransformTypescript, { allowDeclareFields: true, optimizeConstEnums: true } ],
+			[ babelPluginProposalDoExpressions ],
+			[ babelPluginProposalFunctionBind ],
+			[ babelPluginProposalFunctionSent ],
+			[ babelPluginProposalPartialApplication ],
+			[ babelPluginProposalPipelineOperator, { proposal: `hack`, topicToken: `%` } ],
+			[ babelPluginProposalThrowExpressions ],
+			[ babelPluginProposalRecordAndTuple, { syntaxType: `hash`, importPolyfill: true } ]
 		)
 	}
 
@@ -416,4 +413,35 @@ export async function processScript(code: string, {
 	}
 
 	return { script: code, warnings }
+}
+
+if (import.meta.vitest) {
+	const DEBUG_LOG_PROCESSED_SCRIPTS = false
+	const TESTS_FOLDER = `game-scripts-tests`
+
+	const { test, expect } = import.meta.vitest
+
+	const testFiles = await Promise.all(
+		(await readFolder(TESTS_FOLDER, { withFileTypes: true }))
+			.filter(dirent => dirent.isFile())
+			.map(async dirent => {
+				const filePath = getRelativePath(`.`, resolvePath(TESTS_FOLDER, dirent.name))
+				const source = await readFile(filePath, `utf8`)
+
+				const { script, warnings } =
+					await processScript(source, { scriptName: getPathBasename(dirent.name), filePath, minify: false })
+
+				return { filePath, script, warnings }
+			})
+	)
+
+	for (const { filePath, script, warnings } of testFiles) {
+		test(filePath, () => {
+			if (DEBUG_LOG_PROCESSED_SCRIPTS)
+				console.debug(`${filePath} processed script:\n${script}`)
+
+			expect(warnings.length).toBe(0);
+			(0, eval)(`(${script})`)(import.meta.vitest)
+		})
+	}
 }
