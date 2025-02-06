@@ -741,12 +741,12 @@ export function transform(
 		let thisId = reuseDeclaredName ? (parent.id as Identifier).name : `_${evenMoreUniqueId}_THIS_`
 
 		let thisIsReferenced = false
-		if (path.type == `ObjectExpression`) {
+		if (object.type == `ObjectExpression`) {
 			for (const property of (object as ObjectExpression).properties) {
 				if (property.type != `ObjectMethod`)
 					continue
 
-				thisIsReferenced ||= replaceAllThisWith(object, scope, thisId)
+				thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
 			}
 		} else {
 			for (const element of (object as ArrayExpression).elements) {
