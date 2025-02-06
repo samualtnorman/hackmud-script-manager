@@ -444,4 +444,9 @@ if (import.meta.vitest) {
 			(0, eval)(`(${script})`)(import.meta.vitest)
 		})
 	}
+
+	const reassignmentTestSource = `export default () => { const i = 0; i = 1; }`
+	expect(async (): Promise<any> => await processScript(reassignmentTestSource, { scriptName: true, minify: false }))
+		.rejects
+		.toThrowError(`Reassignment to const variable i is not allowed!`)
 }
