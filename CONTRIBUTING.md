@@ -55,3 +55,6 @@ Notice `game-scripts-tests/this_function_array.ts`.
 
 The naming convention uses underscores instead of dashes as if it was the name of a real hackmud script (which cannot
 contain dashes).
+
+If you need to know what the test scripts look like after being transformed, look for a symbol named
+`DEBUG_LOG_PROCESSED_SCRIPTS` in this project and set it to `true`.
