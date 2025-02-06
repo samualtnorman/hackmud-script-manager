@@ -416,6 +416,7 @@ export async function processScript(code: string, {
 }
 
 if (import.meta.vitest) {
+	const DEBUG_LOG_PROCESSED_SCRIPTS = false
 	const TESTS_FOLDER = `game-scripts-tests`
 
 	const { test, expect } = import.meta.vitest
@@ -436,6 +437,9 @@ if (import.meta.vitest) {
 
 	for (const { filePath, script, warnings } of testFiles) {
 		test(filePath, () => {
+			if (DEBUG_LOG_PROCESSED_SCRIPTS)
+				console.debug(`${filePath} processed script:\n${script}`)
+
 			expect(warnings.length).toBe(0);
 			(0, eval)(`(${script})`)(import.meta.vitest)
 		})
