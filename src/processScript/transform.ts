@@ -891,21 +891,8 @@ export function transform(
 				parent.superClass = t.identifier(`Object`)
 		},
 		VariableDeclaration({ node: variableDeclaration }) {
-			if (variableDeclaration.kind == `const`) {
+			if (variableDeclaration.kind == `const`)
 				variableDeclaration.kind = `let`
-				variableDeclaration.extra = { ...variableDeclaration.extra, usedToBeConst: true }
-			}
-		},
-		AssignmentExpression({ node: assignment, scope }) {
-			const lhs = assignment.left
-
-			if (lhs.type != `Identifier`)
-				return
-
-			const binding = scope.getBinding(lhs.name)
-
-			if (binding?.path?.parentPath?.node?.extra?.usedToBeConst)
-				throw new Error(`Reassignment to const variable ${lhs.name} is not allowed!`)
 		},
 		ThisExpression: path => {
 			path.replaceWith(t.identifier(`undefined`))
