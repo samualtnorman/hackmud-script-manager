@@ -138,6 +138,9 @@ importers:
       '@antfu/eslint-config':
         specifier: ^4.1.1
         version: 4.1.1(@typescript-eslint/utils@8.23.0(eslint@9.19.0)(typescript@5.7.2))(@vue/compiler-sfc@3.5.13)(eslint-plugin-format@1.0.1(eslint@9.19.0))(eslint@9.19.0)(typescript@5.7.2)(vitest@3.0.5(@types/debug@4.1.12)(@types/node@18.19.65)(terser@5.36.0)(yaml@2.7.0))
+      '@babel/plugin-syntax-typescript':
+        specifier: ^7.25.9
+        version: 7.25.9(@babel/core@7.24.4)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
