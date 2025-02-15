@@ -175,7 +175,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 		/** **FULLSEC** */ trust: () => string[]
 
 		/**
-		 * FULLSEC
+		 * **FULLSEC*
 		 * @returns A code library containing useful helper functions you can use in your scripts.
 		 */
 		lib: () => {
