@@ -1,14 +1,11 @@
 {
-	"include": [ "*", "scripts/*", "game-scripts/*" ],
 	"compilerOptions": {
-		"noEmit": true,
-		"lib": [ "es2023" ],
-		"types": [ "node", "@total-typescript/ts-reset" ],
 		"target": "es2022",
+		"lib": [ "es2023" ],
 		"module": "nodenext",
 		"resolveJsonModule": true,
+		"types": [ "node", "@total-typescript/ts-reset" ],
 		"checkJs": true,
-		"skipLibCheck": true,
 		"strict": true,
 		"allowUnreachableCode": false,
 		"allowUnusedLabels": false,
@@ -18,6 +15,9 @@
 		"noUncheckedIndexedAccess": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"isolatedModules": true
-	}
+		"noEmit": true,
+		"isolatedModules": true,
+		"skipLibCheck": true
+	},
+	"include": [ "*", "scripts/*", "game-scripts/*" ]
 }

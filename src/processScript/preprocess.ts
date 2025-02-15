@@ -1,20 +1,22 @@
+/* eslint-disable jsdoc/check-param-names */
+import type { NodePath } from "@babel/traverse"
+import type { Program } from "@babel/types"
+import type { LaxPartial } from "@samual/lib"
 import generate from "@babel/generator"
 import { parse } from "@babel/parser"
-import type { NodePath } from "@babel/traverse"
 import traverse from "@babel/traverse"
-import type { Program } from "@babel/types"
 import t from "@babel/types"
-import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
 import { spliceString } from "@samual/lib/spliceString"
 import { resolve as resolveModule } from "import-meta-resolve"
 
 export type PreprocessOptions = LaxPartial<{ /** 11 a-z 0-9 characters */ uniqueId: string }>
 
-/** @param code source code for preprocessing
-  * @param options {@link PreprocessOptions details} */
-export async function preprocess(code: string, { uniqueId = `00000000000` }: PreprocessOptions = {})
-: Promise<{ code: string }> {
+/**
+ * @param code source code for preprocessing
+ * @param options {@link PreprocessOptions details}
+ */
+export async function preprocess(code: string, { uniqueId = `00000000000` }: PreprocessOptions = {}): Promise<{ code: string }> {
 	assert(/^\w{11}$/.test(uniqueId), HERE)
 
 	const sourceCode = code
@@ -64,7 +66,7 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 		}
 
 		if (error.code != `BABEL_PARSER_SYNTAX_ERROR` || error.reasonCode != `PrivateInExpectedIn`) {
-			console.log((/.+/.exec(code.slice(error.pos)))?.[0])
+			console.error((/.+/.exec(code.slice(error.pos)))?.[0])
 
 			throw error
 		}
@@ -102,15 +104,14 @@ export async function preprocess(code: string, { uniqueId = `00000000000` }: Pre
 
 	if (needRecord || needTuple) {
 		file.program.body.unshift(t.importDeclaration(
-			needRecord
-				? (needTuple
-					? [
+			needRecord ?
+				needTuple ?
+					[
 						t.importSpecifier(t.identifier(`Record`), t.identifier(`Record`)),
 						t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`))
 					]
-					: [ t.importSpecifier(t.identifier(`Record`), t.identifier(`Record`)) ]
-				)
-				: [ t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`)) ],
+				: [ t.importSpecifier(t.identifier(`Record`), t.identifier(`Record`)) ]
+			: [ t.importSpecifier(t.identifier(`Tuple`), t.identifier(`Tuple`)) ],
 			t.stringLiteral(`@bloomberg/record-tuple-polyfill`)
 		))
 	}

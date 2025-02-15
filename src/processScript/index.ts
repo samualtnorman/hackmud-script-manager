@@ -1,4 +1,9 @@
+/* eslint-disable jsdoc/check-param-names */
 import type { NodePath, PluginItem } from "@babel/core"
+import type { LVal, Program } from "@babel/types"
+import type { LaxPartial } from "@samual/lib"
+import { readFile, readdir as readFolder } from "fs/promises"
+import { basename as getPathBasename, relative as getRelativePath, isAbsolute as isAbsolutePath, sep as pathSeparator, resolve as resolvePath } from "path"
 import generate from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
@@ -17,17 +22,13 @@ import babelPluginTransformOptionalChaining from "@babel/plugin-transform-option
 import babelPluginTransformPrivatePropertyInObject from "@babel/plugin-transform-private-property-in-object"
 import babelPluginTransformUnicodeSetsRegex from "@babel/plugin-transform-unicode-sets-regex"
 import traverse from "@babel/traverse"
-import type { LVal, Program } from "@babel/types"
 import t from "@babel/types"
 import rollupPluginAlias from "@rollup/plugin-alias"
 import { babel as rollupPluginBabel } from "@rollup/plugin-babel"
 import rollupPluginCommonJS from "@rollup/plugin-commonjs"
 import rollupPluginJSON from "@rollup/plugin-json"
 import rollupPluginNodeResolve from "@rollup/plugin-node-resolve"
-import type { LaxPartial } from "@samual/lib"
 import { assert } from "@samual/lib/assert"
-import { readFile, readdir as readFolder } from "fs/promises"
-import { basename as getPathBasename, relative as getRelativePath, isAbsolute as isAbsolutePath, sep as pathSeparator, resolve as resolvePath } from "path"
 import prettier from "prettier"
 import { rollup } from "rollup"
 import { supportedExtensions as extensions } from "../constants"
@@ -51,20 +52,23 @@ export type ProcessOptions = LaxPartial<{
 	filePath: string
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
-	/** when set to `true` forces use of quine cheats
-	  *
-	  * when set to `false` forces quine cheats not to be used
-	  *
-	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
-	  */
+	/**
+	 * when set to `true` forces use of quine cheats
+	 *
+	 * when set to `false` forces quine cheats not to be used
+	 *
+	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	 */
 	forceQuineCheats: boolean
 
 	rootFolderPath: string
 }> & { /** the name of this script (or set to `true` if not yet known) */ scriptName: string | true }
 
-/** Minifies a given script
-  * @param code JavaScript or TypeScript code
-  * @param options {@link ProcessOptions details} */
+/**
+ * Minifies a given script
+ * @param code JavaScript or TypeScript code
+ * @param options {@link ProcessOptions details}
+ */
 export async function processScript(code: string, {
 	minify: shouldMinify = true,
 	uniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`),
@@ -80,9 +84,7 @@ export async function processScript(code: string, {
 	const sourceCode = code
 	let autocomplete
 	let statedSeclevel
-
 	// TODO do seclevel detection and verification per module
-
 	const autocompleteMatch = /^function\s*\(.+\/\/(?<autocomplete>.+)/.exec(code)
 
 	if (autocompleteMatch) {
@@ -108,45 +110,45 @@ export async function processScript(code: string, {
 					case `fs`:
 					case `4s`:
 					case `f`:
-					case `4`: {
+					case `4`:
 						statedSeclevel = 4
-					} break
+						break
 
 					case `highsec`:
 					case `high`:
 					case `hs`:
 					case `3s`:
 					case `h`:
-					case `3`: {
+					case `3`:
 						statedSeclevel = 3
-					} break
+						break
 
 					case `midsec`:
 					case `mid`:
 					case `ms`:
 					case `2s`:
 					case `m`:
-					case `2`: {
+					case `2`:
 						statedSeclevel = 2
-					} break
+						break
 
 					case `lowsec`:
 					case `low`:
 					case `ls`:
 					case `1s`:
 					case `l`:
-					case `1`: {
+					case `1`:
 						statedSeclevel = 1
-					} break
+						break
 
 					case `nullsec`:
 					case `null`:
 					case `ns`:
 					case `0s`:
 					case `n`:
-					case `0`: {
+					case `0`:
 						statedSeclevel = 0
-					} break
+						break
 
 					default:
 						// TODO turn into warning when I get round to those
@@ -339,28 +341,31 @@ export async function processScript(code: string, {
 			VariableDeclarator(path) {
 				const renameVariables = (lValue: LVal) => {
 					switch (lValue.type) {
-						case `Identifier`: {
+						case `Identifier`:
 							if (includesIllegalString(lValue.name)) {
 								path.scope.rename(
 									lValue.name,
 									`$${Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)}`
 								)
 							}
-						} break
 
-						case `ObjectPattern`: {
+							break
+
+						case `ObjectPattern`:
 							for (const property of lValue.properties) {
 								assert(property.type == `ObjectProperty`, HERE)
 								renameVariables(property.value as LVal)
 							}
-						} break
 
-						case `ArrayPattern`: {
+							break
+
+						case `ArrayPattern`:
 							for (const element of lValue.elements) {
 								if (element)
 									renameVariables(element)
 							}
-						} break
+
+							break
 
 						default:
 							throw Error(`unknown lValue type "${lValue.type}"`)
@@ -415,10 +420,10 @@ export async function processScript(code: string, {
 	return { script: code, warnings }
 }
 
+/* eslint-disable no-console, no-eval */
 if (import.meta.vitest) {
 	const DEBUG_LOG_PROCESSED_SCRIPTS = false
 	const TESTS_FOLDER = `game-scripts-tests`
-
 	const { test, expect } = import.meta.vitest
 
 	const testFiles = await Promise.all(
@@ -446,6 +451,7 @@ if (import.meta.vitest) {
 	}
 
 	const reassignmentTestSource = `export default () => { const i = 0; i = 1; }`
+
 	expect(async (): Promise<any> => await processScript(reassignmentTestSource, { scriptName: true, minify: false }))
 		.rejects
 		.toThrowError(`Reassignment to const variable i is not allowed!`)

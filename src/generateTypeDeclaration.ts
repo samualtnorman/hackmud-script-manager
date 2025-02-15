@@ -1,8 +1,8 @@
-import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { basename as getBaseName, resolve as resolvePath } from "path"
+import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 
 export async function generateTypeDeclaration(sourceDirectory: string, hackmudPath?: string): Promise<string> {
-	const users = new Set<string>()
+	const users = new Set<string>
 
 	if (hackmudPath) {
 		for (const { stats, name } of await readDirectoryWithStats(hackmudPath)) {
@@ -16,7 +16,7 @@ export async function generateTypeDeclaration(sourceDirectory: string, hackmudPa
 	const allScripts: Record<string, string[]> = {}
 	const allAnyScripts: Record<string, string[]> = {}
 
-	await Promise.all((await readDirectoryWithStats(sourceDirectory)).filter(({stats, name}) => !stats.isDirectory() || /^[a-z_][a-z\d_]{0,24}$/.test(name)).map(async ({ stats, name }) => {
+	await Promise.all((await readDirectoryWithStats(sourceDirectory)).filter(({ stats, name }) => !stats.isDirectory() || /^[a-z_][a-z\d_]{0,24}$/.test(name)).map(async ({ stats, name }) => {
 		if (stats.isFile()) {
 			if (name.endsWith(`.ts`)) {
 				if (!name.endsWith(`.d.ts`))

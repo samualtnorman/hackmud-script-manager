@@ -1,31 +1,36 @@
+/* eslint-disable jsdoc/check-param-names */
 import type { LaxPartial } from "@samual/lib"
-import { AutoMap } from "@samual/lib/AutoMap"
+import type { PushOptions } from "./push"
+import { stat as getFileStats, readFile, writeFile } from "fs/promises"
+import { extname as getFileExtension, basename as getPathBaseName, resolve as resolvePath } from "path"
 import { assert } from "@samual/lib/assert"
+import { AutoMap } from "@samual/lib/AutoMap"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { watch as watchDirectory } from "chokidar"
-import { stat as getFileStats, readFile, writeFile } from "fs/promises"
-import { extname as getFileExtension, basename as getPathBaseName, resolve as resolvePath } from "path"
 import { supportedExtensions } from "./constants"
 import { generateTypeDeclaration } from "./generateTypeDeclaration"
 import { processScript } from "./processScript"
-import type { PushOptions } from "./push"
 
 export type WatchOptions = PushOptions & LaxPartial<{
-	/** if provided, will write typescript type declarations for all the scripts on every change detected
-	  *
-	  * writing the type declarations enables interscript type checking and autocompletetes for the args */
+	/**
+	 * if provided, will write typescript type declarations for all the scripts on every change detected
+	 *
+	 * writing the type declarations enables interscript type checking and autocompletetes for the args
+	 */
 	typeDeclarationPath: string
 
 	onReady: () => void
 	rootFolderPath: string
 }>
 
-/** Watches target file or folder for updates and builds and pushes updated file.
-  * @param sourceDirectory path to folder containing source files
-  * @param hackmudDirectory path to hackmud directory
-  * @param options {@link WatchOptions details} and {@link PushOptions more details} */
+/**
+ * Watches target file or folder for updates and builds and pushes updated file.
+ * @param sourceDirectory path to folder containing source files
+ * @param hackmudDirectory path to hackmud directory
+ * @param options {@link WatchOptions details} and {@link PushOptions more details}
+ */
 export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	scripts = [ `*.*` ],
 	onPush,
@@ -44,9 +49,9 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 	if (!sourceFolderStats.isDirectory())
 		throw Error(`Target folder must be a folder`)
 
-	const scriptNamesToUsers = new AutoMap((_scriptName: string) => new Set<string>())
-	const wildScriptUsers = new Set<string>()
-	const wildUserScripts = new Set<string>()
+	const scriptNamesToUsers = new AutoMap((_scriptName: string) => new Set<string>)
+	const wildScriptUsers = new Set<string>
+	const wildUserScripts = new Set<string>
 	let pushEverything = false
 
 	for (const fullScriptName of scripts) {
@@ -102,7 +107,7 @@ export async function watch(sourceDirectory: string, hackmudDirectory: string, {
 				}
 			}))
 
-			const usersToPushToSet = new Set<string>()
+			const usersToPushToSet = new Set<string>
 
 			if (pushEverything || wildUserScripts.has(scriptName)) {
 				for (const { stats, name } of await readDirectoryWithStats(sourceDirectory)) {

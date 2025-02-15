@@ -1,14 +1,14 @@
 {
 	"extends": "..",
 	"compilerOptions": {
-		"declaration": true,
-		"outDir": "../dist",
-		"types": [ "node", "@total-typescript/ts-reset", "babel-plugin-here/env", "vitest/importMeta" ],
 		"rootDir": ".",
 		"module": "es2022",
 		"moduleResolution": "bundler",
-		"isolatedDeclarations": true,
-		"checkJs": false
+		"types": [ "node", "@total-typescript/ts-reset", "babel-plugin-here/env", "vitest/importMeta" ],
+		"checkJs": false,
+		"declaration": true,
+		"outDir": "../dist",
+		"isolatedDeclarations": true
 	},
 	"include": [ "**/*" ]
 }

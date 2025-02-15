@@ -1,3 +1,5 @@
+/* eslint-disable jsdoc/no-multi-asterisks, ts/no-empty-object-type */
+/* eslint style/quotes: [ "warn", "double" ],  */
 type Replace<A, B> = Omit<A, keyof B> & B
 type ErrorScripts = Record<string, () => ScriptFailure>
 
@@ -34,7 +36,7 @@ type UpgradeBase = {
 
 type Upgrade = UpgradeBase & Record<string, null | boolean | number | string>
 
-type CliUpgrade = Omit<UpgradeBase, `rarity`> &
+type CliUpgrade = Omit<UpgradeBase, "rarity"> &
 	{ [k: string]: null | boolean | number | string, rarity: UpgradeRarityString }
 
 type UsersTopItem<R> = { rank: R, name: string, last_activity: string, balance: string }
@@ -42,7 +44,7 @@ type CorpsTopItem<R> = { rank: R, name: string, worth: string }
 
 type CorpsTop = [
 	CorpsTopItem<1>, CorpsTopItem<2>, CorpsTopItem<3>, CorpsTopItem<4>, CorpsTopItem<5>,
-	CorpsTopItem<6>,CorpsTopItem<7>, CorpsTopItem<8>, CorpsTopItem<9>, CorpsTopItem<10>
+	CorpsTopItem<6>, CorpsTopItem<7>, CorpsTopItem<8>, CorpsTopItem<9>, CorpsTopItem<10>
 ]
 
 type Fullsec = Subscripts & PlayerFullsec & {
@@ -77,12 +79,14 @@ type Fullsec = Subscripts & PlayerFullsec & {
 	}
 
 	chats: {
-		/** **FULLSEC**
-		  * @summary Create a new chat channel.
-		  * @description This script lets you create a new chat channel.
-		  * You cannot create a channel that already exists (including any of the default ports from `0000` to `FFFF`).
-		  * If you do not supply a password, anyone can join your channel (but the channel name is not displayed
-		  * anywhere, so they would have to discover it in some way first). */
+		/**
+		 * **FULLSEC**
+		 * @summary Create a new chat channel.
+		 * @description This script lets you create a new chat channel.
+		 * You cannot create a channel that already exists (including any of the default ports from `0000` to `FFFF`).
+		 * If you do not supply a password, anyone can join your channel (but the channel name is not displayed
+		 * anywhere, so they would have to discover it in some way first).
+		 */
 		create: ((args: {
 			/** The name of the channel to create. */ name: string
 			/** The password to secure the channel with. */ password?: string
@@ -91,21 +95,25 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** The password to secure the channel with. */ password?: string
 		}) => ScriptResponse)
 
-		/** **FULLSEC**
-		  * @summary Send a chat message to a channel.
-		  * @description This script lets you send a message to the specified channel.
-		  * You must have joined the channel, and you will see your own message (unlike chats.tell). */
+		/**
+		 * **FULLSEC**
+		 * @summary Send a chat message to a channel.
+		 * @description This script lets you send a message to the specified channel.
+		 * You must have joined the channel, and you will see your own message (unlike chats.tell).
+		 */
 		send: (args: {
 			/** The channel to send the message to. */ channel: string
 			/** The message to send. */ msg: string
 		}) => ScriptResponse
 
-		/** **FULLSEC**
-		  * @summary Send a chat message to a specific user.
-		  * @description This script lets you send a message to the specified user directly.
-		  * You can message any user, you only need their username.
-		  * Note that you will not be able to see your message after it is sent (though many chat scripts based on
-		  * chats.tell also send the message to you to work around this limitation). */
+		/**
+		 * **FULLSEC**
+		 * @summary Send a chat message to a specific user.
+		 * @description This script lets you send a message to the specified user directly.
+		 * You can message any user, you only need their username.
+		 * Note that you will not be able to see your message after it is sent (though many chat scripts based on
+		 * chats.tell also send the message to you to work around this limitation).
+		 */
 		tell: (args: {
 			/** The username to send the message to. */ to: string
 			/** The message to send. */ msg: string
@@ -121,18 +129,16 @@ type Fullsec = Subscripts & PlayerFullsec & {
 
 	market: {
 		/** **FULLSEC** */ browse: {
-			(args:
-				Partial<{
-					seller: string | MongoQuerySelector<string>,
-					listed_before: number | MongoQuerySelector<number>,
-					listed_after: number,
-					cost: number | MongoQuerySelector<number> | string,
-					rarity: UpgradeRarityNumber | MongoQuerySelector<UpgradeRarityNumber>,
-					name: string | MongoQuerySelector<string>
-				} & Omit<{
-					[k in keyof CliUpgrade]: CliUpgrade[k] | MongoQuerySelector<CliUpgrade[k]>
-				}, "rarity">>
-			): { i: string, name: string, rarity: Upgrade["rarity"], cost: number }[] | ScriptFailure
+			(args: Partial<{
+				seller: string | MongoQuerySelector<string>
+				listed_before: number | MongoQuerySelector<number>
+				listed_after: number
+				cost: number | MongoQuerySelector<number> | string
+				rarity: UpgradeRarityNumber | MongoQuerySelector<UpgradeRarityNumber>
+				name: string | MongoQuerySelector<string>
+			} & Omit<{
+				[k in keyof CliUpgrade]: CliUpgrade[k] | MongoQuerySelector<CliUpgrade[k]>
+			}, "rarity">>): { i: string, name: string, rarity: Upgrade["rarity"], cost: number }[] | ScriptFailure
 
 			<I extends string>(args: { i: I }): {
 				i: I
@@ -168,8 +174,10 @@ type Fullsec = Subscripts & PlayerFullsec & {
 		/** **FULLSEC** */ nullsec: Fullsec["scripts"]["fullsec"]
 		/** **FULLSEC** */ trust: () => string[]
 
-		/** FULLSEC
-		  * @returns A code library containing useful helper functions you can use in your scripts. */
+		/**
+		 * FULLSEC
+		 * @returns A code library containing useful helper functions you can use in your scripts.
+		 */
 		lib: () => {
 			ok: () => ScriptSuccess
 			not_impl: () => { ok: false, msg: "Not Implemented." }
@@ -177,22 +185,28 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** @returns All messages added using `scripts.lib().log` during this script run. */ get_log: () => string[]
 
 			/** @returns A random integer in the range [min, max) generated using `rng` (defaults to `Math.random`). */
-			rand_int: (min: number, max: number, rng?:()=>number) => number
+			rand_int: (min: number, max: number, rng?: () => number) => number
 
-			/** @returns `floor` if `value` is less than `floor`, `ceil` if `value` is more than `ceil`, otherwise
-			  * `value`. */
+			/**
+			 * @returns `floor` if `value` is less than `floor`, `ceil` if `value` is more than `ceil`, otherwise
+			 * `value`.
+			 */
 			clamp: (value: number, floor: number, ceil: number) => number
 
-			/** Linear interpolation function.
-			  * @returns A number between `start` and `stop` using `amount` as a percent. */
+			/**
+			 * Linear interpolation function.
+			 * @returns A number between `start` and `stop` using `amount` as a percent.
+			 */
 			lerp: (amount: number, start: number, stop: number) => number
 
-			/** @returns A random element from `array`, selected with a random number generated using `rng`
-			  * (defaults to `Math.random`). */
-			sample: <T>(array: T[], rng?: ()=>number) => T
+			/**
+			 * @returns A random element from `array`, selected with a random number generated using `rng`
+			 * (defaults to `Math.random`).
+			 */
+			sample: <T>(array: T[], rng?: () => number) => T
 
 			/** @returns Whether two MongoDB `ObjectId`s are equivalent. */ are_ids_eq: (id1: any, id2: any) => boolean
-			/** Convert a MongoDB `ObjectId` to a string. */ id_to_str: (id: string | {$oid: string}) => any
+			/** Convert a MongoDB `ObjectId` to a string. */ id_to_str: (id: string | { $oid: string }) => any
 			/** @returns Whether `value` is a boolean primitive. */ is_bool: (value: any) => value is boolean
 			/** @returns Whether `value` is an object or `null`. */
 			is_obj: (value: any) => value is Record<string, unknown> | null
@@ -239,8 +253,10 @@ type Fullsec = Subscripts & PlayerFullsec & {
 
 			corruption_chars: "¡¢Á¤Ã¦§¨©ª"
 
-			/** A list of unique color codes to be used with hackmud's color formatting syntax.
-			  * Does not include numeric codes, which are duplicates of some alphabetic codes. */
+			/**
+			 * A list of unique color codes to be used with hackmud's color formatting syntax.
+			 * Does not include numeric codes, which are duplicates of some alphabetic codes.
+			 */
 			colors: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 			/** Used by `$fs.scripts.lib().corrupt()` to determine the frequency of corruption. */
@@ -249,8 +265,10 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** Adds colored corruption characters to `text`, with frequency determined by `amount`. */
 			corrupt: (text: string | string[], amount: 0 | 1 | 2 | 3 | 4) => string
 
-			/** @returns The first `length` characters of `string`, or the original string if it is shorter than
-			  * `length`. */
+			/**
+			 * @returns The first `length` characters of `string`, or the original string if it is shorter than
+			 * `length`.
+			 */
 			cap_str_len: (string: string, length: number) => string
 
 			/** Applies `callback` to each element in `array` and returns the original array. */
@@ -265,8 +283,10 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** @returns The first element in `array` for which `callback` returns `true`. */
 			select_one: <T>(array: T[], callback: (index: number, value: T) => boolean) => T
 
-			/** @returns A new array composed of the result of applying `callback` to each element of the original array
-			  * in order. */
+			/**
+			 * @returns A new array composed of the result of applying `callback` to each element of the original array
+			 * in order.
+			 */
 			map: <T, U>(array: T[], callback: (index: number, value: T) => U) => U[]
 
 			/** @returns A new object derived from `obj` with only the keys specified in `keys`. */
@@ -274,12 +294,14 @@ type Fullsec = Subscripts & PlayerFullsec & {
 
 			/** @returns An array with the elements from `array` in a random order. */ shuffle: <T>(array: T[]) => T[]
 
-			/** Comparison function for sorting arbitrary values in ascending order using builtin comparison operators.
-			  */
+			/**
+			   Comparison function for sorting arbitrary values in ascending order using builtin comparison operators.
+			 */
 			sort_asc: (one: any, two: any) => 1 | -1 | 0
 
-			/** Comparison function for sorting arbitrary values in descending order using builtin comparison operators.
-			  */
+			/**
+			   Comparison function for sorting arbitrary values in descending order using builtin comparison operators.
+			 */
 			sort_desc: (one: any, two: any) => 1 | -1 | 0
 
 			/** Comparison function for sorting numbers in ascending order. */
@@ -300,15 +322,18 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** @returns The string name of a numeric security level. */
 			get_security_level_name: (security_level: number) => string
 
-			/** @param result The return value of a call to `$db.i()` or `$db.r()`.
-			  * @param nModified The expected value of `result.nModified`.
-			  * @returns Whether the database operation failed. */
-			dbu_result_failed: (result: ReturnType<typeof $db.u | typeof $db.u1 | typeof $db.us>, nModified?: number) =>
-				boolean
+			/**
+			 * @param result The return value of a call to `$db.i()` or `$db.r()`.
+			 * @param nModified The expected value of `result.nModified`.
+			 * @returns Whether the database operation failed.
+			 */
+			dbu_result_failed: (result: ReturnType<typeof $db.u | typeof $db.u1 | typeof $db.us>, nModified?: number) => boolean
 
-			/** @param result The return value of a call to `$db.i()` or `$db.r()`.
-			  * @param n The expected value of `result.n`.
-			  * @returns Whether the database operation failed. */
+			/**
+			 * @param result The return value of a call to `$db.i()` or `$db.r()`.
+			 * @param n The expected value of `result.n`.
+			 * @returns Whether the database operation failed.
+			 */
 			dbir_result_failed: (result: ReturnType<typeof $db.i | typeof $db.r>, n?: number) => boolean
 
 			/** @returns A random string of length `length` using lowercase letters and numbers. */
@@ -320,19 +345,23 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** @returns The script half `y` of a fully-qualified script name `x.y`. */
 			get_scriptname_from_script: (name: string) => string
 
-			/** Determines whether to treat this run as a subscript, based either on the presence of `calling_script` in
-			  * `context`, or the explicit passing of `is_script: true` in `args`. */
+			/**
+			 * Determines whether to treat this run as a subscript, based either on the presence of `calling_script` in
+			 * `context`, or the explicit passing of `is_script: true` in `args`.
+			 */
 			is_script: (context: Context, args: any) => boolean
 
 			/** @returns Whether the script is being called by its owner. */
 			caller_is_owner: (context: Context) => boolean
 
-			/** Removes consecutive duplicate elements from an array.
-			  * @example
-			  * const { uniq } = $fs.scripts.lib()
-			  * const arr = [ 1, 2, 2, 3, 2 ]
-			  *
-			  * $D(uniq(arr)) // [ 1, 2, 3, 2 ] */
+			/**
+			 * Removes consecutive duplicate elements from an array.
+			 * @example
+			 * const { uniq } = $fs.scripts.lib()
+			 * const arr = [ 1, 2, 2, 3, 2 ]
+			 *
+			 * $D(uniq(arr)) // [ 1, 2, 3, 2 ]
+			 */
 			uniq: <T>(array: T[]) => T[]
 
 			/** Sorts an array of numbers or number-coercible strings in descending order. */
@@ -344,29 +373,35 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			/** Add characters from `pad_char` to the left of `input` until it reaches length `length`. */
 			rjust: (input: string, length: number, pad_char?: string) => string
 
-			/** @returns A string with the entries from `strings` split into evenly spaced columns, organized donward
-			  * and then rightward, to fit the current user's terminal. */
+			/**
+			 * @returns A string with the entries from `strings` split into evenly spaced columns, organized donward
+			 * and then rightward, to fit the current user's terminal.
+			 */
 			columnize: (strings: string[]) => string
 
-			/** Takes two newline-separated strings and formats a new string where they appear in columns, separated by
-			  * `space`.
-			  * @example
-			  * const { side_by_side } = $fs.scripts.lib()
-			  * const str1 = "one\ntwo\nthree"
-			  * const str2 = "four\nfive\nsix"
-			  *
-			  * $D(side_by_side(str1, str2, "|"))
-			  * // one|four\n
-			  * // two|five\n
-			  * // three|six */
+			/**
+			 * Takes two newline-separated strings and formats a new string where they appear in columns, separated by
+			 * `space`.
+			 * @example
+			 * const { side_by_side } = $fs.scripts.lib()
+			 * const str1 = "one\ntwo\nthree"
+			 * const str2 = "four\nfive\nsix"
+			 *
+			 * $D(side_by_side(str1, str2, "|"))
+			 * // one|four\n
+			 * // two|five\n
+			 * // three|six
+			 */
 			side_by_side: (str1: string, str2: string, space?: string) => string
 
 			/** @returns Whether enough time remains in the script execution window to satisfy `time_left`. */
 			can_continue_execution: (time_left: number) => boolean
 
-			/** @returns A human-readable error object when not enough time remains in the script execution window to
-			  * satisfy `time_left`. */
-			can_continue_execution_error: (time_left: number, name?: string) => { ok:false, msg: string }
+			/**
+			 * @returns A human-readable error object when not enough time remains in the script execution window to
+			 * satisfy `time_left`.
+			 */
+			can_continue_execution_error: (time_left: number, name?: string) => { ok: false, msg: string }
 
 			/** @returns Current date, equivalent to `new Date()`. */ get_date: () => Date
 			/** @returns time since the epoch, equivalent to `Date.now()`. */ get_date_utcsecs: () => number
@@ -415,8 +450,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 		}
 
 		/** **FULLSEC** */
-		xfer_upgrade_to_caller: (args: ({ i: number | number[] } | { sn: string | string[] }) & { memo?: string }) =>
-			ScriptResponse
+		xfer_upgrade_to_caller: (args: ({ i: number | number[] } | { sn: string | string[] }) & { memo?: string }) => ScriptResponse
 	}
 
 	users: {
@@ -433,19 +467,23 @@ type Fullsec = Subscripts & PlayerFullsec & {
 
 type Highsec = Fullsec & PlayerHighsec & {
 	accts: {
-		/** **HIGHSEC**
-		  * @returns GC balance as number if `is_script` is true (default).
-		  * @returns GC balance as string if `is_script` is false. */
+		/**
+		 * **HIGHSEC**
+		 * @returns GC balance as number if `is_script` is true (default).
+		 * @returns GC balance as string if `is_script` is false.
+		 */
 		balance: {
 			(args?: { is_script?: true }): number
 			(args: { is_script: false }): string
 		}
 
-		/** **HIGHSEC**
+		/**
+		 * **HIGHSEC**
 		 * @returns Transaction history according to filter.
 		 * @returns If `is_script` is true (default), time property as Date object.
 		 * @returns Wraps transactions in object with msg, time property as string (game date format e.g. 201028.2147)
-		 * if `is_script` is false. */
+		 * if `is_script` is false.
+		 */
 		transactions: {
 			(args?: { count?: number | "all", to?: string, from?: string, script?: string, is_script?: true }): {
 				time: Date
@@ -502,16 +540,14 @@ type Highsec = Fullsec & PlayerHighsec & {
 					Record<string, null | boolean | number | string>
 			)[] | ScriptFailure
 
-			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?:
-				{ filter?: F, is_script?: true, full: true }
-			): (Omit<UpgradeBase, keyof F> & F & Record<string, null | boolean | number | string>)[] | ScriptFailure
+			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?: { filter?: F, is_script?: true, full: true }): (Omit<UpgradeBase, keyof F> & F & Record<string, null | boolean | number | string>)[] | ScriptFailure
 
 			(args?: { filter?: Partial<Upgrade & { loaded: boolean }>, is_script: false, full?: false }):
 				{ msg: string, upgrades: string[] } | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(
 				args?: { filter?: F, is_script: false, full: true }
-			): (Omit<UpgradeBase, keyof F | `rarity`> & F & {
+			): (Omit<UpgradeBase, keyof F | "rarity"> & F & {
 				[x: string]: null | boolean | number | string
 				rarity: UpgradeRarityString
 			})[] | ScriptFailure
@@ -623,8 +659,7 @@ type Nullsec = Lowsec & PlayerNullsec & {
 		/** **NULLSEC** */ manage: {
 			(args: { command: "list" }): { name: string, is_admin: boolean }[] | ScriptFailure
 
-			(args: { command: "demote" | "promote", name: string } | { command: "fire", name: string, confirm: true }):
-				ScriptResponse
+			(args: { command: "demote" | "promote", name: string } | { command: "fire", name: string, confirm: true }): ScriptResponse
 		}
 
 		/** **NULLSEC** */ offers: {
@@ -816,17 +851,23 @@ type Cursor<T> = {
 	/** Run `callback` on each document that satisfied the query. */
 	each: (callback: (document: T) => void) => null
 
-	/** Returns a new cursor with documents sorted as specified.
-	  * A value of 1 sorts the property ascending, and -1 descending.
-	  * @param order The way the documents are to be sorted. */
+	/**
+	 * Returns a new cursor with documents sorted as specified.
+	 * A value of 1 sorts the property ascending, and -1 descending.
+	 * @param order The way the documents are to be sorted.
+	 */
 	sort: (order?: SortOrder) => Cursor<T>
 
-	/** Returns a new cursor without the first number of documents.
-	  * @param count Number of documents to skip. */
+	/**
+	 * Returns a new cursor without the first number of documents.
+	 * @param count Number of documents to skip.
+	 */
 	skip: (count: number) => Cursor<T>
 
-	/** Returns a new cursor limited to a number of documents as specified.
-	  * @param count Number of documents. */
+	/**
+	 * Returns a new cursor limited to a number of documents as specified.
+	 * @param count Number of documents.
+	 */
 	limit: (count: number) => Cursor<T>
 
 	/** @param key The key of the documents. */ distinct: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
@@ -842,8 +883,10 @@ type CliContext = {
 	/** The number of columns in the caller’s terminal. */ cols: number
 	/** The number of rows in the caller’s terminal. */ rows: number
 
-	/** The name of the script that directly called this script, or null if called on the command line or as a
-	  * scriptor. */
+	/**
+	 * The name of the script that directly called this script, or null if called on the command line or as a
+	 * scriptor.
+	 */
 	calling_script: null
 
 	is_scriptor?: undefined
@@ -851,8 +894,9 @@ type CliContext = {
 }
 
 type SubscriptContext = Replace<CliContext, {
-	/** The name of the script that directly called this script, or null if called on the command line or as a scriptor.
-	  */
+	/**
+	   The name of the script that directly called this script, or null if called on the command line or as a scriptor.
+	 */
 	calling_script: string
 }>
 
@@ -866,13 +910,13 @@ type MongoProject<TDocument, TProjection> =
 	(TProjection extends { _id: false | 0 } ? {} : { _id: TDocument extends { _id: infer TId } ? TId : MongoId }) & (
 		true extends (1 extends TProjection[keyof TProjection] ? true : TProjection[keyof TProjection]) ?
 			{
-				[K in
-					keyof TDocument as K extends keyof TProjection ? TProjection[K] extends true | 1 ? K : never : never
+				[K in keyof TDocument as K extends
+					keyof TProjection ? TProjection[K] extends true | 1 ? K : never : never
 				]: TDocument[K]
 			} &
 			{
-				-readonly [K in
-					keyof TProjection as TProjection[K] extends true | 1 ? K extends keyof TDocument ? never : K : never
+				-readonly [K in keyof TProjection as TProjection[K] extends
+					true | 1 ? K extends keyof TDocument ? never : K : never
 				]?: MongoValue
 			}
 		: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
@@ -888,192 +932,205 @@ declare global {
 	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 	type MongoObjectId = { $oid: string }
 
+	/* eslint-disable ts/consistent-type-definitions */
 	interface PlayerFullsec {}
 	interface PlayerHighsec {}
 	interface PlayerMidsec {}
 	interface PlayerLowsec {}
 	interface PlayerNullsec {}
+	/* eslint-enable ts/consistent-type-definitions */
 
 	/** Subscript space that can call FULLSEC scripts. */ const $fs: Fullsec
-
 	/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
 	const $hs: Highsec
-
-	/** Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
-	  */
+	/**
+	   Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
+	 */
 	const $ms: Midsec
-
-	/** Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
-	  */
+	/**
+	   Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
+	 */
 	const $ls: Lowsec
-
 	/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
 	const $ns: Nullsec
-
 	/** Subscript space that can call FULLSEC scripts. */ const $4s: typeof $fs
-
 	/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
 	const $3s: typeof $hs
-
-	/** Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
-	  */
+	/**
+	   Subscript space that can call MIDSEC and above scripts. Makes your script MIDSEC (overrides higher security levels).
+	 */
 	const $2s: typeof $ms
-
-	/** Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
-	  */
+	/**
+	   Subscript space that can call LOWSEC and above scripts. Makes your script LOWSEC (overrides higher security levels).
+	 */
 	const $1s: typeof $ls
-
 	/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
 	const $0s: typeof $ns
-
-	/** Subscript space that can call any script. Uses seclevel provided in comment before script (defaults to NULLSEC)
-	  * @example
-	  * // @​seclevel MIDSEC
-	  * // note, do NOT copy paste the above line because there is a zero-width space inserted between "@" and "s"
-	  * export function script() {
-	  * 	$s.foo.bar() // will be converted to #ms.foo.bar()
-	  * } */
+	/* eslint-disable no-irregular-whitespace */
+	/**
+	 * Subscript space that can call any script. Uses seclevel provided in comment before script (defaults to NULLSEC)
+	 * @example
+	 * // @​seclevel MIDSEC
+	 * // note, do NOT copy paste the above line because there is a zero-width space inserted between "@" and "s"
+	 * export function script() {
+	 * 	$s.foo.bar() // will be converted to #ms.foo.bar()
+	 * }
+	 */
 	const $s: Nullsec
+	/* eslint-enable no-irregular-whitespace */
 
 	const $db: {
-		/** Insert a document or documents into a collection.
-		  * @param documents A document or array of documents to insert into the collection. */
-		i: <T extends MongoDocument>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) =>
-			{ n: number, opTime: { t: number }, ok: 0 | 1 }[]
+		/**
+		 * Insert a document or documents into a collection.
+		 * @param documents A document or array of documents to insert into the collection.
+		 */
+		i: <T extends MongoDocument>(documents: (T & { _id?: MongoId }) | (T & { _id?: MongoId })[]) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
-		/** Remove documents from a collection.
-		  * @param query Specifies deletion criteria using query operators. */
+		/**
+		 * Remove documents from a collection.
+		 * @param query Specifies deletion criteria using query operators.
+		 */
 		r: <T extends MongoDocument>(query: MongoQuery<T>) => { n: number, opTime: { t: number }, ok: 0 | 1 }[]
 
-		/** Find documents in a collection or view and returns a cursor to the selected documents.
-		  * @param query Specifies deletion criteria using query operators.
-		  * @param projection Specifies the fields to return in the documents that match the query filter. */
+		/**
+		 * Find documents in a collection or view and returns a cursor to the selected documents.
+		 * @param query Specifies deletion criteria using query operators.
+		 * @param projection Specifies the fields to return in the documents that match the query filter.
+		 */
 		f: <
 			const TQuery extends MongoQueryObject & { _id?: MongoQueryId },
 			const TProjection extends { [k: string]: boolean | 0 | 1 } = {}
 		>(query: TQuery, projection?: TProjection) => Cursor<MongoProject<MongoQueryType<TQuery>, TProjection>>
 
-		/** Update existing documents in a collection.
-		  * @param query Specifies deletion criteria using query operators.
-		  * @param command The modifications to apply.
-		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-		u: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
-			{ n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
+		/**
+		 * Update existing documents in a collection.
+		 * @param query Specifies deletion criteria using query operators.
+		 * @param command The modifications to apply.
+		 * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters}
+		 */
+		u: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) => { n: number, opTime: { t: number }, ok: 0 | 1, nModified: number }[]
 
-		/** Updates one document within the collection based on the filter.
-		  * @param query Specifies deletion criteria using query operators.
-		  * @param command The modifications to apply.
-		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-		u1: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
-			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
+		/**
+		 * Updates one document within the collection based on the filter.
+		 * @param query Specifies deletion criteria using query operators.
+		 * @param command The modifications to apply.
+		 * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters}
+		 */
+		u1: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) => { n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
-		/** Update or insert document.
-		  * Same as Update, but if no documents match the query, one document will be inserted based on the properties in
-		  * both the query and the command.
-		  * The `$setOnInsert` operator is useful to set defaults.
-		  * @param query Specifies deletion criteria using query operators.
-		  * @param command The modifications to apply.
-		  * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters} */
-		us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) =>
-			{ n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
+		/**
+		 * Update or insert document.
+		 * Same as Update, but if no documents match the query, one document will be inserted based on the properties in
+		 * both the query and the command.
+		 * The `$setOnInsert` operator is useful to set defaults.
+		 * @param query Specifies deletion criteria using query operators.
+		 * @param command The modifications to apply.
+		 * {@link https://docs.mongodb.com/manual/reference/method/db.collection.update/#parameters}
+		 */
+		us: <T extends MongoDocument>(query: MongoQuery<T> | MongoQuery<T>[], command: MongoUpdateCommand<T>) => { n: number, ok: 0 | 1, opTime: { t: number }, nModified: number }[]
 
 		ObjectId: () => MongoObjectId
 	}
 
-	/** Debug Log.
-	  *
-	  * If `$D()` is called in a script you own, the `return` value of the top level script is suppressed and instead an
-	  * array of every `$D()`’d entry is printed.
-	  * This lets you use `$D()` like `console.log()`.
-	  *
-	  * `$D()` in scripts not owned by you are not shown but the `return` value always is.
-	  *
-	  * `$D()` returns the first argument so `$D("Hello, World!") evaluates to `"Hello, World!"` as if the `$D` text wasn't
-	  * there.
-	  *
-	  * `$D()`’d items are returned even if the script times out or errors. */
+	/**
+	 * Debug Log.
+	 *
+	 * If `$D()` is called in a script you own, the `return` value of the top level script is suppressed and instead an
+	 * array of every `$D()`’d entry is printed.
+	 * This lets you use `$D()` like `console.log()`.
+	 *
+	 * `$D()` in scripts not owned by you are not shown but the `return` value always is.
+	 *
+	 * `$D()` returns the first argument so `$D("Hello, World!") evaluates to `"Hello, World!"` as if the `$D` text wasn't
+	 * there.
+	 *
+	 * `$D()`’d items are returned even if the script times out or errors.
+	 */
 	function $D<T>(args: T): T
 
-	/** Function Multi-Call Lock.
-	  *
-	  * This is used by escrow to ensure that it is only used once in script execution.
-	  *
-	  * The first time (per-script) `$FMCL` is encountered, it returns `undefined`, every other time it `return`s `true`.
-	  *
-	  * @example
-	  * if ($FMCL)
-	  * 	return { ok: false, msg: "This script can only be used once per script execution." }
-	  *
-	  * // all code here will only run once */
+	/**
+	 * Function Multi-Call Lock.
+	 *
+	 * This is used by escrow to ensure that it is only used once in script execution.
+	 *
+	 * The first time (per-script) `$FMCL` is encountered, it returns `undefined`, every other time it `return`s `true`.
+	 *
+	 * @example
+	 * if ($FMCL)
+	 * 	return { ok: false, msg: "This script can only be used once per script execution." }
+	 *
+	 * // all code here will only run once
+	 */
 	const $FMCL: undefined | true
-
-	/** Per-script mutable "global" persistent object that is discarded at the end of top level script execution.
-	  *
-	  * `$G` persists between script calls until the end of the main script run making it useful for caching db entries when
-	  * your script is a subscript.
-	  * @example
-	  * if (!$G.dbCache)
-	  * 	$G.dbCache = $db.f({ whatever: true }).first() */
+	/**
+	 * Per-script mutable "global" persistent object that is discarded at the end of top level script execution.
+	 *
+	 * `$G` persists between script calls until the end of the main script run making it useful for caching db entries when
+	 * your script is a subscript.
+	 * @example
+	 * if (!$G.dbCache)
+	 * 	$G.dbCache = $db.f({ whatever: true }).first()
+	 */
 	const $G: Record<string | symbol, any>
-
-	/** This contains a JS timestamp (not Date) set immediately before your code begins running.
-	  * @example
-	  * $D(Date.now() - _START) // milliseconds left of run time
-	  */
+	/**
+	 * This contains a JS timestamp (not Date) set immediately before your code begins running.
+	 * @example
+	 * $D(Date.now() - _START) // milliseconds left of run time
+	 */
 	const _START: number
-
-	/** This contains a JS timestamp (not Date) set immediately before your code begins running.
-	  * @example
-	  * $D(Date.now() - _ST) // milliseconds left of run time */
+	/**
+	 * This contains a JS timestamp (not Date) set immediately before your code begins running.
+	 * @example
+	 * $D(Date.now() - _ST) // milliseconds left of run time
+	 */
 	const _ST: typeof _START
-
 	/** JavaScript timestamp for the end of the script run (`_START + _TIMEOUT`). */ const _END: number
-
 	/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
 	const _TIMEOUT: number
-
 	/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
 	const _TO: typeof _TIMEOUT
-
 	/** The source code of this script as a string. */ const _SOURCE: string
 	/** A unix timestamp of the date this script was built. */ const _BUILD_DATE: number
-
-	/** The user this script has been uploaded to.
-	  *
-	  * Shorter alternative to `context.this_script.split(".")[0].
-	  *
-	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
+	/**
+	 * The user this script has been uploaded to.
+	 *
+	 * Shorter alternative to `context.this_script.split(".")[0].
+	 *
+	 * In rare cases where it's not known at build time, it's `"UNKNOWN"`.
+	 */
 	const _SCRIPT_USER: string
-
 	/** @deprecated Use `_SCRIPT_SUBNAME` instead. */
 	const _SCRIPT_NAME: string
-
-	/** The name of this script excluding the user and `.`.
-	  *
-	  * e.g. in the script `foo.bar`, `_SCRIPT_NAME` is `bar`.
-	  *
-	  * Shorter alternative to `context.this_script.split(".")[1].
-	  *
-	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
+	/**
+	 * The name of this script excluding the user and `.`.
+	 *
+	 * e.g. in the script `foo.bar`, `_SCRIPT_NAME` is `bar`.
+	 *
+	 * Shorter alternative to `context.this_script.split(".")[1].
+	 *
+	 * In rare cases where it's not known at build time, it's `"UNKNOWN"`.
+	 */
 	const _SCRIPT_SUBNAME: string
-
-	/** The full name of this script equivilent to `context.this_script` but should use less characters.
-	  *
-	  * In rare cases where it's not known at build time, it's `"UNKNOWN"`. */
+	/**
+	 * The full name of this script equivilent to `context.this_script` but should use less characters.
+	 *
+	 * In rare cases where it's not known at build time, it's `"UNKNOWN"`.
+	 */
 	const _FULL_SCRIPT_NAME: string
-
-	/** The seclevel of this script as a number.
-	  *
-	  * In rare cases where it's not known at build time, it's `-1`. */
+	/**
+	 * The seclevel of this script as a number.
+	 *
+	 * In rare cases where it's not known at build time, it's `-1`.
+	 */
 	const _SECLEVEL: -1 | 0 | 1 | 2 | 3 | 4
-
-	/** Recursively
-	  * [`Object.freeze()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze)
-	  * an object and its properties' objects and its properties' objects and so on.
-	  *
-	  * [Official Hackmud Wiki](https://wiki.hackmud.com/scripting/extensions/deep_freeze) */
+	/**
+	 * Recursively
+	 * [`Object.freeze()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze)
+	 * an object and its properties' objects and its properties' objects and so on.
+	 *
+	 * [Official Hackmud Wiki](https://wiki.hackmud.com/scripting/extensions/deep_freeze)
+	 */
 	const DEEP_FREEZE: <T>(value: T) => DeepFreeze<T>
-
 	const _RUN_ID: string
 }
 

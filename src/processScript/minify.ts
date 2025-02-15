@@ -1,13 +1,14 @@
-import generate from "@babel/generator"
+/* eslint-disable jsdoc/check-param-names */
 import type { NodePath } from "@babel/traverse"
-import traverse from "@babel/traverse"
 import type { Expression, File, FunctionDeclaration, Program } from "@babel/types"
-import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
+import generate from "@babel/generator"
+import traverse from "@babel/traverse"
+import t from "@babel/types"
 import { assert } from "@samual/lib/assert"
 import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
 import { spliceString } from "@samual/lib/spliceString"
-import { tokTypes as tokenTypes, tokenizer as tokenize } from "acorn"
+import { tokenizer as tokenize, tokTypes as tokenTypes } from "acorn"
 import * as terser from "terser"
 import { getReferencePathsToGlobal, includesIllegalString, replaceUnsafeStrings } from "./shared"
 
@@ -15,12 +16,13 @@ type MinifyOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueId: string
 	/** whether to mangle function and class names (defaults to `false`) */ mangleNames: boolean
 
-	/** when set to `true` forces use of quine cheats
-	  *
-	  * when set to `false` forces quine cheats not to be used
-	  *
-	  * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
-	  */
+	/**
+	 * when set to `true` forces use of quine cheats
+	 *
+	 * when set to `false` forces quine cheats not to be used
+	 *
+	 * when left unset or set to `undefined`, automatically uses or doesn't use quine cheats based on character count
+	 */
 	forceQuineCheats: boolean
 
 	/** the comment inserted after the function signature */ autocomplete: string
@@ -32,8 +34,10 @@ const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
 // TODO move autocomplete code outside this function
 // TODO replace references to `arguments`
 
-/** @param file babel ast node representing a file containing transformed code
-  * @param options {@link MinifyOptions details} */
+/**
+ * @param file babel ast node representing a file containing transformed code
+ * @param options {@link MinifyOptions details}
+ */
 export async function minify(
 	file: File,
 	{ uniqueId = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
@@ -68,7 +72,6 @@ export async function minify(
 
 			if (!binding.referenced) {
 				mainFunctionPath.node.params.pop()
-
 				continue
 			}
 		}
@@ -168,7 +171,8 @@ export async function minify(
 			format: { semicolons: false },
 			keep_classnames: !mangleNames,
 			keep_fnames: !mangleNames
-		})).code!.replace(new RegExp(`_${uniqueId}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
+		})).code!
+			.replace(new RegExp(`_${uniqueId}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
 			.replace(new RegExp(`_${uniqueId}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
 
 		if (autocomplete) {
@@ -277,14 +281,12 @@ export async function minify(
 						}
 					},
 					NullLiteral(path) {
-						/* eslint-disable unicorn/no-null */
 						let jsonValueIndex = jsonValues.indexOf(null)
 
 						if (jsonValueIndex == -1)
 							jsonValueIndex += jsonValues.push(null)
 
 						path.replaceWith(t.identifier(`_${uniqueId}_JSON_VALUE_${jsonValueIndex}_`))
-						/* eslint-enable unicorn/no-null */
 					},
 					NumericLiteral(path) {
 						promises.push((async () => {
@@ -303,7 +305,6 @@ export async function minify(
 						})())
 					},
 					StringLiteral(path) {
-						// eslint-disable-next-line @typescript-eslint/no-base-to-string -- the `NodePath`'s `.toString()` method compiles and returns the contained `Node`
 						if (JSON.stringify(path.node.value).includes(`\\u00`) || path.toString().length < 4) {
 							path.node.value = replaceUnsafeStrings(uniqueId, path.node.value)
 
@@ -517,7 +518,6 @@ function parseObjectExpression(node: babel.types.ObjectExpression, o: Record<str
 
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = childObject
 		} else if (property.value.type == `NullLiteral`)
-			// eslint-disable-next-line unicorn/no-null
 			o[property.key.type == `Identifier` ? property.key.name : property.key.value] = null
 		else if (property.value.type == `BooleanLiteral` || property.value.type == `NumericLiteral` ||
 			property.value.type == `StringLiteral`
@@ -556,7 +556,6 @@ function parseArrayExpression(node: babel.types.ArrayExpression, o: unknown[]) {
 
 			o.push(childObject)
 		} else if (element.type == `NullLiteral`)
-			// eslint-disable-next-line unicorn/no-null
 			o.push(null)
 		else if (element.type == `BooleanLiteral` || element.type == `NumericLiteral` || element.type == `StringLiteral`)
 			o.push(element.value)

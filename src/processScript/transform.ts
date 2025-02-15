@@ -1,8 +1,9 @@
+/* eslint-disable jsdoc/check-param-names */
 import type { NodePath, Scope } from "@babel/traverse"
-import traverse from "@babel/traverse"
 import type { ArrayExpression, Block, BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, Node, ObjectExpression } from "@babel/types"
-import t from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
+import traverse from "@babel/traverse"
+import t from "@babel/types"
 import { assert } from "@samual/lib/assert"
 import { clearObject } from "@samual/lib/clearObject"
 import { validDBMethods } from "../constants"
@@ -19,17 +20,19 @@ const globalFunctionsUnder7Characters = [
 	`BigInt`
 ]
 
-/** transform a given babel `File` to be hackmud compatible
-  *
-  * (returned File will need `postprocess()`ing)
-  * @param file babel ast node representing a file containing preprocessed code
-  * @param sourceCode the original untouched source code
-  * @param options {@link TransformOptions details} */
+/**
+ * transform a given babel `File` to be hackmud compatible
+ *
+ * (returned File will need `postprocess()`ing)
+ * @param file babel ast node representing a file containing preprocessed code
+ * @param sourceCode the original untouched source code
+ * @param options {@link TransformOptions details}
+ */
 export function transform(
 	file: File,
 	sourceCode: string,
 	{ uniqueId = `00000000000`, scriptUser, scriptName, seclevel = 4 }: TransformOptions
-): { file: File; seclevel: number, warnings: { message: string }[] } {
+): { file: File, seclevel: number, warnings: { message: string }[] } {
 	const warnings: { message: string }[] = []
 	const topFunctionName = `_${uniqueId}_SCRIPT_`
 	let program!: NodePath<t.Program>
@@ -144,7 +147,7 @@ export function transform(
 		}
 	}
 
-	const neededSubscriptLets = new Map<string, number>()
+	const neededSubscriptLets = new Map<string, number>
 	let detectedSeclevel = 4
 
 	if (program.scope.hasGlobal(`$s`)) {
@@ -188,8 +191,7 @@ export function transform(
 
 	seclevel = Math.min(seclevel, detectedSeclevel)
 
-	// eslint-disable-next-line unicorn/prevent-abbreviations
-	const neededDbMethodLets = new Set<string>()
+	const neededDbMethodLets = new Set<string>
 
 	if (program.scope.hasGlobal(`$db`)) {
 		for (const referencePath of getReferencePathsToGlobal(`$db`, program)) {
@@ -263,7 +265,7 @@ export function transform(
 		}
 	}
 
-	const consoleMethodsReferenced = new Set<string>()
+	const consoleMethodsReferenced = new Set<string>
 
 	if (program.scope.hasGlobal(`console`)) {
 		for (const referencePath of getReferencePathsToGlobal(`console`, program)) {
@@ -313,9 +315,9 @@ export function transform(
 					mainFunction = t.functionDeclaration(
 						t.identifier(topFunctionName),
 						declarator.init.params,
-						declarator.init.body.type == `BlockStatement`
-							? declarator.init.body
-							: t.blockStatement([ t.returnStatement(declarator.init.body) ])
+						declarator.init.body.type == `BlockStatement` ?
+							declarator.init.body
+						: t.blockStatement([ t.returnStatement(declarator.init.body) ])
 					)
 
 					continue
@@ -369,7 +371,6 @@ export function transform(
 	)
 
 	if (uniqueIdScriptUserNeeded) {
-		// eslint-disable-next-line unicorn/prevent-abbreviations
 		const mainFunctionParams = mainFunction.params
 
 		mainFunction.params = [ t.restElement(t.identifier(`_${uniqueId}_PARAMS_`)) ]
@@ -397,7 +398,7 @@ export function transform(
 	if (globalBlock.body.length) {
 		program.scope.crawl()
 
-		const globalBlockVariables = new Set<string>()
+		const globalBlockVariables = new Set<string>
 		let hoistedGlobalBlockFunctions = 0
 
 		for (const [ globalBlockIndex, globalBlockStatement ] of [ ...globalBlock.body.entries() ].reverse()) {
@@ -628,9 +629,9 @@ export function transform(
 		mainFunction.body.body.unshift(t.variableDeclaration(
 			`let`,
 			[ ...neededDbMethodLets ].map(name => {
-				const getArgs = () => name == `ObjectId`
-					? []
-					: (name == `i` || name == `r` ? [ t.identifier(`a`) ] : [ t.identifier(`a`), t.identifier(`b`) ])
+				const getArgs = () => name == `ObjectId` ?
+					[]
+				: (name == `i` || name == `r` ? [ t.identifier(`a`) ] : [ t.identifier(`a`), t.identifier(`b`) ])
 
 				return t.variableDeclarator(
 					t.identifier(`_${uniqueId}_CONSOLE_METHOD_${name}_`),
@@ -678,8 +679,10 @@ export function transform(
 	const getFirstParentBlock = (path: NodePath): Block => {
 		let someBlock: Block | null = null
 		let currentParent: NodePath<any> | null = path
+
 		while (currentParent) {
-			if (!currentParent || !currentParent.node) break
+			if (!currentParent || !currentParent.node)
+				break
 
 			if (t.isBlock(currentParent.node)) {
 				someBlock = currentParent.node
@@ -690,10 +693,11 @@ export function transform(
 				currentParent.replaceWith(
 					t.blockStatement([
 						t.returnStatement(
-							currentParent.node,
-						),
-					]),
+							currentParent.node
+						)
+					])
 				)
+
 				someBlock = currentParent.node
 				break
 			}
@@ -703,11 +707,13 @@ export function transform(
 
 		// Technically, this can't happen, since the Program node will be a block.
 		assert(someBlock != null, HERE)
-		return someBlock;
+
+		return someBlock
 	}
 
 	const replaceAllThisWith = (node: Node, scope: Scope, thisId: string): boolean => {
 		let thisIsReferenced = false
+
 		traverse(node, {
 			ThisExpression(path) {
 				thisIsReferenced = true
@@ -724,23 +730,23 @@ export function transform(
 	}
 
 	type ObjectLikeExpression = ObjectExpression | ArrayExpression
+
 	const replaceThisInObjectLikeDefinition = <T extends ObjectLikeExpression>(path: NodePath<T>) => {
 		const { node: object, scope, parent } = path
-
 		const evenMoreUniqueId = Math.floor(Math.random() * (2 ** 52)).toString(36).padStart(11, `0`)
 
 		// This removes the additional let that would normally be inserted from this sort of construct:
 		// const foo = {
 		//   bar() { this.whatever = 1 }
 		// }
-		const reuseDeclaredName = parent.type == `VariableDeclarator`
-			&& path.parentPath?.parentPath?.node?.type == `VariableDeclaration`
-			&& path.parentPath?.parentPath?.node?.kind == `const` // This is only safe if it's not redeclared!
-			&& parent.id.type == `Identifier`
+		const reuseDeclaredName = parent.type == `VariableDeclarator` &&
+			path.parentPath?.parentPath?.node?.type == `VariableDeclaration` &&
+			path.parentPath?.parentPath?.node?.kind == `const` && // This is only safe if it's not redeclared!
+			parent.id.type == `Identifier`
 
-		let thisId = reuseDeclaredName ? (parent.id as Identifier).name : `_${evenMoreUniqueId}_THIS_`
-
+		const thisId = reuseDeclaredName ? (parent.id as Identifier).name : `_${evenMoreUniqueId}_THIS_`
 		let thisIsReferenced = false
+
 		if (object.type == `ObjectExpression`) {
 			for (const property of (object as ObjectExpression).properties) {
 				if (property.type != `ObjectMethod`)
@@ -757,21 +763,25 @@ export function transform(
 			}
 		}
 
-		if (!thisIsReferenced) return
-		if (reuseDeclaredName) return
+		if (!thisIsReferenced)
+			return
+
+		if (reuseDeclaredName)
+			return
 
 		path.replaceWith(
 			t.assignmentExpression(`=`, t.identifier(thisId), object)
 		)
 
-		const parentBlock = getFirstParentBlock(path);
+		const parentBlock = getFirstParentBlock(path)
+
 		parentBlock.body.unshift(
 			t.variableDeclaration(`let`, [
 				t.variableDeclarator(
 					t.identifier(thisId),
 					null
-				),
-			]),
+				)
+			])
 		)
 	}
 
@@ -883,20 +893,19 @@ export function transform(
 		VariableDeclaration({ node: variableDeclaration }) {
 			if (variableDeclaration.kind == `const`) {
 				variableDeclaration.kind = `let`
-				variableDeclaration.extra = {
-					...variableDeclaration.extra,
-					usedToBeConst: true,
-				}
+				variableDeclaration.extra = { ...variableDeclaration.extra, usedToBeConst: true }
 			}
 		},
 		AssignmentExpression({ node: assignment, scope }) {
 			const lhs = assignment.left
-			if (lhs.type != `Identifier`) return
+
+			if (lhs.type != `Identifier`)
+				return
 
 			const binding = scope.getBinding(lhs.name)
-			if (binding?.path?.parentPath?.node?.extra?.usedToBeConst) {
-				throw new Error(`Reassignment to const variable ${lhs.name} is not allowed!`);
-			}
+
+			if (binding?.path?.parentPath?.node?.extra?.usedToBeConst)
+				throw new Error(`Reassignment to const variable ${lhs.name} is not allowed!`)
 		},
 		ThisExpression: path => {
 			path.replaceWith(t.identifier(`undefined`))
@@ -905,8 +914,8 @@ export function transform(
 			const bigIntAsNumber = Number(path.node.value)
 
 			path.replaceWith(t.callExpression(t.identifier(`BigInt`), [
-				BigInt(bigIntAsNumber) == BigInt(path.node.value)
-					? t.numericLiteral(bigIntAsNumber)
+				BigInt(bigIntAsNumber) == BigInt(path.node.value) ?
+					t.numericLiteral(bigIntAsNumber)
 					: t.stringLiteral(path.node.value)
 			]))
 		}
@@ -950,7 +959,9 @@ export function transform(
 					`${referencePath.parent.property.name}$${referencePath.parentPath.parentPath.node.property.name}`
 
 				referencePath.parentPath.parentPath.replaceWith(t.identifier(`_${uniqueId}_SUBSCRIPT_${name}_`))
+
 				const maxSecLevel = Math.max(neededSubscriptLets.get(name) || 0, seclevel)
+
 				neededSubscriptLets.set(name, maxSecLevel)
 			}
 		}

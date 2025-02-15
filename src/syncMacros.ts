@@ -1,10 +1,10 @@
-import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 import { stat as getFileStatus, readFile, writeFile } from "fs/promises"
 import { basename as getBaseName, extname as getFileExtension, resolve as resolvePath } from "path"
+import { readDirectoryWithStats } from "@samual/lib/readDirectoryWithStats"
 
 export async function syncMacros(hackmudPath: string): Promise<{ macrosSynced: number, usersSynced: number }> {
 	const files = await readDirectoryWithStats(hackmudPath)
-	const macros = new Map<string, { macro: string, date: Date }>()
+	const macros = new Map<string, { macro: string, date: Date }>
 	const users: string[] = []
 
 	await Promise.all(files.map(async file => {
@@ -25,11 +25,13 @@ export async function syncMacros(hackmudPath: string): Promise<{ macrosSynced: n
 					if (!currentMacro || date > currentMacro.date)
 						macros.set(macroName, { date, macro: lines[(index * 2) + 1]! })
 				}
-			} break
 
-			case `.key`: {
+				break
+			}
+
+			case `.key`:
 				users.push(getBaseName(file.name, `.key`))
-			} break
+				break
 		}
 	}))
 

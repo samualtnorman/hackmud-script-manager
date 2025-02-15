@@ -1,16 +1,17 @@
 #!/usr/bin/env node
+/* eslint-disable no-console */
 import type { Replace } from "@samual/lib"
-import { AutoMap } from "@samual/lib/AutoMap"
-import { assert } from "@samual/lib/assert"
-import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
-import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
+import type { Info } from ".."
 import { readFile, writeFile } from "fs/promises"
 import { homedir as getHomeDirectory } from "os"
 import {
 	basename as getPathBaseName, dirname as getPathDirectory, extname as getPathFileExtension,
 	relative as getRelativePath, resolve as resolvePath
 } from "path"
-import type { Info } from ".."
+import { assert } from "@samual/lib/assert"
+import { AutoMap } from "@samual/lib/AutoMap"
+import { countHackmudCharacters } from "@samual/lib/countHackmudCharacters"
+import { writeFilePersistent } from "@samual/lib/writeFilePersistent"
 import { version as moduleVersion } from "../../package.json"
 import { supportedExtensions } from "../constants"
 import { generateTypeDeclaration } from "../generateTypeDeclaration"
@@ -19,20 +20,8 @@ import { syncMacros } from "../syncMacros"
 
 type OptionValue = boolean | string
 
-const formatOption = (name: string) => colourN(`-${name.length == 1 ? `` : `-`}${name}`)
-const options = new Map<string, OptionValue>()
+const options = new Map<string, OptionValue>
 const commands: string[] = []
-
-const userColours = new AutoMap<string, string>(user => {
-	let hash = 0
-
-	for (const char of user)
-		hash += (hash >> 1) + hash + `xi1_8ratvsw9hlbgm02y5zpdcn7uekof463qj`.indexOf(char) + 1
-
-	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6]!(user)
-})
-
-const log = (message: string) => console.log(colourS(message))
 
 for (const argument of process.argv.slice(2)) {
 	if (argument[0] == `-`) {
@@ -67,9 +56,7 @@ const pushModule = import(`../push`)
 const processScriptModule = import(`../processScript`)
 const watchModule = import(`../watch`)
 const chokidarModule = import(`chokidar`)
-
 const { default: chalk } = await import(`chalk`)
-
 const colourA = chalk.rgb(0xFF, 0xFF, 0xFF)
 const colourB = chalk.rgb(0xCA, 0xCA, 0xCA)
 const colourC = chalk.rgb(0x9B, 0x9B, 0x9B)
@@ -83,6 +70,18 @@ const colourN = chalk.rgb(0x00, 0xFF, 0xFF)
 const colourS = chalk.rgb(0x7A, 0xB2, 0xF4)
 const colourV = chalk.rgb(0xFF, 0x00, 0xEC)
 const colourW = chalk.rgb(0xFF, 0x96, 0xE0)
+const formatOption = (name: string) => colourN(`-${name.length == 1 ? `` : `-`}${name}`)
+
+const userColours = new AutoMap<string, string>(user => {
+	let hash = 0
+
+	for (const char of user)
+		hash += (hash >> 1) + hash + `xi1_8ratvsw9hlbgm02y5zpdcn7uekof463qj`.indexOf(char) + 1
+
+	return [ colourJ, colourK, colourM, colourW, colourL, colourB ][hash % 6]!(user)
+})
+
+const log = (message: string) => console.log(colourS(message))
 
 if (process.version.startsWith(`v21.`)) {
 	process.exitCode = 1
@@ -201,9 +200,11 @@ ${chalk.bold(`Warning:`)} ${formatOption(noMinifyOption.name)} is deprecated and
 
 			let outputPath = commands[2] || resolvePath(
 				getPathDirectory(target),
-				fileBaseNameEndsWithDotSrc
-					? `${scriptName}.js`
-					: (fileExtension == `.js` ? `${fileBaseName}.min.js` : `${fileBaseName}.js`)
+				fileBaseNameEndsWithDotSrc ?
+					`${scriptName}.js`
+				: fileExtension == `.js` ?
+					`${fileBaseName}.min.js`
+				: `${fileBaseName}.js`
 			)
 
 			const golfFile = () => readFile(target, { encoding: `utf8` }).then(async source => {
@@ -243,7 +244,8 @@ ${chalk.bold(`Warning:`)} ${formatOption(noMinifyOption.name)} is deprecated and
 				const { watch: watchFile } = await chokidarModule
 
 				watchFile(target, { awaitWriteFinish: { stabilityThreshold: 100 } })
-					.on(`ready`, () => log(`Watching ${target}`)).on(`change`, golfFile)
+					.on(`ready`, () => log(`Watching ${target}`))
+					.on(`change`, golfFile)
 
 				autoExit = false
 			} else
@@ -284,8 +286,7 @@ ${chalk.bold(`Warning:`)} ${formatOption(noMinifyOption.name)} is deprecated and
 				if (dtsPathOption) {
 					if (typeof dtsPathOption.value != `string`) {
 						logError(
-							`Option ${formatOption(dtsPathOption.name)} must be a string, got ${colourV(dtsPathOption.value)
-								}\n`
+							`Option ${formatOption(dtsPathOption.name)} must be a string, got ${colourV(dtsPathOption.value)}\n`
 						)
 
 						logHelp()
@@ -367,7 +368,9 @@ ${chalk.bold(`Warning:`)} ${formatOption(dtsPathOption.name)} is deprecated and 
 				autoExit = false
 			}
 		}
-	} break
+
+		break
+	}
 
 	case `pull`: {
 		const hackmudPath = getHackmudPath()
@@ -387,7 +390,9 @@ ${chalk.bold(`Warning:`)} ${formatOption(dtsPathOption.name)} is deprecated and 
 			console.error(error)
 			logError(`Something went wrong, did you forget to ${colourC(`#down`)} the script?`)
 		})
-	} break
+
+		break
+	}
 
 	case `sync-macros`: {
 		const hackmudPath = getHackmudPath()
@@ -397,7 +402,8 @@ ${chalk.bold(`Warning:`)} ${formatOption(dtsPathOption.name)} is deprecated and 
 		const { macrosSynced, usersSynced } = await syncMacros(hackmudPath)
 
 		log(`Synced ${macrosSynced} macros to ${usersSynced} users`)
-	} break
+		break
+	}
 
 	case `generate-type-declaration`:
 	case `gen-type-declaration`:
@@ -446,11 +452,12 @@ ${chalk.bold(`Warning:`)} ${colourC(`hsm`)} ${colourL(commands[0])} is deprecate
 		})
 
 		log(`Wrote type declaration to ${chalk.bold(typeDeclarationPath)}`)
-	} break
+		break
+	}
 
-	case `help`: {
+	case `help`:
 		logHelp()
-	} break
+		break
 
 	default: {
 		if (commands[0])
@@ -470,7 +477,6 @@ function logHelp() {
 	const generateTypeDeclarationCommandDescription = `Generate a type declaration file for a directory of scripts`
 	const syncMacrosCommandDescription = `Sync macros across all hackmud users`
 	const pullCommandDescription = `Pull a script a from a hackmud user's script directory`
-
 	const noMinifyOptionDescription = `Skip minification to produce a "readable" script`
 	const mangleNamesOptionDescription = `Reduce character count further but lose function names in error call stacks`
 	const forceQuineCheatsOptionDescription = `Force quine cheats on or off`
@@ -482,7 +488,7 @@ ${colourN(`--hackmud-path`)}=${colourB(`<path>`)}
 	switch (commands[0]) {
 		case `dev`:
 		case `watch`:
-		case `push`: {
+		case `push`:
 			console.log(colourS(`\
 ${colourJ(commands[0] == `push` ? pushCommandDescription : watchCommandDescription)}
 
@@ -527,9 +533,10 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${col
 ${colourC(`hsm`)} ${colourL(commands[0])} ${colourV(`src`)} ${colourC(`*`)}${colourV(`.`)}${colourL(`*`)}
     Pushes all scripts found in ${colourV(`src`)} folder to all users`
 			))
-		} break
 
-		case `pull`: {
+			break
+
+		case `pull`:
 			console.log(colourS(`\
 ${colourJ(pullCommandDescription)}
 
@@ -539,10 +546,11 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<script user>`)}${colourV(`
 ${colourA(`Options:`)}
 ${hackmudPathOption}`
 			))
-		} break
+
+			break
 
 		case `minify`:
-		case `golf`: {
+		case `golf`:
 			console.log(colourS(`\
 ${colourJ(minifyCommandDescription)}
 
@@ -561,13 +569,14 @@ ${colourN(`--watch`)}
 ${colourN(`--root-folder-path`)}
     The folder that root will be aliased to in import statements`
 			))
-		} break
+
+			break
 
 		case `generate-type-declaration`:
 		case `gen-type-declaration`:
 		case `gen-dts`:
 		case `gen-types`:
-		case `emit-dts`: {
+		case `emit-dts`:
 			if (!warnedDeprecatedEmitDtsAlias && commands[0] != `emit-dts` && commands[0] != `gen-dts`) {
 				process.exitCode = 1
 
@@ -587,16 +596,18 @@ ${colourC(`hsm`)} ${colourL(commands[0])} ${colourB(`<directory> [output path]`)
 ${colourA(`Options:`)}
 ${hackmudPathOption}`
 			))
-		} break
 
-		case `sync-macros`: {
+			break
+
+		case `sync-macros`:
 			console.log(colourS(`\
 ${colourJ(syncMacrosCommandDescription)}
 
 ${colourA(`Options:`)}
 ${hackmudPathOption}`
 			))
-		} break
+
+			break
 
 		default: {
 			console.log(colourS(`\
@@ -679,9 +690,9 @@ function getHackmudPath() {
 		return process.env.HSM_HACKMUD_PATH
 	}
 
-	return process.platform == `win32`
-		? resolvePath(process.env.APPDATA!, `hackmud`)
-		: resolvePath(getHomeDirectory(), `.config/hackmud`)
+	return process.platform == `win32` ?
+		resolvePath(process.env.APPDATA!, `hackmud`)
+	: resolvePath(getHomeDirectory(), `.config/hackmud`)
 }
 
 type Option = { name: string, value: OptionValue }
