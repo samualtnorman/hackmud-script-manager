@@ -258,7 +258,18 @@ export async function processScript(code: string, {
 			rollupPluginJSON({ preferConst: true }),
 			{
 				name: `hackmud-script-manager`,
+				resolveId(source) {
+					if (source == filePathResolved)
+						return filePathResolved
+				},
+				async load(id) {
+					if (id == filePathResolved)
+						return (await preprocess(code, { uniqueId })).code
+				},
 				async transform(code, id) {
+					if (id == filePathResolved)
+						return
+
 					if (isAbsolutePath(id) && !id.includes(`${pathSeparator}node_modules${pathSeparator}`))
 						return (await preprocess(code, { uniqueId })).code
 
