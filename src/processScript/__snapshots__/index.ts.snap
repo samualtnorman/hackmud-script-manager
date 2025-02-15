@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`programmatic api works 1`] = `
+{
+  "script": "function(){#4s.scripts.trust()}",
+  "warnings": [],
+}
+`;

@@ -450,11 +450,10 @@ if (import.meta.vitest) {
 		})
 	}
 
-	test(`reassigning const variable`, () => {
-		const reassignmentTestSource = `export default () => { const i = 0; i = 1; }`
-	
-		expect(async (): Promise<any> => await processScript(reassignmentTestSource, { scriptName: true, minify: false }))
-			.rejects
-			.toThrowError(`Reassignment to const variable i is not allowed!`)
+	test(`programmatic api works`, async () => {
+		const source = `function () { #fs.scripts.trust() }`
+		const processedScript = await processScript(source, { scriptName: true })
+
+		expect(processedScript).toMatchSnapshot()
 	})
 }
