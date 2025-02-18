@@ -20,7 +20,6 @@ export default ({ expect }: typeof import('vitest')) => {
         bar() {
             return 2
         },
-        // @ts-expect-error
         baz(a = this.foo, b = this.bar()) {
             return a + b
         }
