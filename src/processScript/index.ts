@@ -184,7 +184,7 @@ export async function processScript(code: string, {
 		filePathResolved = getRelativePath(`.`, filePath)
 
 		if (filePath.endsWith(`.ts`)) {
-			plugins.push([
+			plugins.unshift([
 				(await import(`@babel/plugin-transform-typescript`)),
 				{ allowDeclareFields: true, optimizeConstEnums: true }
 			])
