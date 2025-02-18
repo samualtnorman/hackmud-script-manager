@@ -830,7 +830,7 @@ export function transform(
 							path.replaceWith(t.callExpression(
 								t.memberExpression(t.super(), t.identifier(`valueOf`)), []
 							))
-						},
+						}
 					}, scope)
 				}
 
