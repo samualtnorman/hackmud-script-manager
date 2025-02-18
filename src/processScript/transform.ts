@@ -821,6 +821,19 @@ export function transform(
 
 				let methodReferencesThis = false as boolean
 
+				for (const param of classMethod.params) {
+					traverse(param, {
+						ThisExpression(path) {
+							// We can't reference _abc_THIS_ here, because there would be
+							// nowhere to place the assignment to that!
+							// Hence, we just do the super thing directly.
+							path.replaceWith(t.callExpression(
+								t.memberExpression(t.super(), t.identifier(`valueOf`)), []
+							))
+						},
+					}, scope)
+				}
+
 				traverse(classMethod.body, {
 					ThisExpression(path) {
 						methodReferencesThis = true
