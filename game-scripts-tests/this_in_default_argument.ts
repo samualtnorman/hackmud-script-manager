@@ -1,6 +1,6 @@
 export default ({ expect }: typeof import('vitest')) => {
     class Foo {
-        declare foo: number;
+        declare foo: number
 
         constructor() {
             this.foo = 1
@@ -20,13 +20,13 @@ export default ({ expect }: typeof import('vitest')) => {
         bar() {
             return 2
         },
-        // @ts-ignore
+        // @ts-expect-error
         baz(a = this.foo, b = this.bar()) {
             return a + b
         }
     }
 
-    const foo = new Foo();
+    const foo = new Foo()
     expect(foo.baz(3, 4)).toBe(7) // Is this the real life?
     expect(foo.baz()).toBe(3) // Is this just fantasy?
 

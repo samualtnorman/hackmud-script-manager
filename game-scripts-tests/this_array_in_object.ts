@@ -3,7 +3,7 @@ export default ({ expect }: typeof import('vitest')) => {
 		0: `test[0]`,
 		foo: [
 			function () {
-				// @ts-ignore
+				// @ts-expect-error
 				return this[0]
 			}
 		],
