@@ -13,10 +13,7 @@
 	],
 	"license": "MIT",
 	"homepage": "https://github.com/samualtnorman/hackmud-script-manager#readme",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/samualtnorman/hackmud-script-manager.git"
-	},
+	"repository": "github:samualtnorman/hackmud-script-manager",
 	"bugs": "https://github.com/samualtnorman/hackmud-script-manager/issues",
 	"keywords": [
 		"api",
