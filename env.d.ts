@@ -553,11 +553,11 @@ type Highsec = Fullsec & PlayerHighsec & {
 				rarity: UpgradeRarityString
 			})[] | ScriptFailure
 
-			(args:{
+			(args: {
 				filter:
 				Partial<{
-					loaded: boolean,
-					rarity: UpgradeRarityNumber | MongoQuerySelector<UpgradeRarityNumber>,
+					loaded: boolean
+					rarity: UpgradeRarityNumber | MongoQuerySelector<UpgradeRarityNumber>
 					name: string | MongoQuerySelector<string>
 				} & Omit<{
 					[k in keyof CliUpgrade]: CliUpgrade[k] | MongoQuerySelector<CliUpgrade[k]>
