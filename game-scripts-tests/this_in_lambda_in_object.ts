@@ -1,17 +1,16 @@
+// Since this is the thing being tested, we need to disable the ESLint rule instead.
+/* eslint-disable object-shorthand */
+
 export default ({ expect }: typeof import('vitest')) => {
 	const myObject = {
 		a: 0,
-		// Since this is the thing being tested, we need to disable the ESLint rule instead.
-		/* eslint-disable object-shorthand */
 		b: function () {
 			this.a++
 			return this.a
 		},
-		/* eslint-disable object-shorthand */
 		c: function (value: number = this.a) {
 			this.a = value + 1
 		},
-		/* eslint-disable object-shorthand */
 		d: function ({ value = this.a }: { value?: number }) {
 			this.a = value + 1
 		}
