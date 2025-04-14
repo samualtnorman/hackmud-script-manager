@@ -1,23 +1,13 @@
 /* eslint-disable jsdoc/check-param-names */
-import type { NodePath, Scope } from '@babel/traverse';
-import traverse from '@babel/traverse';
-import type {
-	ArrayExpression,
-	Block,
-	BlockStatement,
-	CallExpression,
-	File,
-	FunctionDeclaration,
-	Identifier,
-	Node,
-	ObjectExpression
-} from '@babel/types';
-import t from '@babel/types';
-import type { LaxPartial } from '@samual/lib';
-import { assert } from '@samual/lib/assert';
-import { clearObject } from '@samual/lib/clearObject';
-import { validDBMethods } from '../constants';
-import { getReferencePathsToGlobal } from './shared';
+import type { NodePath, Scope } from "@babel/traverse"
+import type { ArrayExpression, Block, BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, Node, ObjectExpression } from "@babel/types"
+import type { LaxPartial } from "@samual/lib"
+import traverse from "@babel/traverse"
+import t from "@babel/types"
+import { assert } from "@samual/lib/assert"
+import { clearObject } from "@samual/lib/clearObject"
+import { validDBMethods } from "../constants"
+import { getReferencePathsToGlobal } from "./shared"
 
 export type TransformOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueId: string
