@@ -1,13 +1,23 @@
 /* eslint-disable jsdoc/check-param-names */
-import type { NodePath, Scope } from "@babel/traverse"
-import type { ArrayExpression, Block, BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, Node, ObjectExpression } from "@babel/types"
-import type { LaxPartial } from "@samual/lib"
-import traverse from "@babel/traverse"
-import t from "@babel/types"
-import { assert } from "@samual/lib/assert"
-import { clearObject } from "@samual/lib/clearObject"
-import { validDBMethods } from "../constants"
-import { getReferencePathsToGlobal } from "./shared"
+import type { NodePath, Scope } from '@babel/traverse';
+import traverse from '@babel/traverse';
+import type {
+	ArrayExpression,
+	Block,
+	BlockStatement,
+	CallExpression,
+	File,
+	FunctionDeclaration,
+	Identifier,
+	Node,
+	ObjectExpression
+} from '@babel/types';
+import t from '@babel/types';
+import type { LaxPartial } from '@samual/lib';
+import { assert } from '@samual/lib/assert';
+import { clearObject } from '@samual/lib/clearObject';
+import { validDBMethods } from '../constants';
+import { getReferencePathsToGlobal } from './shared';
 
 export type TransformOptions = LaxPartial<{
 	/** 11 a-z 0-9 characters */ uniqueId: string
@@ -749,10 +759,19 @@ export function transform(
 
 		if (object.type == `ObjectExpression`) {
 			for (const property of (object as ObjectExpression).properties) {
-				if (property.type != `ObjectMethod`)
+				if (property.type == `ObjectMethod`) {
+					thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
 					continue
+				}
 
-				thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
+				if (property.type == `ObjectProperty` && property.value.type == `FunctionExpression`) {
+					// Replace in things like this: function (foo = this.a)
+					for (const param of property.value.params) {
+						thisIsReferenced ||= replaceAllThisWith(param, scope, thisId)
+					}
+
+					thisIsReferenced ||= replaceAllThisWith(property.value.body, scope, thisId)
+				}
 			}
 		} else {
 			for (const element of (object as ArrayExpression).elements) {
