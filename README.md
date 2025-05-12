@@ -4,8 +4,6 @@ Command made for [Hackmud Scripting Environment](https://github.com/samualtnorma
 
 Join [our Discord server](https://discord.gg/RSa4Sc6pNA)!
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/R6R0XN5CX)
-
 You can read about how HSM works [in my blog post](https://samual.uk/blog/js-code-transformation-niche-environment/).
 
 ## Install
