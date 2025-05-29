@@ -749,10 +749,19 @@ export function transform(
 
 		if (object.type == `ObjectExpression`) {
 			for (const property of (object as ObjectExpression).properties) {
-				if (property.type != `ObjectMethod`)
+				if (property.type == `ObjectMethod`) {
+					thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
 					continue
+				}
 
-				thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
+				if (property.type == `ObjectProperty` && property.value.type == `FunctionExpression`) {
+					// Replace in things like this: function (foo = this.a)
+					for (const param of property.value.params) {
+						thisIsReferenced ||= replaceAllThisWith(param, scope, thisId)
+					}
+
+					thisIsReferenced ||= replaceAllThisWith(property.value.body, scope, thisId)
+				}
 			}
 		} else {
 			for (const element of (object as ArrayExpression).elements) {
