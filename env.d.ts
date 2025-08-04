@@ -21,10 +21,11 @@ type Subscripts = Record<string, Record<string, (...args: any) => any>> & {
 
 type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
 type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5
+type UpgradeTypeString = "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
 
 type UpgradeBase = {
 	name: string
-	type: "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
+	type: UpgradeTypeString
 	up_class?: -1 | 0 | 1 | 2 | 3
 	tier: 1 | 2 | 3 | 4
 	rarity: UpgradeRarityNumber
@@ -551,6 +552,17 @@ type Highsec = Fullsec & PlayerHighsec & {
 				[x: string]: null | boolean | number | string
 				rarity: UpgradeRarityString
 			})[] | ScriptFailure
+
+			(args: {
+				filter:
+				Partial<{
+					loaded: boolean
+					rarity: UpgradeRarityNumber | MongoQuerySelector<UpgradeRarityNumber>
+					name: string | MongoQuerySelector<string>
+				} & Omit<{
+					[k in keyof CliUpgrade]: CliUpgrade[k] | MongoQuerySelector<CliUpgrade[k]>
+				}, "rarity">>
+			}): { i: string, name: string, rarity: Upgrade["rarity"], cost: number, loaded: boolean }[] | ScriptFailure
 		}
 	}
 
