@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/check-param-names */
 import type { NodePath, Scope } from "@babel/traverse"
-import type { ArrayExpression, Block, BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, Node, ObjectExpression } from "@babel/types"
+import type { ArrayExpression, Block, BlockStatement, CallExpression, File, FunctionDeclaration, Identifier, LVal, Node, ObjectExpression } from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
 import traverse from "@babel/traverse"
 import t from "@babel/types"
@@ -294,7 +294,7 @@ export function transform(
 
 			if (
 				(specifier.exported.type == `Identifier` ? specifier.exported.name : specifier.exported.value) !=
-					`default`
+				`default`
 			)
 				throw Error(`Only default exports are supported`)
 
@@ -317,7 +317,7 @@ export function transform(
 						declarator.init.params,
 						declarator.init.body.type == `BlockStatement` ?
 							declarator.init.body
-						: t.blockStatement([ t.returnStatement(declarator.init.body) ])
+							: t.blockStatement([ t.returnStatement(declarator.init.body) ])
 					)
 
 					continue
@@ -340,7 +340,7 @@ export function transform(
 
 				if (declarator.init) {
 					globalBlock.body
-						.push(t.expressionStatement(t.assignmentExpression(`=`, declarator.id, declarator.init)))
+						.push(t.expressionStatement(t.assignmentExpression(`=`, declarator.id as LVal, declarator.init)))
 				}
 			}
 		} else if (statement.type == `FunctionDeclaration`) {
@@ -631,7 +631,7 @@ export function transform(
 			[ ...neededDbMethodLets ].map(name => {
 				const getArgs = () => name == `ObjectId` ?
 					[]
-				: (name == `i` || name == `r` ? [ t.identifier(`a`) ] : [ t.identifier(`a`), t.identifier(`b`) ])
+					: (name == `i` || name == `r` ? [ t.identifier(`a`) ] : [ t.identifier(`a`), t.identifier(`b`) ])
 
 				return t.variableDeclarator(
 					t.identifier(`_${uniqueId}_CONSOLE_METHOD_${name}_`),
@@ -749,10 +749,19 @@ export function transform(
 
 		if (object.type == `ObjectExpression`) {
 			for (const property of (object as ObjectExpression).properties) {
-				if (property.type != `ObjectMethod`)
+				if (property.type == `ObjectMethod`) {
+					thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
 					continue
+				}
 
-				thisIsReferenced ||= replaceAllThisWith(property, scope, thisId)
+				if (property.type == `ObjectProperty` && property.value.type == `FunctionExpression`) {
+					// Replace in things like this: function (foo = this.a)
+					for (const param of property.value.params) {
+						thisIsReferenced ||= replaceAllThisWith(param, scope, thisId)
+					}
+
+					thisIsReferenced ||= replaceAllThisWith(property.value.body, scope, thisId)
+				}
 			}
 		} else {
 			for (const element of (object as ArrayExpression).elements) {
@@ -951,8 +960,7 @@ export function transform(
 
 			if (referencePath.parentPath.parentPath.parentPath?.type == `CallExpression`) {
 				// BUG this is causing typescript to be slow
-				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$${seclevel}$SUBSCRIPT$${
-					referencePath.parent.property.name
+				referencePath.parentPath.parentPath.replaceWith(t.identifier(`$${uniqueId}$${seclevel}$SUBSCRIPT$${referencePath.parent.property.name
 				}$${referencePath.parentPath.parentPath.node.property.name}$`))
 			} else {
 				const name =

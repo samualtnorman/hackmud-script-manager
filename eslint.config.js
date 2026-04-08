@@ -5,6 +5,7 @@ export default antfu(
 		formatters: true,
 		stylistic: { indent: "tab", quotes: "backtick" },
 		rules: {
+			"style/member-delimiter-style": "off",
 			"style/comma-dangle": [ "error", "never" ],
 			"style/array-bracket-spacing": [ "error", "always" ],
 			"unicorn/prefer-node-protocol": "off",

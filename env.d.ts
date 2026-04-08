@@ -13,39 +13,12 @@ type Subscripts = Record<string, Record<string, (...args: any) => any>> & {
 	gui: ErrorScripts
 	kernel: ErrorScripts
 	market: ErrorScripts
+	marks: ErrorScripts
 	scripts: ErrorScripts
 	sys: ErrorScripts
 	trust: ErrorScripts
 	users: ErrorScripts
 }
-
-type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
-type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5
-
-type UpgradeBase = {
-	name: string
-	type: "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
-	up_class?: -1 | 0 | 1 | 2 | 3
-	tier: 1 | 2 | 3 | 4
-	rarity: UpgradeRarityNumber
-	i: number
-	loaded: boolean
-	sn: string
-	description: string
-}
-
-type Upgrade = UpgradeBase & Record<string, null | boolean | number | string>
-
-type CliUpgrade = Omit<UpgradeBase, "rarity"> &
-	{ [k: string]: null | boolean | number | string, rarity: UpgradeRarityString }
-
-type UsersTopItem<R> = { rank: R, name: string, last_activity: string, balance: string }
-type CorpsTopItem<R> = { rank: R, name: string, worth: string }
-
-type CorpsTop = [
-	CorpsTopItem<1>, CorpsTopItem<2>, CorpsTopItem<3>, CorpsTopItem<4>, CorpsTopItem<5>,
-	CorpsTopItem<6>, CorpsTopItem<7>, CorpsTopItem<8>, CorpsTopItem<9>, CorpsTopItem<10>
-]
 
 type Fullsec = Subscripts & PlayerFullsec & {
 	accts: {
@@ -101,10 +74,13 @@ type Fullsec = Subscripts & PlayerFullsec & {
 		 * @description This script lets you send a message to the specified channel.
 		 * You must have joined the channel, and you will see your own message (unlike chats.tell).
 		 */
-		send: (args: {
+		send: ((args: {
 			/** The channel to send the message to. */ channel: string
 			/** The message to send. */ msg: string
-		}) => ScriptResponse
+		}) => ScriptResponse) & ((args: {
+			/** The channel  to send the message to. */ c: string
+			/** The message to  send. */ msg: string
+		}) => ScriptResponse)
 
 		/**
 		 * **FULLSEC**
@@ -260,7 +236,7 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			colors: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 			/** Used by `$fs.scripts.lib().corrupt()` to determine the frequency of corruption. */
-			corruptions: [ 0, 1, 1.5, 2.5, 5 ]
+			corruptions: [0, 1, 1.5, 2.5, 5]
 
 			/** Adds colored corruption characters to `text`, with frequency determined by `amount`. */
 			corrupt: (text: string | string[], amount: 0 | 1 | 2 | 3 | 4) => string
@@ -311,13 +287,13 @@ type Fullsec = Subscripts & PlayerFullsec & {
 			num_sort_desc: (one: number, two: number) => 1 | -1 | 0
 
 			/** @returns The value and the index of the largest number in `array`. */
-			max_val_index: (array: number[]) => [ largestValue: number, index: number ]
+			max_val_index: (array: number[]) => [largestValue: number, index: number]
 
 			/** @returns A new `Date` equivalent to `date.getTime() + add_ms`. */
 			add_time: (date: Date, add_ms: number) => Date
 
 			/** Array of strings representing seclevels. */
-			security_level_names: [ "NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC" ]
+			security_level_names: ["NULLSEC", "LOWSEC", "MIDSEC", "HIGHSEC", "FULLSEC"]
 
 			/** @returns The string name of a numeric security level. */
 			get_security_level_name: (security_level: number) => string
@@ -433,20 +409,17 @@ type Fullsec = Subscripts & PlayerFullsec & {
 
 		/** **FULLSEC** */
 		upgrades_of_owner: {
-			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?: { filter?: F, full?: false }): (
-				Omit<
-					Pick<UpgradeBase, "tier" | "rarity" | "name" | "type" | "i" | "loaded">,
-					keyof F
-				> & Pick<F, "tier" | "rarity" | "name" | "type" | "i" | "loaded">
-			)[] | ScriptFailure
-
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args: { filter?: F, full: true }): (
-				Omit<UpgradeBase, keyof F> & F & Record<string, null | boolean | number | string>
+				Omit<Upgrade, keyof F> & F
 			)[] | ScriptFailure
 
-			<I extends number>(args: { i: I }): (
-				Omit<UpgradeBase, "i"> & { [x: string]: null | boolean | number | string, i: I }
-			) | ScriptFailure
+			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?: { filter?: F, full?: boolean }): (
+				Upgrade
+			)[] | ScriptFailure
+
+			<I extends number>(args: { i: I }): Upgrade | ScriptFailure
+
+			<I extends number>(args: { i: I[] }): Upgrade[] | ScriptFailure
 		}
 
 		/** **FULLSEC** */
@@ -508,6 +481,15 @@ type Highsec = Fullsec & PlayerHighsec & {
 		}
 	}
 
+	marks: {
+		/** **HIGHSEC** */ available: () => string
+		/** **HIGHSEC** */ protocol: (args?: {
+			pos?: [number, number],
+			name?: string,
+			[foo: any]: any
+		}) => string
+	}
+
 	scripts: {
 		/** **HIGHSEC** */ sys: () => string | string[]
 	}
@@ -518,8 +500,7 @@ type Highsec = Fullsec & PlayerHighsec & {
 
 		/** **HIGHSEC** */
 		upgrade_log: {
-			(args?: { is_script?: true, user?: string, run_id?: string, count?: number, start?: number }):
-				{ t: Date, u: string, r: string, msg: string }[] | ScriptFailure
+			(args?: { is_script?: true, user?: string, run_id?: string, count?: number, start?: number }): { t: Date, u: string, r: string, msg: string }[] | ScriptFailure
 
 			(args: { is_script: false, user?: string, run_id?: string, count?: number, start?: number }):
 				string[] | ScriptFailure
@@ -537,13 +518,12 @@ type Highsec = Fullsec & PlayerHighsec & {
 				full?: false
 			}): (
 				Omit<Pick<UpgradeBase, "tier" | "rarity" | "name" | "type" | "i" | "loaded">, keyof F> & F &
-					Record<string, null | boolean | number | string>
+				Record<string, null | boolean | number | string>
 			)[] | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(args?: { filter?: F, is_script?: true, full: true }): (Omit<UpgradeBase, keyof F> & F & Record<string, null | boolean | number | string>)[] | ScriptFailure
 
-			(args?: { filter?: Partial<Upgrade & { loaded: boolean }>, is_script: false, full?: false }):
-				{ msg: string, upgrades: string[] } | ScriptFailure
+			(args?: { filter?: Partial<Upgrade & { loaded: boolean }>, is_script: false, full?: false }): { msg: string, upgrades: string[] } | ScriptFailure
 
 			<F extends Partial<Upgrade & { loaded: boolean }> = object>(
 				args?: { filter?: F, is_script: false, full: true }
@@ -609,14 +589,14 @@ type Midsec = Highsec & PlayerMidsec & {
 		manage: {
 			(args: { unload?: number | number[], load?: number | number[] }): ScriptResponse
 
-			(args: { reorder?: ([ number, number ] | { from: number, to: number })[] | { from: number, to: number } }):
+			(args: { reorder?: ([number, number] | { from: number, to: number })[] | { from: number, to: number } }):
 				string[] | ScriptFailure
 		}
 	}
 }
 
 type Lowsec = Midsec & PlayerLowsec & {
-	kernel: { /** **LOWSEC** */ hardline: () => ScriptResponse }
+	kernel: { /** **LOWSEC** */ hardline: (args?: { activate?: boolean, dc?: boolean }) => ScriptResponse }
 
 	market: {
 		/** **LOWSEC** */ sell: (args: {
@@ -625,14 +605,15 @@ type Lowsec = Midsec & PlayerLowsec & {
 			description?: string
 			count?: number
 			no_notify?: boolean
-			confirm: true
+			confirm?: boolean
+			delist?: string
 		}) => ScriptResponse<{ token: string }>
 	}
 
 	sys: {
 		/** **LOWSEC** */ access_log: {
 			(args?: { user?: string, run_id?: string, is_script?: true, count?: number, start?: number }):
-				{ t: Date, u: string | undefined, r: string | undefined, msg: string }[] | ScriptFailure
+			AccessLog[] | ScriptFailure
 
 			(args: { user?: string, run_id?: string, is_script: false, count?: number, start?: number }): string[]
 		}
@@ -645,13 +626,35 @@ type Lowsec = Midsec & PlayerLowsec & {
 			(args: { i: number | number[], to: string, memo?: string }): ScriptResponse
 			(args: { sn: string | string[], to: string, memo?: string }): ScriptResponse
 		}
-		/** **LOWSEC**  */ expose_access_log: (args: { target: string }) => ScriptResponse
+		/** **LOWSEC**  */ expose_access_log: (args: { target: string }) => AccessLog[] | ScriptFailure
 		/** **LOWSEC** */ xfer_gc_from: (args: { target: string, amount: number | string }) => ScriptResponse
-		/** **LOWSEC** */ expose_balance: (args: { target: string }) => ScriptResponse
+		/** **LOWSEC** */ expose_balance: (args: { target: string }) => number | ScriptFailure
+
+		/** **LOWSEC** */ expose_upgrades: (args: { target: string }) => UpgradeBase[] | ScriptFailure
+		/** **LOWSEC** */ xfer_upgrade_from: (args: { target: string, i: number | number[] }) => ScriptResponse<{}>
 	}
 }
 
 type Nullsec = Lowsec & PlayerNullsec & {
+	binmat: {
+		/**
+		 * **NULLSEC**
+		 */
+		connect: (args: { target: string, trace: Trace, brain?: string }) => ScriptResponse,
+		/**
+		 * **NULLSEC**
+		 */
+		c: typeof $ns.binmat.connect,
+		/**
+		 * **NULLSEC**
+		 */
+		xform: (args: { op: Op }) => ScriptResponse,
+		/**
+		 * **NULLSEC**
+		 */
+		x: typeof $ns.binmat.xform
+	}
+
 	corps: {
 		/** **NULLSEC** */ create: (args: { name: string, confirm: true }) => ScriptResponse
 		/** **NULLSEC** */ hire: (args: { name: string }) => ScriptResponse
@@ -670,6 +673,8 @@ type Nullsec = Lowsec & PlayerNullsec & {
 		/** **NULLSEC** */ quit: (args: { confirm: true }) => ScriptResponse
 		/** **NULLSEC** */ top: () => CorpsTop | { top: CorpsTop, active: { name: string, worth: string } }
 	}
+
+	marks: { /** **NULLSEC** */ clone: (args?: { name?: string }) => ScriptResponse }
 
 	sys: { /** **NULLSEC** */ breach: (args: { confirm: true }) => ScriptResponse }
 	trust: { /** **NULLSEC** */ me: () => string }
@@ -761,17 +766,17 @@ type MongoDocument = MongoObject & { _id?: MongoId }
 
 type MongoQueryType<TQuery extends MongoQueryObject> = {
 	-readonly [K in keyof TQuery]:
-		TQuery[K] extends MongoPrimitive ?
-			TQuery[K]
+	TQuery[K] extends MongoPrimitive ?
+		TQuery[K]
 		: TQuery[K] extends { $type: infer TType } ?
 			TType extends keyof MongoTypeStringsToTypes ? MongoTypeStringsToTypes[TType] : unknown
-		: TQuery[K] extends { $in: (infer TIn)[] } ?
-			TIn
-		: keyof TQuery[K] extends `$${string}` ?
-			unknown
-		: TQuery[K] extends { [k: string]: any } ?
-			MongoQueryType<TQuery[K]>
-		: never
+			: TQuery[K] extends { $in: (infer TIn)[] } ?
+				TIn
+				: keyof TQuery[K] extends `$${string}` ?
+					unknown
+					: TQuery[K] extends { [k: string]: any } ?
+						MongoQueryType<TQuery[K]>
+						: never
 }
 
 type MongoCommandValue = MongoPrimitive | MongoCommandValue[] | { [k: string]: MongoCommandValue }
@@ -783,8 +788,8 @@ type MongoComparisonSelectors<T extends MongoValue = MongoValue> =
 type MongoElementSelectors = { $exists: boolean, $type: MongoTypeNumber | MongoTypeString }
 
 type MongoQuerySelector<T extends MongoValue> = Partial<
-	T extends []
-		? MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>
+	T extends [] ?
+	MongoArraySelectors<T> & MongoElementSelectors & MongoComparisonSelectors<T>
 		: MongoElementSelectors & MongoComparisonSelectors<T>
 >
 
@@ -793,7 +798,7 @@ type MongoQuery<T extends MongoObject> = { [K in keyof T]?: T[K] | MongoQuerySel
 type MongoUpdateArrayOperatorUniversalModifiers<T> = { $each?: T extends [] ? T : T[] }
 
 type MongoUpdateArrayOperatorModifiers<T> = MongoUpdateArrayOperatorUniversalModifiers<T> &
-	{ $position?: number, $slice?: number, $sort?: 1 | -1 }
+{ $position?: number, $slice?: number, $sort?: 1 | -1 }
 
 type MongoUpdateCommand<T extends MongoObject> = Partial<{
 	/* Universal operators */
@@ -805,7 +810,7 @@ type MongoUpdateCommand<T extends MongoObject> = Partial<{
 
 	/* Date & number operators */
 	$inc: Record<string, number> &
-		{ [K in keyof T as T[K] extends number | Date ? K : never]?: T[K] extends number ? number : Date }
+	{ [K in keyof T as T[K] extends number | Date ? K : never]?: T[K] extends number ? number : Date }
 
 	$mul: Record<string, number> & { [K in keyof T as T[K] extends number ? K : never]?: number }
 	$min: Record<string, number> & { [K in keyof T as T[K] extends number ? K : never]?: number }
@@ -815,18 +820,18 @@ type MongoUpdateCommand<T extends MongoObject> = Partial<{
 	$pop: Record<string, -1 | 1> & { [K in keyof T as T[K] extends [] ? K : never]?: -1 | 1 }
 
 	$push: Record<string, MongoCommandValue> & {
-		[K in keyof T as T[K] extends [] ? K : never]?: (T[K] extends (infer U)[] ? U : never)
-			| MongoUpdateArrayOperatorModifiers<T[K]>
+		[K in keyof T as T[K] extends [] ? K : never]?: (T[K] extends (infer U)[] ? U : never) |
+		MongoUpdateArrayOperatorModifiers<T[K]>
 	}
 
 	$addToSet: Partial<Record<string, MongoCommandValue> & {
-		[K in keyof T as T[K] extends [] ? K : never]: (T[K] extends (infer U)[] ? U : never)
-			| MongoUpdateArrayOperatorUniversalModifiers<T[K]>
+		[K in keyof T as T[K] extends [] ? K : never]: (T[K] extends (infer U)[] ? U : never) |
+		MongoUpdateArrayOperatorUniversalModifiers<T[K]>
 	}>
 
 	$pull: Partial<Record<string, MongoCommandValue> & {
-		[K in keyof T as T[K] extends [] ? K : never]: (T[K] extends (infer U)[] ? U : never)
-			| MongoQuerySelector<T[K]>
+		[K in keyof T as T[K] extends [] ? K : never]: (T[K] extends (infer U)[] ? U : never) |
+		MongoQuerySelector<T[K]>
 	}>
 
 	$pullAll: Record<string, MongoCommandValue> & { [K in keyof T as T[K] extends [] ? K : never]?: T[K] }
@@ -835,21 +840,36 @@ type MongoUpdateCommand<T extends MongoObject> = Partial<{
 type SortOrder = { [key: string]: 1 | -1 | SortOrder }
 
 type Cursor<T> = {
-	/** Returns the first document that satisfies the query. */ first: () => T | null
-	/** Returns an array of documents that satisfy the query. */ array: () => T[]
-	/** Returns the number of documents that match the query. */ count: () => number
+	/** Returns the first document that satisfies the query. */
+	first: () => T | null
+	/** Returns an array of documents that satisfy the query. */
+	array: () => T[]
+	/** Returns the number of documents that match the query. */
+	count: () => number
 
 	/** Returns the first document that satisfies the query. Also makes cursor unusable. */
 	first_and_close: () => T
 
+	/** Returns the first document that satisfies the query.  Keeps cursor open. */
+	first_and_keep_open: () => T
+
 	/** Returns an array of documents that satisfy the query. Also makes cursor unusable. */
 	array_and_close: () => T[]
+
+	/** Returns an array of documents that satisfy the query. Keeps cursor open. */
+	array_and_keep_open: () => T[]
 
 	/** Returns the number of documents that match the query. Also makes cursor unusable. */
 	count_and_close: () => number
 
+	/** Returns the number of documents that match the query. Keeps cursor open. */
+	count_and_keep_open: () => number
+
 	/** Run `callback` on each document that satisfied the query. */
 	each: (callback: (document: T) => void) => null
+
+	/** Run `callback` on each document that satisfied the query. Keeps cursor open */
+	each_and_keep_open: (callback: (document: T) => void) => null
 
 	/**
 	 * Returns a new cursor with documents sorted as specified.
@@ -870,8 +890,15 @@ type Cursor<T> = {
 	 */
 	limit: (count: number) => Cursor<T>
 
-	/** @param key The key of the documents. */ distinct: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
-	/** Make cursor unusable. */ close: () => null
+	/** @param key The key of the documents. Keeps cursor open */
+	distinct_and_keep_open: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
+
+	/** @param key The key of the documents. */
+	distinct: { (key: string): MongoValue[], (key: "_id"): MongoId[] }
+
+	/** Make cursor unusable. */
+	close: () => null
+
 	NumberLong: (number: number) => number
 	// TODO what actually is the type here?
 	ObjectId: () => any
@@ -909,17 +936,17 @@ type BrainContext = Replace<CliContext, { /** Whether the script is being run vi
 type MongoProject<TDocument, TProjection> =
 	(TProjection extends { _id: false | 0 } ? {} : { _id: TDocument extends { _id: infer TId } ? TId : MongoId }) & (
 		true extends (1 extends TProjection[keyof TProjection] ? true : TProjection[keyof TProjection]) ?
-			{
-				[K in keyof TDocument as K extends
-					keyof TProjection ? TProjection[K] extends true | 1 ? K : never : never
-				]: TDocument[K]
-			} &
-			{
-				-readonly [K in keyof TProjection as TProjection[K] extends
-					true | 1 ? K extends keyof TDocument ? never : K : never
-				]?: MongoValue
-			}
-		: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
+		{
+			[K in keyof TDocument as K extends
+			keyof TProjection ? TProjection[K] extends true | 1 ? K : never : never
+			]: TDocument[K]
+		} &
+		{
+			-readonly [K in keyof TProjection as TProjection[K] extends
+			true | 1 ? K extends keyof TDocument ? never : K : never
+			]?: MongoValue
+		}
+			: { [k: string]: MongoValue } & { [K in keyof TDocument as K extends keyof TProjection ? never : K]: TDocument[K] }
 	)
 
 type DeepFreeze<T> = { readonly [P in keyof T]: DeepFreeze<T[P]> }
@@ -932,15 +959,154 @@ declare global {
 	type Context = CliContext | SubscriptContext | ScriptorContext | BrainContext
 	type MongoObjectId = { $oid: string }
 
+	type AccessLog = { t: Date, u: string | undefined, r: string | undefined, msg: string }
+
+	type UpgradeRarityString = "`0noob`" | "`1kiddie`" | "`2h4x0r`" | "`3h4rdc0r3`" | "`4|_|b3|2`" | "`531337`"
+	type UpgradeRarityNumber = 0 | 1 | 2 | 3 | 4 | 5
+
+	type UpgradeBase = {
+		name: string
+		type: "lock" | "script_space" | "chat" | "script" | "tool" | "bot_brain" | "glam"
+		up_class?: -1 | 0 | 1 | 2 | 3
+		tier: 1 | 2 | 3 | 4
+		rarity: UpgradeRarityNumber
+		i: number
+		loaded: boolean
+		sn: string
+		description: string
+	}
+
+	type Upgrade = UpgradeBase & Record<string, null | boolean | number | string>
+
+	type CliUpgrade = Omit<UpgradeBase, "rarity"> &
+	{ [k: string]: null | boolean | number | string, rarity: UpgradeRarityString }
+
+	type UsersTopItem<R> = { rank: R, name: string, last_activity: string, balance: string }
+	type CorpsTopItem<R> = { rank: R, name: string, worth: string }
+
+	type CorpsTop = [
+		CorpsTopItem<1>, CorpsTopItem<2>, CorpsTopItem<3>, CorpsTopItem<4>, CorpsTopItem<5>,
+		CorpsTopItem<6>, CorpsTopItem<7>, CorpsTopItem<8>, CorpsTopItem<9>, CorpsTopItem<10>
+	]
+
+	// BINMAT types
+	type Axiom = "%" | "&" | "+" | "!" | "^" | "#"
+
+	type CardValue = "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "a" | "*" | ">" | "?" | "@"
+
+	type Card = `${CardValue}${Axiom}`
+
+	type TeamHand = Card[]
+	type EnemyHand = number
+	type Hand = TeamHand | EnemyHand
+
+	type Deck = {
+		c: number,
+		t: Card | "X"
+	}
+
+	type Discard = `${Card}u`[]
+	type AttackerDiscard = Card[]
+
+	type Stack = (Card | `${Card}u` | "X")[]
+
+	type GameState = {
+		a?: Deck,
+		a0?: Stack,
+		a1?: Stack,
+		a2?: Stack,
+		a3?: Stack,
+		a4?: Stack,
+		a5?: Stack,
+		d0?: Stack,
+		d1?: Stack,
+		d2?: Stack,
+		d3?: Stack,
+		d4?: Stack,
+		d5?: Stack,
+		ha0?: Hand,
+		ha1?: Hand,
+		ha2?: Hand,
+		ha3?: Hand,
+		ha4?: Hand,
+		ha5?: Hand,
+		ha6?: Hand,
+		ha7?: Hand,
+		ha8?: Hand,
+		ha9?: Hand,
+		haa?: Hand,
+		hab?: Hand,
+		hac?: Hand,
+		had?: Hand,
+		hae?: Hand,
+		haf?: Hand,
+		hd0?: Hand,
+		hd1?: Hand,
+		hd2?: Hand,
+		hd3?: Hand,
+		hd4?: Hand,
+		hd5?: Hand,
+		hd6?: Hand,
+		hd7?: Hand,
+		hd8?: Hand,
+		hd9?: Hand,
+		hda?: Hand,
+		hdb?: Hand,
+		hdc?: Hand,
+		hdd?: Hand,
+		hde?: Hand,
+		hdf?: Hand,
+		l0?: Deck
+		l1?: Deck
+		l2?: Deck
+		l3?: Deck
+		l4?: Deck
+		l5?: Deck
+		ord: number,
+		turns: number,
+		x0?: Discard,
+		x1?: Discard,
+		x2?: Discard,
+		x3?: Discard,
+		x4?: Discard,
+		x5?: Discard,
+		xa?: AttackerDiscard
+	}
+
+	type BINMATArgs = {
+		ops: string[],
+		plr: string,
+		plrs: [string, string, string?][],
+		s: GameState
+	}
+
+	type Lane = "0" | "1" | "2" | "3" | "4" | "5"
+
+	type POp = `p${CardValue | Card}${Lane}`
+	type UOp = `u${CardValue | Card}${Lane}`
+	type XOp = `x${CardValue | Card}${Lane | "a"}`
+
+	type DrawOp = `d${Lane | "a"}`
+	type PlayOp = POp | UOp
+	type DiscardOp = XOp
+	type CombatOp = `c${Lane}`
+
+	type Op = DrawOp | PlayOp | DiscardOp | CombatOp
+
+	type TraceDefender = "100101111" // 303
+	type TraceAttacker = "101000000" // 320
+	type Trace = TraceDefender | TraceAttacker
+
 	/* eslint-disable ts/consistent-type-definitions */
-	interface PlayerFullsec {}
-	interface PlayerHighsec {}
-	interface PlayerMidsec {}
-	interface PlayerLowsec {}
-	interface PlayerNullsec {}
+	interface PlayerFullsec { }
+	interface PlayerHighsec { }
+	interface PlayerMidsec { }
+	interface PlayerLowsec { }
+	interface PlayerNullsec { }
 	/* eslint-enable ts/consistent-type-definitions */
 
-	/** Subscript space that can call FULLSEC scripts. */ const $fs: Fullsec
+	/** Subscript space that can call FULLSEC scripts. */
+	const $fs: Fullsec
 	/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
 	const $hs: Highsec
 	/**
@@ -953,7 +1119,8 @@ declare global {
 	const $ls: Lowsec
 	/** Subscript space that can call any script. Makes your script NULLSEC (overrides higher security levels). */
 	const $ns: Nullsec
-	/** Subscript space that can call FULLSEC scripts. */ const $4s: typeof $fs
+	/** Subscript space that can call FULLSEC scripts. */
+	const $4s: typeof $fs
 	/** Subscript space that can call HIGHSEC and above scripts. Makes your script HIGHSEC (overrides FULLSEC). */
 	const $3s: typeof $hs
 	/**
@@ -1089,6 +1256,7 @@ declare global {
 	const _TIMEOUT: number
 	/** The number of milliseconds a script can run for. Normally `5000` though it has been known to change. */
 	const _TO: typeof _TIMEOUT
+	/** A function to deep-clone an object. */ const _CLONE: <T>(obj: T) => T
 	/** The source code of this script as a string. */ const _SOURCE: string
 	/** A unix timestamp of the date this script was built. */ const _BUILD_DATE: number
 	/**
@@ -1134,4 +1302,4 @@ declare global {
 	const _RUN_ID: string
 }
 
-export {}
+export { }

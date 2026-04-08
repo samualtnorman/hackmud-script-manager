@@ -105,7 +105,7 @@ export async function push(
 	}
 
 	const usersToScriptsToPush =
-		new AutoMap((_user: string) => new Map</* script name */ string, /* script path */ string>)
+		new AutoMap((_user: string) => new Map<string, /* script path */ string>)
 
 	// const usersToScriptNames = new Cache((_user: string) => new Set)
 	// const pushEverything_ = scripts.includes(`*.*`)

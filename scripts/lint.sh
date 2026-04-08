@@ -1,5 +1,5 @@
 #!/bin/sh
 set -ex
-tsc
-tsc --project src
-eslint
+npx tsc
+npx tsc --project src
+npx eslint

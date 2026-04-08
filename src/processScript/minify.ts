@@ -25,7 +25,7 @@ type MinifyOptions = LaxPartial<{
 	 */
 	forceQuineCheats: boolean
 
-	/** the comment inserted after the function signature */ autocomplete: string
+	// /** the comment inserted after the function signature */ autocomplete: string
 }>
 
 const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
@@ -40,7 +40,8 @@ const minifyNumber = async (number: number) => /\$\((?<number>.+)\)/
  */
 export async function minify(
 	file: File,
-	{ uniqueId = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
+	// { uniqueId = `00000000000`, mangleNames = false, forceQuineCheats, autocomplete }: MinifyOptions = {}
+	{ uniqueId = `00000000000`, mangleNames = false, forceQuineCheats }: MinifyOptions = {}
 ): Promise<string> {
 	assert(/^\w{11}$/.exec(uniqueId), HERE)
 
@@ -175,13 +176,13 @@ export async function minify(
 			.replace(new RegExp(`_${uniqueId}_PROTOTYPE_PROPERTY_`, `g`), `"prototype"`)
 			.replace(new RegExp(`_${uniqueId}_PROTO_PROPERTY_`, `g`), `"__proto__"`)
 
-		if (autocomplete) {
-			scriptBeforeJSONValueReplacement = spliceString(
-				scriptBeforeJSONValueReplacement,
-				`//${autocomplete}\n`,
-				getFunctionBodyStart(scriptBeforeJSONValueReplacement) + 1
-			)
-		}
+		// if (autocomplete) {
+		// 	scriptBeforeJSONValueReplacement = spliceString(
+		// 		scriptBeforeJSONValueReplacement,
+		// 		`//${autocomplete}\n`,
+		// 		getFunctionBodyStart(scriptBeforeJSONValueReplacement) + 1
+		// 	)
+		// }
 
 		if (forceQuineCheats == false)
 			return scriptBeforeJSONValueReplacement
@@ -465,7 +466,8 @@ export async function minify(
 	if (comment != undefined) {
 		code = spliceString(
 			code,
-			`${autocomplete ? `//${autocomplete}\n` : ``}\n//\t${comment}\t\n`,
+			// `${autocomplete ? `//${autocomplete}\n` : ``}\n//\t${comment}\t\n`,
+			`\n//\t${comment}\t\n`,
 			getFunctionBodyStart(code) + 1
 		)
 

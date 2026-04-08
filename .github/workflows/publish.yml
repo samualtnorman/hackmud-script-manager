@@ -1,15 +1,18 @@
 name: Publish
 on: { push: { branches: [ main, "0.20" ] }, release: { types: [ created ] } }
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
 
     steps:
-    - { name: Checkout, uses: actions/checkout@v4 }
-    - { name: Setup Node.js environment, uses: actions/setup-node@v4, with: { node-version: ^18 || >=20 } }
-    - { name: Setup pnpm, uses: pnpm/action-setup@v3, with: { version: ^9.0.1, run_install: true } }
+    - { name: Checkout, uses: actions/checkout@v6 }
+    - { name: Setup Node.js environment, uses: actions/setup-node@v6, with: { node-version: 24 } }
+    - { name: Setup pnpm, uses: pnpm/action-setup@v4, with: { run_install: true } }
     - run: git config --global user.email github-action@users.noreply.github.com
     - run: git config --global user.name "Github Action"
     - run: pnpm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}

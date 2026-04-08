@@ -1,6 +1,6 @@
 /* eslint-disable jsdoc/check-param-names */
 import type { NodePath, PluginItem } from "@babel/core"
-import type { LVal, Program } from "@babel/types"
+import type { LVal, Program, VoidPattern } from "@babel/types"
 import type { LaxPartial } from "@samual/lib"
 import { readFile, readdir as readFolder } from "fs/promises"
 import { basename as getPathBasename, relative as getRelativePath, isAbsolute as isAbsolutePath, sep as pathSeparator, resolve as resolvePath } from "path"
@@ -8,9 +8,9 @@ import generate from "@babel/generator"
 import { parse } from "@babel/parser"
 import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators"
 import babelPluginProposalDestructuringPrivate from "@babel/plugin-proposal-destructuring-private"
-import babelPluginProposalExplicitResourceManagement from "@babel/plugin-proposal-explicit-resource-management"
 import babelPluginTransformClassProperties from "@babel/plugin-transform-class-properties"
 import babelPluginTransformClassStaticBlock from "@babel/plugin-transform-class-static-block"
+import babelPluginTransformExplicitResourceManagement from "@babel/plugin-transform-explicit-resource-management"
 import babelPluginTransformExponentiationOperator from "@babel/plugin-transform-exponentiation-operator"
 import babelPluginTransformJsonStrings from "@babel/plugin-transform-json-strings"
 import babelPluginTransformLogicalAssignmentOperators from "@babel/plugin-transform-logical-assignment-operators"
@@ -175,7 +175,7 @@ export async function processScript(code: string, {
 		[ babelPluginTransformExponentiationOperator ],
 		[ babelPluginTransformUnicodeSetsRegex ],
 		[ babelPluginProposalDestructuringPrivate ],
-		[ babelPluginProposalExplicitResourceManagement ]
+		[ babelPluginTransformExplicitResourceManagement ]
 	]
 
 	let filePathResolved
@@ -326,7 +326,8 @@ export async function processScript(code: string, {
 	code = generate(file).code
 
 	if (shouldMinify)
-		code = await minify(file, { uniqueId, mangleNames, forceQuineCheats, autocomplete })
+		// code = await minify(file, { uniqueId, mangleNames, forceQuineCheats, autocomplete })
+		code = await minify(file, { uniqueId, mangleNames, forceQuineCheats })
 	else {
 		traverse(file, {
 			MemberExpression({ node: memberExpression }) {
@@ -350,7 +351,7 @@ export async function processScript(code: string, {
 				}
 			},
 			VariableDeclarator(path) {
-				const renameVariables = (lValue: LVal) => {
+				const renameVariables = (lValue: LVal | VoidPattern) => {
 					switch (lValue.type) {
 						case `Identifier`:
 							if (includesIllegalString(lValue.name)) {
@@ -373,7 +374,7 @@ export async function processScript(code: string, {
 						case `ArrayPattern`:
 							for (const element of lValue.elements) {
 								if (element)
-									renameVariables(element)
+									renameVariables(element as LVal)
 							}
 
 							break
@@ -383,7 +384,7 @@ export async function processScript(code: string, {
 					}
 				}
 
-				renameVariables(path.node.id)
+				renameVariables(path.node.id as LVal)
 			},
 			ObjectProperty({ node: objectProperty }) {
 				if (objectProperty.key.type == `Identifier` && includesIllegalString(objectProperty.key.name)) {
@@ -420,7 +421,7 @@ export async function processScript(code: string, {
 		)
 	}
 
-	code = postprocess(code, uniqueId)
+	code = postprocess(code, uniqueId, autocomplete)
 
 	if (includesIllegalString(code)) {
 		throw Error(
